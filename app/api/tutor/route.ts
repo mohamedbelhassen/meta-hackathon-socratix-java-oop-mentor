@@ -174,6 +174,32 @@ interface JavaFile {
   content: string;
 }
 
+interface SocratixReply {
+  message_markdown: string;
+  course_reference: string;
+  inspected_files: string[];
+}
+
+interface ConceptSignal {
+  chapter: string;
+  micro_concept: string;
+  signal: 'POSITIVE' | 'NEGATIVE';
+  score_delta: number;
+  code_location: string;
+  diagnostic_note: string;
+}
+
+interface Telemetry {
+  current_milestone: string;
+  milestone_status: string;
+  concept_signals: ConceptSignal[];
+}
+
+interface SocratixResponse {
+  socratic_reply: SocratixReply;
+  telemetry: Telemetry;
+}
+
 export async function POST(request: Request) {
   const startTime = Date.now();
 
@@ -201,7 +227,7 @@ export async function POST(request: Request) {
     const META_API_URL = 'https://api.meta.ai/v1/chat/completions';
     const META_API_KEY = process.env.META_API_KEY;
 
-    let parsedResult: any = null;
+    let parsedResult: SocratixResponse | null = null;
 
     // Check if real Meta API key is available
     if (META_API_KEY && !META_API_KEY.includes('votre-cle')) {
@@ -325,6 +351,10 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!parsedResult) {
+      throw new Error('Failed to generate Socratic response');
+    }
+
     // =========================================================================
     // 3. TARGETED PERSISTENCE IN SUPABASE (CHAT HISTORY + TELEMETRY UPSERT)
     // =========================================================================
@@ -413,10 +443,11 @@ export async function POST(request: Request) {
         prompt_cache: 'ephemeral',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
     console.error('Error in /api/tutor:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

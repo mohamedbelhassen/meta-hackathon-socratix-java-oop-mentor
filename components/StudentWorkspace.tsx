@@ -427,26 +427,22 @@ export default function StudentWorkspace() {
                     <div className="prose prose-invert prose-emerald max-w-none text-sm leading-relaxed">
                       <ReactMarkdown
                         components={{
-                          code({ className, children, ...props }: any) {
+                          code({ className, children }: React.ComponentPropsWithoutRef<'code'>) {
                             const match = /language-(\w+)/.exec(className || '');
                             const codeString = String(children).replace(/\n$/, '');
                             const isMultiLine = match || codeString.includes('\n');
 
                             return isMultiLine ? (
                               <SyntaxHighlighter
-                                style={vscDarkPlus as any}
+                                style={vscDarkPlus}
                                 language={match ? match[1] : 'java'}
                                 PreTag="div"
                                 className="rounded-md my-2 text-xs"
-                                {...props}
                               >
                                 {codeString}
                               </SyntaxHighlighter>
                             ) : (
-                              <code
-                                className="bg-slate-900 text-emerald-300 px-1.5 py-0.5 rounded text-xs font-mono"
-                                {...props}
-                              >
+                              <code className="bg-slate-900 text-emerald-300 px-1.5 py-0.5 rounded text-xs font-mono">
                                 {children}
                               </code>
                             );
