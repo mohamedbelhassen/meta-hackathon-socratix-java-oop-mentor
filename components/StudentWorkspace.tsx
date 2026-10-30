@@ -4,10 +4,16 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { createClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FolderOpen, Send, FileCode, Sparkles, BookOpen, UserCheck } from 'lucide-react';
+import { FolderOpen, Send, FileCode, Sparkles, BookOpen, UserCheck, HardDrive, Edit3 } from 'lucide-react';
+
+// Initialize client-side Supabase for Realtime Broadcast
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 // Types for chat messages and local Java files
 interface Message {
@@ -85,6 +91,29 @@ const DEMO_CODE_PRESETS: Record<string, JavaFile[]> = {
   ],
 };
 
+// Helper: Recursively read all .java files from a FileSystemDirectoryHandle
+const readJavaDirectoryRecursive = async (
+  handle: FileSystemDirectoryHandle,
+  pathPrefix = ''
+): Promise<JavaFile[]> => {
+  const collected: JavaFile[] = [];
+  for await (const entry of handle.values()) {
+    const relativePath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
+    if (entry.kind === 'file' && entry.name.endsWith('.java')) {
+      const file = await (entry as FileSystemFileHandle).getFile();
+      const content = await file.text();
+      collected.push({ name: relativePath, content });
+    } else if (entry.kind === 'directory') {
+      const subFiles = await readJavaDirectoryRecursive(
+        entry as FileSystemDirectoryHandle,
+        relativePath
+      );
+      collected.push(...subFiles);
+    }
+  }
+  return collected;
+};
+
 export default function StudentWorkspace() {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -106,37 +135,109 @@ export default function StudentWorkspace() {
   const [workspaceFiles, setWorkspaceFiles] = useState<JavaFile[]>(DEMO_CODE_PRESETS.buggy_encapsulation);
   const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
 
+  // Resizable Left Panel Width (default 380px, clamped between 280px and 750px)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(380);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  // Restore saved width from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedWidth = localStorage.getItem('socratix_panel_width');
+      if (savedWidth) {
+        const parsed = parseInt(savedWidth, 10);
+        if (!isNaN(parsed) && parsed >= 280 && parsed <= 800) {
+          setLeftPanelWidth(parsed);
+        }
+      }
+    }
+  }, []);
+
+  // Dragging event listeners for resizing
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const maxAllowed = Math.min(800, window.innerWidth * 0.65);
+      const newWidth = Math.max(280, Math.min(e.clientX, maxAllowed));
+      setLeftPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        localStorage.setItem('socratix_panel_width', leftPanelWidth.toString());
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDragging, leftPanelWidth]);
+
+  const handleStartResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
   // Keep reference to FileSystemDirectoryHandle for automatic re-reading before every chat message
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isDiskLinked, setIsDiskLinked] = useState<boolean>(false);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isAnalyzing]);
 
-  // Helper: Recursively read all .java files from a FileSystemDirectoryHandle
-  const readJavaDirectoryRecursive = async (
-    handle: FileSystemDirectoryHandle,
-    pathPrefix = ''
-  ): Promise<JavaFile[]> => {
-    const collected: JavaFile[] = [];
-    for await (const entry of handle.values()) {
-      const relativePath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
-      if (entry.kind === 'file' && entry.name.endsWith('.java')) {
-        const file = await (entry as FileSystemFileHandle).getFile();
-        const content = await file.text();
-        collected.push({ name: relativePath, content });
-      } else if (entry.kind === 'directory') {
-        const subFiles = await readJavaDirectoryRecursive(
-          entry as FileSystemDirectoryHandle,
-          relativePath
-        );
-        collected.push(...subFiles);
-      }
-    }
-    return collected;
-  };
+  // Realtime Broadcast Listener: Respond immediately to On-Demand Workspace Dumps from Teacher
+  useEffect(() => {
+    if (!supabaseClient) return;
+
+    const syncChannel = supabaseClient.channel('workspace-sync');
+
+    syncChannel
+      .on('broadcast', { event: 'REQUEST_WORKSPACE_DUMP' }, async ({ payload }) => {
+        if (payload?.studentId === activeProfile.id) {
+          let currentFiles = workspaceFiles;
+          let source: 'disk' | 'preset' = isDiskLinked ? 'disk' : 'preset';
+
+          if (dirHandleRef.current) {
+            try {
+              currentFiles = await readJavaDirectoryRecursive(dirHandleRef.current);
+              setWorkspaceFiles(currentFiles);
+              source = 'disk';
+            } catch (err) {
+              console.error('Error re-reading disk for live dump:', err);
+            }
+          }
+
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'WORKSPACE_DUMP_RESPONSE',
+            payload: {
+              studentId: activeProfile.id,
+              files: currentFiles,
+              source,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabaseClient.removeChannel(syncChannel);
+    };
+  }, [activeProfile.id, workspaceFiles, isDiskLinked]);
 
   // Open Native Browser Directory Picker (File System Access API)
   const handleSelectFolder = async () => {
@@ -154,6 +255,7 @@ export default function StudentWorkspace() {
 
       const filesData = await readJavaDirectoryRecursive(dirHandle);
       setWorkspaceFiles(filesData);
+      setIsDiskLinked(true);
       setActiveFileIndex(0);
     } catch (err) {
       console.warn('Directory selection cancelled or failed:', err);
@@ -163,6 +265,7 @@ export default function StudentWorkspace() {
   // Load a 1-Click Judge Demo Preset
   const handleLoadPreset = (presetKey: string, label: string) => {
     dirHandleRef.current = null;
+    setIsDiskLinked(false);
     setSelectedFolder(label);
     setWorkspaceFiles(DEMO_CODE_PRESETS[presetKey]);
     setActiveFileIndex(0);
@@ -247,8 +350,13 @@ export default function StudentWorkspace() {
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
-      {/* LEFT PANEL: WORKSPACE (IDE Sidebar) */}
-      <div className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col">
+      {/* LEFT PANEL: WORKSPACE (IDE Sidebar - Resizable) */}
+      <div
+        style={{ width: `${leftPanelWidth}px` }}
+        className={`shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden ${
+          isDragging ? '' : 'transition-[width] duration-100 ease-out'
+        }`}
+      >
         {/* Workspace Header */}
         <div className="p-4 border-b border-slate-800">
           <div className="flex items-center justify-between">
@@ -365,35 +473,89 @@ export default function StudentWorkspace() {
             </ul>
           </div>
 
-          {/* Editable Live Code Preview */}
+          {/* Code Viewer / Editor with Single Source of Truth rule */}
           {workspaceFiles[activeFileIndex] && (
-            <div className="flex-1 flex flex-col min-h-[180px]">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
-                <span className="font-mono text-emerald-400">
-                  {workspaceFiles[activeFileIndex].name}
-                </span>
-                <span className="text-[10px] text-slate-500">Live Buffer</span>
-              </div>
-              <textarea
-                value={workspaceFiles[activeFileIndex].content}
-                onChange={(e) => {
-                  const updated = [...workspaceFiles];
-                  updated[activeFileIndex] = {
-                    ...updated[activeFileIndex],
-                    content: e.target.value,
-                  };
-                  setWorkspaceFiles(updated);
-                }}
-                spellCheck={false}
-                className="w-full flex-1 bg-slate-950 border border-slate-800 rounded-lg p-2.5 font-mono text-xs text-slate-300 focus:outline-none focus:border-emerald-500/50 resize-none"
-              />
+            <div className="flex-1 flex flex-col min-h-[220px]">
+              {isDiskLinked ? (
+                // Read-Only Viewer for Local Disk Folders
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center justify-between text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1.5 rounded-t-lg">
+                    <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[10px]">
+                      <HardDrive className="w-3.5 h-3.5 shrink-0" />
+                      <span className="font-semibold">Local Disk Linked (Read-Only)</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[220px]">
+                      {workspaceFiles[activeFileIndex].name}
+                    </span>
+                  </div>
+                  <div className="flex-1 bg-slate-950 border-x border-b border-slate-800 rounded-b-lg overflow-x-auto overflow-y-auto min-h-[220px] max-h-[480px]">
+                    <SyntaxHighlighter
+                      style={vscDarkPlus}
+                      language="java"
+                      showLineNumbers
+                      customStyle={{
+                        margin: 0,
+                        padding: '0.75rem',
+                        fontSize: '0.75rem',
+                        backgroundColor: 'transparent',
+                        whiteSpace: 'pre',
+                      }}
+                    >
+                      {workspaceFiles[activeFileIndex].content}
+                    </SyntaxHighlighter>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1 italic">
+                    Edit & save in your IDE (VS Code, IntelliJ) — Socratix auto-syncs on question/inspection.
+                  </p>
+                </div>
+              ) : (
+                // Interactive In-Browser Editor for Demo Presets
+                <div className="flex-1 flex flex-col">
+                  <div className="flex items-center justify-between text-[11px] bg-amber-950/40 border border-amber-800/40 px-2.5 py-1.5 rounded-t-lg">
+                    <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[10px]">
+                      <Edit3 className="w-3.5 h-3.5 shrink-0" />
+                      <span className="font-semibold">Demo Preset (In-Browser Editor)</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[220px]">
+                      {workspaceFiles[activeFileIndex].name}
+                    </span>
+                  </div>
+                  <textarea
+                    value={workspaceFiles[activeFileIndex].content}
+                    onChange={(e) => {
+                      const updated = [...workspaceFiles];
+                      updated[activeFileIndex] = {
+                        ...updated[activeFileIndex],
+                        content: e.target.value,
+                      };
+                      setWorkspaceFiles(updated);
+                    }}
+                    spellCheck={false}
+                    className="w-full flex-1 min-h-[220px] max-h-[480px] bg-slate-950 border-x border-b border-slate-800 rounded-b-lg p-2.5 font-mono text-xs text-slate-300 focus:outline-none focus:border-amber-500/50 resize-none whitespace-pre overflow-x-auto"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1 italic">
+                    Hackathon Jury Demo Mode: You can edit Java code directly in this buffer.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
+      {/* DRAGGABLE RESIZER SPLITTER */}
+      <div
+        onMouseDown={handleStartResize}
+        className={`w-1.5 hover:w-2.5 bg-slate-800 hover:bg-emerald-500 cursor-col-resize transition-all shrink-0 relative flex items-center justify-center group z-20 select-none ${
+          isDragging ? 'bg-emerald-500 w-2.5' : ''
+        }`}
+        title="Glisser pour ajuster la largeur du code Java (280px - 800px)"
+      >
+        <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-white rounded-full transition-colors" />
+      </div>
+
       {/* RIGHT PANEL: SOCRATIC CHAT */}
-      <div className="flex-1 flex flex-col bg-slate-950 relative">
+      <div className="flex-1 flex flex-col bg-slate-950 relative min-w-[320px] overflow-hidden">
         {/* Chat Header */}
         <div className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50">
           <div className="flex items-center gap-2.5">

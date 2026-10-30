@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
   Table,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, X, Code2, MessageSquare, Activity } from 'lucide-react';
+import { Eye, X, Code2, MessageSquare, Activity, Radio } from 'lucide-react';
 
 // Initialize Supabase client (using public anon key for frontend Realtime)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -47,6 +47,13 @@ interface ChatMessageRecord {
   created_at: string;
 }
 
+interface LiveWorkspaceDump {
+  studentId: string;
+  files: Array<{ name: string; content: string }>;
+  source: 'disk' | 'preset';
+  timestamp: string;
+}
+
 export default function TeacherDashboardMatrix() {
   const [records, setRecords] = useState<CompetencyRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,12 +63,17 @@ export default function TeacherDashboardMatrix() {
   const [studentMessages, setStudentMessages] = useState<ChatMessageRecord[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
 
+  // State for On-Demand Live Workspace Dump (Option B)
+  const [liveDump, setLiveDump] = useState<LiveWorkspaceDump | null>(null);
+  const [isRequestingLive, setIsRequestingLive] = useState(false);
+  const syncChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   // Fetch initial telemetry data and subscribe to Supabase Realtime changes
   useEffect(() => {
     fetchTelemetryData();
 
-    // Set up Supabase Realtime Subscription on student_competencies
-    const channel = supabase
+    // 1. Set up Supabase Realtime Subscription on student_competencies table
+    const dbChannel = supabase
       .channel('realtime-telemetry')
       .on(
         'postgres_changes',
@@ -71,15 +83,34 @@ export default function TeacherDashboardMatrix() {
           table: 'student_competencies',
         },
         (payload) => {
-          console.log('Realtime update received!', payload);
+          console.log('Realtime telemetry update received!', payload);
           // Re-fetch data to ensure we have the joined profile display_name
           fetchTelemetryData();
         }
       )
       .subscribe();
 
+    // 2. Set up Supabase Realtime Broadcast channel for Live Workspace Sync
+    const syncChannel = supabase
+      .channel('workspace-sync')
+      .on('broadcast', { event: 'WORKSPACE_DUMP_RESPONSE' }, ({ payload }) => {
+        if (payload?.studentId) {
+          setLiveDump({
+            studentId: payload.studentId,
+            files: payload.files || [],
+            source: payload.source || 'preset',
+            timestamp: payload.timestamp || new Date().toISOString(),
+          });
+          setIsRequestingLive(false);
+        }
+      })
+      .subscribe();
+
+    syncChannelRef.current = syncChannel;
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(dbChannel);
+      supabase.removeChannel(syncChannel);
     };
   }, []);
 
@@ -105,7 +136,24 @@ export default function TeacherDashboardMatrix() {
   // Load targeted JSONB code_snapshot and Socratic chat history when clicking a student
   const handleInspectStudent = async (record: CompetencyRecord) => {
     setSelectedRecord(record);
+    setLiveDump(null);
     setIsLoadingChat(true);
+    setIsRequestingLive(true);
+
+    // Send On-Demand Broadcast request to the student machine
+    if (syncChannelRef.current) {
+      syncChannelRef.current.send({
+        type: 'broadcast',
+        event: 'REQUEST_WORKSPACE_DUMP',
+        payload: { studentId: record.student_id },
+      });
+    }
+
+    // 2-second timeout: fallback smoothly if student tab is closed
+    setTimeout(() => {
+      setIsRequestingLive(false);
+    }, 2000);
+
     try {
       const { data: sessionData } = await supabase
         .from('chat_sessions')
@@ -364,38 +412,86 @@ export default function TeacherDashboardMatrix() {
                   </div>
                 </div>
 
-                {/* Right Column: Targeted JSONB Code Snapshot */}
+                {/* Right Column: Live Workspace (Option B) or Fallback DB Snapshot */}
                 <div className="space-y-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Code2 className="w-3.5 h-3.5 text-emerald-400" />
-                    Targeted JSONB Code Snapshot (Inspected Files Only)
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+                      Student Workspace Code
+                    </h3>
+                    {liveDump && liveDump.studentId === selectedRecord.student_id ? (
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 text-[10px] animate-pulse flex items-center gap-1">
+                        <Radio className="w-3 h-3 text-emerald-400" />
+                        Live Workspace ({liveDump.source === 'disk' ? 'Machine Disque' : 'Preset En Ligne'})
+                      </Badge>
+                    ) : isRequestingLive ? (
+                      <span className="text-[10px] text-amber-400 font-mono animate-pulse flex items-center gap-1">
+                        <Activity className="w-3 h-3 animate-spin" />
+                        Live machine query...
+                      </span>
+                    ) : (
+                      <Badge className="bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">
+                        📦 Snapshot Archivé (Dernière Question)
+                      </Badge>
+                    )}
+                  </div>
+
                   <div className="space-y-3 max-h-80 overflow-y-auto">
-                    {studentMessages
-                      .filter(
-                        (m) =>
-                          m.role === 'user' &&
-                          Array.isArray(m.code_snapshot) &&
-                          m.code_snapshot.length > 0
-                      )
-                      .slice(-1)
-                      .map((msg) =>
-                        (msg.code_snapshot as Array<{ name: string; content: string }>).map(
-                          (file, i) => (
-                            <div
-                              key={i}
-                              className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden"
-                            >
-                              <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs font-mono text-emerald-400">
-                                {file.name}
-                              </div>
-                              <pre className="p-3 text-xs font-mono text-slate-300 overflow-x-auto">
-                                {file.content}
-                              </pre>
+                    {/* Scenario 1: Live Workspace Dump received via Realtime Broadcast */}
+                    {liveDump && liveDump.studentId === selectedRecord.student_id ? (
+                      liveDump.files.length === 0 ? (
+                        <div className="p-4 text-center text-slate-500 text-xs">
+                          No Java files currently in student workspace.
+                        </div>
+                      ) : (
+                        liveDump.files.map((file, i) => (
+                          <div
+                            key={i}
+                            className="bg-slate-950 border border-emerald-900/40 rounded-lg overflow-hidden shadow"
+                          >
+                            <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs font-mono text-emerald-400 flex items-center justify-between">
+                              <span>{file.name}</span>
+                              <span className="text-[10px] text-emerald-500/80 font-mono">
+                                Live • {new Date(liveDump.timestamp).toLocaleTimeString()}
+                              </span>
                             </div>
+                            <pre className="p-3 text-xs font-mono text-slate-300 overflow-x-auto">
+                              {file.content}
+                            </pre>
+                          </div>
+                        ))
+                      )
+                    ) : (
+                      /* Scenario 2: Fallback to last persisted snapshot in chat_messages */
+                      studentMessages
+                        .filter(
+                          (m) =>
+                            m.role === 'user' &&
+                            Array.isArray(m.code_snapshot) &&
+                            m.code_snapshot.length > 0
+                        )
+                        .slice(-1)
+                        .map((msg) =>
+                          (msg.code_snapshot as Array<{ name: string; content: string }>).map(
+                            (file, i) => (
+                              <div
+                                key={i}
+                                className="bg-slate-950 border border-slate-800 rounded-lg overflow-hidden"
+                              >
+                                <div className="px-3 py-1.5 bg-slate-900 border-b border-slate-800 text-xs font-mono text-amber-400 flex items-center justify-between">
+                                  <span>{file.name}</span>
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    Archived with question
+                                  </span>
+                                </div>
+                                <pre className="p-3 text-xs font-mono text-slate-300 overflow-x-auto">
+                                  {file.content}
+                                </pre>
+                              </div>
+                            )
                           )
                         )
-                      )}
+                    )}
                   </div>
                 </div>
               </div>
