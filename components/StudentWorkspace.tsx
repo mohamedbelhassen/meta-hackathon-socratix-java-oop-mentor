@@ -875,9 +875,9 @@ export default function StudentWorkspace() {
                 variant="outline"
                 size="sm"
                 onClick={handleSelectFolder}
-                className="h-6 text-[10px] border-slate-700 hover:bg-slate-800 px-2 gap-1"
+                className="h-6 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-700 hover:border-emerald-500/50 px-2.5 gap-1.5 transition-all shadow-sm"
               >
-                <FolderOpen className="w-3 h-3" />
+                <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
                 Folder
               </Button>
             </div>
@@ -942,9 +942,9 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Code Editor / Viewer */}
-        <div className="flex-1 overflow-auto bg-slate-950 relative">
+        <div className="flex-1 min-h-0 bg-slate-950 relative overflow-hidden">
           {sourceMode === 'disk' ? (
-            <div className="p-4">
+            <div className="h-full overflow-y-auto p-4">
               <SyntaxHighlighter
                 language={getSyntaxLanguage(currentFile.name)}
                 style={vscDarkPlus}
@@ -963,7 +963,7 @@ export default function StudentWorkspace() {
             <textarea
               value={currentFile.content}
               onChange={(e) => handleCodeChange(e.target.value)}
-              className="w-full h-full p-4 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none"
+              className="w-full h-full block p-4 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
               spellCheck={false}
             />
           )}
