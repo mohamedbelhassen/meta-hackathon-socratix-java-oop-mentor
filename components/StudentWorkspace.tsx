@@ -30,6 +30,7 @@ import {
   ChevronDown,
   ChevronUp,
   Layers,
+  AlertTriangle,
 } from 'lucide-react';
 import MilestoneCelebrationModal, {
   CompetencyReport,
@@ -137,6 +138,8 @@ export default function StudentWorkspace() {
   // Modals
   const [activeSlideReference, setActiveSlideReference] = useState<StructuredCourseReference | null>(null);
   const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [completionReport, setCompletionReport] = useState<CompetencyReport | null>(null);
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
@@ -532,10 +535,9 @@ export default function StudentWorkspace() {
   };
 
   // Reset Student Session
-  const handleResetSession = async () => {
+  const executeResetSession = async () => {
     if (!activeStudent || !activeLab) return;
-    const confirmed = confirm(`Reset session for ${activeStudent.name} on ${activeLab.title}? This will clear dialogue history and telemetry.`);
-    if (!confirmed) return;
+    setIsResetting(true);
 
     try {
       await fetch('/api/sessions/reset', {
@@ -556,8 +558,11 @@ export default function StudentWorkspace() {
           content: `Session has been reset for **${activeStudent.name}**. You are ready for a fresh start on **${activeLab.title}**!`,
         },
       ]);
+      setIsResetModalOpen(false);
     } catch (err) {
       console.error('Failed to reset session:', err);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -698,7 +703,7 @@ export default function StudentWorkspace() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleResetSession}
+              onClick={() => setIsResetModalOpen(true)}
               className="h-7 text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-2 gap-1"
               title="Reset current student session"
             >
@@ -1116,6 +1121,49 @@ export default function StudentWorkspace() {
         report={completionReport}
         milestoneId={activeActivity?.title || 'Milestone Completed'}
       />
+
+      {/* Custom Dark-Themed Reset Confirmation Modal */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-100">
+                  Reset Student Session?
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Reset session for <span className="font-semibold text-slate-200">{activeStudent.name}</span> on{' '}
+                  <span className="font-semibold text-slate-200">{activeLab?.title || 'this lab'}</span>? This will clear all dialogue history, code edits, and telemetry.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 hover:border-slate-600"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={executeResetSession}
+                disabled={isResetting}
+                className="h-8 text-xs bg-rose-600 hover:bg-rose-500 text-white font-medium gap-1.5 shadow-sm shadow-rose-950/30"
+              >
+                <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+                {isResetting ? 'Resetting...' : 'Confirm Reset'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
