@@ -9,6 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { FolderOpen, Send, FileCode, Sparkles, BookOpen, UserCheck, HardDrive, Edit3 } from 'lucide-react';
+import MilestoneCelebrationModal, {
+  CompetencyReport,
+  playCelebrationChime,
+  triggerCelebrationConfetti,
+  replayCelebration,
+} from './MilestoneCelebrationModal';
 
 // Initialize client-side Supabase for Realtime Broadcast
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -126,6 +132,11 @@ export default function StudentWorkspace() {
   const [input, setInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
+
+  // Milestone Completion & Celebration State
+  const [completionReport, setCompletionReport] = useState<CompetencyReport | null>(null);
+  const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
+  const [completedMilestone, setCompletedMilestone] = useState<string | null>(null);
 
   // Active Student Profile (Defaults to Bob for the Red-to-Green Live Demo)
   const [activeProfile, setActiveProfile] = useState(DEMO_PROFILES[0]);
@@ -301,13 +312,23 @@ export default function StudentWorkspace() {
 
       const startTime = performance.now();
 
-      // Ghost Context: Silently attach current .java files + studentId + labSessionId
+      // Extract recent sliding-window conversation history (last 6 turns, excluding initial greeting)
+      const conversationHistory = messages
+        .filter((m) => m.id !== 'welcome')
+        .slice(-6)
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+      // Ghost Context: Silently attach current .java files + sliding history + studentId + labSessionId
       const response = await fetch('/api/tutor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: userText,
           files: currentFiles,
+          history: conversationHistory,
           studentId: activeProfile.id,
           labSessionId: ACTIVE_LAB_SESSION_ID,
         }),
@@ -329,6 +350,17 @@ export default function StudentWorkspace() {
             latencyMs: data.meta?.latency_ms || elapsedMs,
           },
         ]);
+
+        // Trigger Milestone Completion celebration & competency report
+        if (data.data.is_milestone_completed) {
+          const report = data.data.competency_report;
+          const milestone = data.data.telemetry?.current_milestone || 'LAB5_ENCAPSULATION';
+          setCompletionReport(report);
+          setCompletedMilestone(milestone);
+          setIsCelebrationOpen(true);
+          playCelebrationChime();
+          triggerCelebrationConfetti();
+        }
       } else {
         throw new Error(data.error || 'Failed to analyze code');
       }
@@ -570,6 +602,48 @@ export default function StudentWorkspace() {
           </div>
         </div>
 
+        {/* Pinned Milestone Completion Banner */}
+        {completionReport && (
+          <div className="mx-6 mt-4 p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-3">
+              <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </span>
+              <div>
+                <div className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-2">
+                  <span>🏆 Milestone Mastered</span>
+                  <span className="text-slate-500">•</span>
+                  <span>{completedMilestone}</span>
+                </div>
+                <div className="text-xs text-slate-300 mt-0.5">
+                  All contracts met! Review your competency report & consolidation slides.
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={replayCelebration}
+                className="text-xs text-slate-400 hover:text-emerald-400 h-8 px-2.5 flex items-center gap-1.5 hover:bg-slate-800"
+                title="Replay Celebration Sound & Fireworks"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Replay 🎉</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsCelebrationOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
+              >
+                View Report Card 🏆
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Messages Stream */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.map((msg) => (
@@ -693,6 +767,14 @@ export default function StudentWorkspace() {
           </form>
         </div>
       </div>
+
+      {/* Milestone Celebration & Pedagogical Assessment Modal */}
+      <MilestoneCelebrationModal
+        isOpen={isCelebrationOpen}
+        onClose={() => setIsCelebrationOpen(false)}
+        milestoneId={completedMilestone || 'LAB5_ENCAPSULATION'}
+        report={completionReport}
+      />
     </div>
   );
 }
