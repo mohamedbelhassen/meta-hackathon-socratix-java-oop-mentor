@@ -1,181 +1,411 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { createClient } from '@supabase/supabase-js';
+import { getBrowserSupabase } from '@/lib/supabase';
+import {
+  Course,
+  Lab,
+  LabActivity,
+  DemoPreset,
+  DemoPresetFile,
+  StudentLabSession,
+  StructuredCourseReference,
+} from '@/types/socratix';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { FolderOpen, Send, FileCode, Sparkles, BookOpen, UserCheck, HardDrive, Edit3 } from 'lucide-react';
+import {
+  FolderOpen,
+  Send,
+  FileCode,
+  Sparkles,
+  BookOpen,
+  RotateCcw,
+  Lightbulb,
+  CheckCircle2,
+  Clock,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+} from 'lucide-react';
 import MilestoneCelebrationModal, {
   CompetencyReport,
   playCelebrationChime,
   triggerCelebrationConfetti,
-  replayCelebration,
 } from './MilestoneCelebrationModal';
+import SmartSlideViewerModal from './SmartSlideViewerModal';
+import {
+  saveActiveContext,
+  loadActiveContext,
+  savePresetEdits,
+  loadPresetEdits,
+  clearPresetEdits,
+  saveDirectoryHandle,
+  loadDirectoryHandle,
+} from '@/lib/workspace-persistence';
 
-// Initialize client-side Supabase for Realtime Broadcast
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseClient = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+const DEMO_PERSONAS = [
+  { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', role: 'Student' },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', role: 'Judge / Sandbox' },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', role: 'Student' },
+  { id: '55555555-5555-5555-5555-555555555555', name: 'Ines', role: 'Student' },
+];
 
-// Types for chat messages and local Java files
-interface Message {
+const SEAT_OPTIONS = Array.from({ length: 20 }, (_, i) => `PC ${String(i + 1).padStart(2, '0')}`);
+
+interface ChatItem {
   id: string;
   role: 'user' | 'assistant';
   content: string;
-  courseReference?: string;
-  inspectedFiles?: string[];
+  courseReference?: StructuredCourseReference | null;
   latencyMs?: number;
 }
 
-export interface JavaFile {
-  name: string;
-  content: string;
-}
-
-// Fixed UUIDs from supabase/seed.sql for seamless Hackathon Demo
-const DEMO_PROFILES = [
+// Fallback presets if lab has no custom presets
+const DEFAULT_JAVA_PRESETS: DemoPreset[] = [
   {
-    id: '33333333-3333-3333-3333-333333333333',
-    label: 'Bob (Room A0-10 - PC 02)',
-    mode: 'Student',
-    room: 'Room A0-10',
-    pc: 'PC 02',
+    key: 'buggy_encapsulation',
+    label: 'Buggy Encapsulation',
+    description: 'Item price lacks private visibility modifier.',
+    files: [
+      {
+        name: 'Item.java',
+        content: `public class Item {\n  double price; // Missing private modifier!\n  String name;\n\n  public Item(String name, double price) {\n    this.name = name;\n    this.price = price;\n  }\n}`,
+      },
+      {
+        name: 'YallaPOS.java',
+        content: `public class YallaPOS {\n  public static void main(String[] args) {\n    Item item = new Item("Coffee", 4.5);\n    item.price = -100.0; // Direct unsafe access!\n  }\n}`,
+      },
+    ],
   },
   {
-    id: '44444444-4444-4444-4444-444444444444',
-    label: 'Guest (Room A0-10 - PC 12)',
-    mode: 'Guest',
-    room: 'Room A0-10',
-    pc: 'PC 12',
-  },
-  {
-    id: '22222222-2222-2222-2222-222222222222',
-    label: 'Alice (Room A0-10 - PC 01)',
-    mode: 'Student',
-    room: 'Room A0-10',
-    pc: 'PC 01',
+    key: 'fixed_encapsulation',
+    label: 'Fixed Encapsulation',
+    description: 'Item price is private with defensive setter.',
+    files: [
+      {
+        name: 'Item.java',
+        content: `public class Item {\n  private double price;\n  private String name;\n\n  public Item(String name, double price) {\n    this.name = name;\n    setPrice(price);\n  }\n\n  public double getPrice() {\n    return price;\n  }\n\n  public void setPrice(double price) {\n    if (price < 0) throw new IllegalArgumentException("Price cannot be negative");\n    this.price = price;\n  }\n}`,
+      },
+      {
+        name: 'YallaPOS.java',
+        content: `public class YallaPOS {\n  public static void main(String[] args) {\n    Item item = new Item("Coffee", 4.5);\n    System.out.println("Item price: " + item.getPrice());\n  }\n}`,
+      },
+    ],
   },
 ];
 
-const ACTIVE_LAB_SESSION_ID = '55555555-5555-5555-5555-555555555555';
-
-// Demo Presets so Hackathon Judges can test in 1 click without local Java files
-const DEMO_CODE_PRESETS: Record<string, JavaFile[]> = {
-  buggy_encapsulation: [
-    {
-      name: 'Item.java',
-      content: `public class Item {\n  double price; // Missing private modifier!\n  String name;\n\n  public Item(String name, double price) {\n    this.name = name;\n    this.price = price;\n  }\n}`,
-    },
-    {
-      name: 'YallaPOS.java',
-      content: `public class YallaPOS {\n  public static void main(String[] args) {\n    Item item = new Item("Coffee", 4.5);\n    item.price = -100.0; // Direct unsafe access!\n  }\n}`,
-    },
-  ],
-  buggy_polymorphism: [
-    {
-      name: 'YallaPOS.java',
-      content: `public class YallaPOS {\n  public static void main(String[] args) {\n    Article[] cart = new Article[10];\n    cart[0] = new Service("Home Delivery", 15.0); // ERROR: Service is not an Article\n  }\n}`,
-    },
-    {
-      name: 'Facturable.java',
-      content: `public interface Facturable {\n  double getMontantTTC();\n}`,
-    },
-  ],
-  fixed_polymorphism: [
-    {
-      name: 'YallaPOS.java',
-      content: `public class YallaPOS {\n  public static void main(String[] args) {\n    Facturable[] cart = new Facturable[10];\n    cart[0] = new Service("Home Delivery", 15.0);\n  }\n}`,
-    },
-    {
-      name: 'Facturable.java',
-      content: `public interface Facturable {\n  double getMontantTTC();\n}`,
-    },
-  ],
-};
-
-// Helper: Recursively read all .java files from a FileSystemDirectoryHandle
-const readJavaDirectoryRecursive = async (
-  handle: FileSystemDirectoryHandle,
-  pathPrefix = ''
-): Promise<JavaFile[]> => {
-  const collected: JavaFile[] = [];
-  for await (const entry of handle.values()) {
-    const relativePath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
-    if (entry.kind === 'file' && entry.name.endsWith('.java')) {
-      const file = await (entry as FileSystemFileHandle).getFile();
-      const content = await file.text();
-      collected.push({ name: relativePath, content });
-    } else if (entry.kind === 'directory') {
-      const subFiles = await readJavaDirectoryRecursive(
-        entry as FileSystemDirectoryHandle,
-        relativePath
-      );
-      collected.push(...subFiles);
-    }
-  }
-  return collected;
-};
-
 export default function StudentWorkspace() {
-  const [messages, setMessages] = useState<Message[]>([
+  // Course & Lab Hierarchy
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [labs, setLabs] = useState<Lab[]>([]);
+  const [activeLab, setActiveLab] = useState<Lab | null>(null);
+  const [activeActivity, setActiveActivity] = useState<LabActivity | null>(null);
+
+  // Student Persona & Physical Workstation
+  const [activeStudent, setActiveStudent] = useState(DEMO_PERSONAS[0]);
+  const [seatLabel, setSeatLabel] = useState('PC 01');
+
+  // Files & Source Mode ('preset' | 'disk')
+  const [sourceMode, setSourceMode] = useState<'preset' | 'disk'>('preset');
+  const [activePresetKey, setActivePresetKey] = useState<string>('buggy_encapsulation');
+  const [workspaceFiles, setWorkspaceFiles] = useState<DemoPresetFile[]>(DEFAULT_JAVA_PRESETS[0].files);
+  const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
+  const [folderName, setFolderName] = useState<string>('Demo Sandbox');
+
+  // Disk Handle Ref
+  const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const [needsDiskReconnect, setNeedsDiskReconnect] = useState(false);
+
+  // Chat & Telemetry Session State
+  const [messages, setMessages] = useState<ChatItem[]>([
     {
       id: 'welcome',
       role: 'assistant',
       content:
-        'Hello! I am **Socratix**. Ask me a question about your *Yalla POS* project. I will read your local files to help you move forward without giving you the direct solution.',
+        'Hello! I am **Socratix**, your Socratic mentor. Ask a question or click **"💡 Stuck? Ask for a Hint"** to get guided through your milestones without giving away solutions.',
     },
   ]);
   const [input, setInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [loadingStep, setLoadingStep] = useState('');
+  const [sessionState, setSessionState] = useState<StudentLabSession | null>(null);
 
-  // Milestone Completion & Celebration State
+  // Modals
+  const [activeSlideReference, setActiveSlideReference] = useState<StructuredCourseReference | null>(null);
+  const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
   const [completionReport, setCompletionReport] = useState<CompetencyReport | null>(null);
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
-  const [completedMilestone, setCompletedMilestone] = useState<string | null>(null);
+  const [isBriefExpanded, setIsBriefExpanded] = useState(false);
 
-  // Active Student Profile (Defaults to Bob for the Red-to-Green Live Demo)
-  const [activeProfile, setActiveProfile] = useState(DEMO_PROFILES[0]);
-
-  // Local Java Workspace state
-  const [selectedFolder, setSelectedFolder] = useState<string | null>('Demo Sandbox (YallaPOS)');
-  const [workspaceFiles, setWorkspaceFiles] = useState<JavaFile[]>(DEMO_CODE_PRESETS.buggy_encapsulation);
-  const [activeFileIndex, setActiveFileIndex] = useState<number>(0);
-
-  // Resizable Left Panel Width (default 380px, clamped between 280px and 750px)
-  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(380);
+  // Layout Resizing
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(440);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Restore saved width from localStorage on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedWidth = localStorage.getItem('socratix_panel_width');
-      if (savedWidth) {
-        const parsed = parseInt(savedWidth, 10);
-        if (!isNaN(parsed) && parsed >= 280 && parsed <= 800) {
-          setLeftPanelWidth(parsed);
+  // Helper: Get syntax highlighting language
+  const getSyntaxLanguage = (filename: string): string => {
+    if (filename.endsWith('.java')) return 'java';
+    if (filename.endsWith('.js') || filename.endsWith('.jsx')) return 'javascript';
+    if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return 'typescript';
+    if (filename.endsWith('.json')) return 'json';
+    return 'text';
+  };
+
+  // Helper: Read directory files filtered by course extensions
+  const readDirectoryRecursive = useCallback(async (
+    handle: FileSystemDirectoryHandle,
+    extensions: string[],
+    pathPrefix = ''
+  ): Promise<DemoPresetFile[]> => {
+    const collected: DemoPresetFile[] = [];
+    for await (const entry of handle.values()) {
+      const relPath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
+      if (entry.kind === 'file') {
+        const matchesExt = extensions.some((ext) => entry.name.toLowerCase().endsWith(ext.toLowerCase()));
+        if (matchesExt) {
+          const file = await (entry as FileSystemFileHandle).getFile();
+          const content = await file.text();
+          collected.push({ name: relPath, content });
         }
+      } else if (entry.kind === 'directory') {
+        const subFiles = await readDirectoryRecursive(
+          entry as FileSystemDirectoryHandle,
+          extensions,
+          relPath
+        );
+        collected.push(...subFiles);
       }
     }
+    return collected;
   }, []);
 
-  // Dragging event listeners for resizing
+  // 1. Initial Load: Fetch Courses
+  useEffect(() => {
+    async function initCourses() {
+      try {
+        const res = await fetch('/api/studio/courses');
+        const data = await res.json();
+        if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
+          setCourses(data.courses);
+          const savedCtx = loadActiveContext();
+          const targetCourse = data.courses.find((c: Course) => c.id === savedCtx?.courseId) || data.courses[0];
+          setActiveCourse(targetCourse);
+          if (savedCtx?.studentId) {
+            const p = DEMO_PERSONAS.find((dp) => dp.id === savedCtx.studentId);
+            if (p) setActiveStudent(p);
+          }
+          if (savedCtx?.seatLabel) {
+            setSeatLabel(savedCtx.seatLabel);
+          }
+        }
+      } catch (err) {
+        console.error('[StudentWorkspace] Failed to fetch courses:', err);
+      }
+    }
+    initCourses();
+  }, []);
+
+  // 2. Fetch Labs for Active Course
+  useEffect(() => {
+    if (!activeCourse) return;
+
+    const supabase = getBrowserSupabase();
+    async function fetchCourseLabs() {
+      const { data, error } = await supabase
+        .from('labs')
+        .select('*')
+        .eq('course_id', activeCourse!.id)
+        .order('lab_number', { ascending: true });
+
+      if (!error && data) {
+        setLabs(data as Lab[]);
+        const savedCtx = loadActiveContext();
+        const initialLab = data.find((l: Lab) => l.id === savedCtx?.labId) || data[0] || null;
+        setActiveLab(initialLab);
+      }
+    }
+    fetchCourseLabs();
+  }, [activeCourse]);
+
+  // 3. Update Active Activity & Preset when Active Lab Changes
+  useEffect(() => {
+    if (!activeLab) return;
+
+    const savedCtx = loadActiveContext();
+    const act = activeLab.activities?.find((a) => a.id === savedCtx?.activityId)
+      || activeLab.activities?.[0]
+      || null;
+    setActiveActivity(act);
+
+    // Setup Presets
+    const labPresets = activeLab.demo_presets && activeLab.demo_presets.length > 0
+      ? activeLab.demo_presets
+      : DEFAULT_JAVA_PRESETS;
+
+    const targetPresetKey = savedCtx?.activePresetKey || labPresets[0].key;
+    const targetPreset = labPresets.find((p) => p.key === targetPresetKey) || labPresets[0];
+
+    setActivePresetKey(targetPreset.key);
+
+    if (savedCtx?.sourceMode === 'disk') {
+      setSourceMode('disk');
+      // Check IndexedDB handle for F5 resilience
+      loadDirectoryHandle(`${activeStudent.id}_${activeCourse?.id}`).then((handle) => {
+        if (handle) {
+          dirHandleRef.current = handle;
+          setFolderName(handle.name);
+          // Check browser permission
+          const handleWithPerms = handle as unknown as {
+            queryPermission?: (desc: { mode: string }) => Promise<PermissionState>;
+          };
+          if (handleWithPerms.queryPermission) {
+            handleWithPerms.queryPermission({ mode: 'read' }).then((status) => {
+              if (status === 'granted') {
+                readDirectoryRecursive(handle, activeCourse?.file_extensions || ['.java']).then((files) => {
+                  setWorkspaceFiles(files);
+                  setActiveFileIndex(0);
+                });
+              } else {
+                setNeedsDiskReconnect(true);
+              }
+            });
+          } else {
+            readDirectoryRecursive(handle, activeCourse?.file_extensions || ['.java']).then((files) => {
+              setWorkspaceFiles(files);
+              setActiveFileIndex(0);
+            });
+          }
+        }
+      });
+    } else {
+      setSourceMode('preset');
+      const editedFiles = loadPresetEdits(activeLab.id, targetPreset.key);
+      setWorkspaceFiles(editedFiles || targetPreset.files);
+      setFolderName(`Preset: ${targetPreset.label}`);
+      setActiveFileIndex(0);
+    }
+  }, [activeLab, activeCourse, activeStudent.id, readDirectoryRecursive]);
+
+  // 4. Restore Chat History & Session State from DB on Lab / Student Change
+  useEffect(() => {
+    if (!activeStudent || !activeLab) return;
+
+    async function restoreSessionContext() {
+      try {
+        const res = await fetch(`/api/sessions/context?studentId=${activeStudent.id}&labId=${activeLab!.id}`);
+        const data = await res.json();
+        if (data.session) {
+          setSessionState(data.session);
+          if (data.session.seat_label) {
+            setSeatLabel(data.session.seat_label);
+          }
+        }
+        if (data.messages && data.messages.length > 0) {
+          const chatItems: ChatItem[] = data.messages.map((m: {
+            id: string;
+            role: 'user' | 'assistant';
+            content: string;
+            course_reference?: StructuredCourseReference;
+            latency_ms?: number;
+          }) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            courseReference: m.course_reference || null,
+            latencyMs: m.latency_ms,
+          }));
+          setMessages(chatItems);
+        } else {
+          setMessages([
+            {
+              id: 'welcome',
+              role: 'assistant',
+              content: `Hello ${activeStudent.name}! I am **Socratix**. Ask me a question or click **"💡 Stuck? Ask for a Hint"** to get guided on ${activeLab!.title}.`,
+            },
+          ]);
+        }
+      } catch (err) {
+        console.error('[StudentWorkspace] Error restoring session:', err);
+      }
+    }
+    restoreSessionContext();
+  }, [activeStudent, activeLab]);
+
+  // 5. Persist Active Context on Change
+  useEffect(() => {
+    if (!activeCourse || !activeLab) return;
+    saveActiveContext({
+      courseId: activeCourse.id,
+      labId: activeLab.id,
+      activityId: activeActivity?.id,
+      studentId: activeStudent.id,
+      seatLabel,
+      sourceMode,
+      activePresetKey,
+    });
+  }, [activeCourse, activeLab, activeActivity, activeStudent, seatLabel, sourceMode, activePresetKey]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isAnalyzing]);
+
+  // Realtime Broadcast Listener for Teacher On-Demand Dumps
+  useEffect(() => {
+    const supabase = getBrowserSupabase();
+    const syncChannel = supabase.channel('workspace-sync');
+
+    syncChannel
+      .on('broadcast', { event: 'REQUEST_WORKSPACE_DUMP' }, async ({ payload }) => {
+        if (payload?.studentId === activeStudent.id) {
+          let currentFiles = workspaceFiles;
+          if (dirHandleRef.current) {
+            try {
+              currentFiles = await readDirectoryRecursive(
+                dirHandleRef.current,
+                activeCourse?.file_extensions || ['.java']
+              );
+              setWorkspaceFiles(currentFiles);
+            } catch (err) {
+              console.error('Error re-reading disk:', err);
+            }
+          }
+
+          syncChannel.send({
+            type: 'broadcast',
+            event: 'WORKSPACE_DUMP_RESPONSE',
+            payload: {
+              studentId: activeStudent.id,
+              files: currentFiles,
+              source: sourceMode,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(syncChannel);
+    };
+  }, [activeStudent.id, workspaceFiles, sourceMode, activeCourse, readDirectoryRecursive]);
+
+  // Panel Resizing Logic
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
       const maxAllowed = Math.min(800, window.innerWidth * 0.65);
-      const newWidth = Math.max(280, Math.min(e.clientX, maxAllowed));
+      const newWidth = Math.max(300, Math.min(e.clientX, maxAllowed));
       setLeftPanelWidth(newWidth);
     };
 
     const handleMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
-        localStorage.setItem('socratix_panel_width', leftPanelWidth.toString());
       }
     };
 
@@ -192,588 +422,699 @@ export default function StudentWorkspace() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isDragging, leftPanelWidth]);
+  }, [isDragging]);
 
-  const handleStartResize = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  // Keep reference to FileSystemDirectoryHandle for automatic re-reading before every chat message
-  const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isDiskLinked, setIsDiskLinked] = useState<boolean>(false);
-
-  // Auto-scroll to bottom of chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isAnalyzing]);
-
-  // Realtime Broadcast Listener: Respond immediately to On-Demand Workspace Dumps from Teacher
-  useEffect(() => {
-    if (!supabaseClient) return;
-
-    const syncChannel = supabaseClient.channel('workspace-sync');
-
-    syncChannel
-      .on('broadcast', { event: 'REQUEST_WORKSPACE_DUMP' }, async ({ payload }) => {
-        if (payload?.studentId === activeProfile.id) {
-          let currentFiles = workspaceFiles;
-          let source: 'disk' | 'preset' = isDiskLinked ? 'disk' : 'preset';
-
-          if (dirHandleRef.current) {
-            try {
-              currentFiles = await readJavaDirectoryRecursive(dirHandleRef.current);
-              setWorkspaceFiles(currentFiles);
-              source = 'disk';
-            } catch (err) {
-              console.error('Error re-reading disk for live dump:', err);
-            }
-          }
-
-          syncChannel.send({
-            type: 'broadcast',
-            event: 'WORKSPACE_DUMP_RESPONSE',
-            payload: {
-              studentId: activeProfile.id,
-              files: currentFiles,
-              source,
-              timestamp: new Date().toISOString(),
-            },
-          });
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabaseClient.removeChannel(syncChannel);
-    };
-  }, [activeProfile.id, workspaceFiles, isDiskLinked]);
-
-  // Open Native Browser Directory Picker (File System Access API)
+  // Handle Local Folder Selection
   const handleSelectFolder = async () => {
     try {
-      if (!window.showDirectoryPicker) {
-        alert(
-          'Your browser does not support the File System Access API. Please use Chrome or Edge, or use the built-in Demo Presets below.'
-        );
+      if (!('showDirectoryPicker' in window)) {
+        alert('File System Access API is not supported in this browser. Please use Chrome/Edge or Presets.');
         return;
       }
-
-      const dirHandle = await window.showDirectoryPicker();
+      const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker();
       dirHandleRef.current = dirHandle;
-      setSelectedFolder(dirHandle.name);
+      setSourceMode('disk');
+      setFolderName(dirHandle.name);
+      setNeedsDiskReconnect(false);
 
-      const filesData = await readJavaDirectoryRecursive(dirHandle);
-      setWorkspaceFiles(filesData);
-      setIsDiskLinked(true);
-      setActiveFileIndex(0);
+      if (activeCourse) {
+        await saveDirectoryHandle(`${activeStudent.id}_${activeCourse.id}`, dirHandle);
+        const filesData = await readDirectoryRecursive(dirHandle, activeCourse.file_extensions || ['.java']);
+        setWorkspaceFiles(filesData);
+        setActiveFileIndex(0);
+      }
     } catch (err) {
-      console.warn('Directory selection cancelled or failed:', err);
+      console.warn('Folder selection cancelled or failed:', err);
     }
   };
 
-  // Load a 1-Click Judge Demo Preset
-  const handleLoadPreset = (presetKey: string, label: string) => {
+  // Reconnect Disk Handle 1-Click
+  const handleReconnectDisk = async () => {
+    if (!dirHandleRef.current) return;
+    try {
+      const handleWithPerms = dirHandleRef.current as unknown as {
+        requestPermission?: (desc: { mode: string }) => Promise<PermissionState>;
+      };
+      const status = handleWithPerms.requestPermission
+        ? await handleWithPerms.requestPermission({ mode: 'read' })
+        : 'granted';
+      if (status === 'granted') {
+        setNeedsDiskReconnect(false);
+        const filesData = await readDirectoryRecursive(
+          dirHandleRef.current,
+          activeCourse?.file_extensions || ['.java']
+        );
+        setWorkspaceFiles(filesData);
+      }
+    } catch (err) {
+      console.error('Reconnect failed:', err);
+    }
+  };
+
+  // Switch Preset
+  const handleSelectPreset = (preset: DemoPreset) => {
     dirHandleRef.current = null;
-    setIsDiskLinked(false);
-    setSelectedFolder(label);
-    setWorkspaceFiles(DEMO_CODE_PRESETS[presetKey]);
+    setSourceMode('preset');
+    setActivePresetKey(preset.key);
+    setFolderName(`Preset: ${preset.label}`);
+    setNeedsDiskReconnect(false);
+
+    if (activeLab) {
+      const edited = loadPresetEdits(activeLab.id, preset.key);
+      setWorkspaceFiles(edited || preset.files);
+    } else {
+      setWorkspaceFiles(preset.files);
+    }
     setActiveFileIndex(0);
   };
 
-  // Send question + Ghost Context (.java files) to /api/tutor
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || workspaceFiles.length === 0 || isAnalyzing) return;
+  // Restore Default Preset
+  const handleRestorePreset = () => {
+    if (!activeLab) return;
+    clearPresetEdits(activeLab.id, activePresetKey);
+    const presets = activeLab.demo_presets && activeLab.demo_presets.length > 0
+      ? activeLab.demo_presets
+      : DEFAULT_JAVA_PRESETS;
+    const currentPreset = presets.find((p) => p.key === activePresetKey) || presets[0];
+    setWorkspaceFiles(currentPreset.files);
+  };
 
-    const userText = input.trim();
-    setInput('');
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: 'user', content: userText },
-    ]);
+  // Handle File Content Edit (in Preset Mode)
+  const handleCodeChange = (newCode: string) => {
+    if (sourceMode === 'disk' || !workspaceFiles[activeFileIndex]) return;
+    const updated = [...workspaceFiles];
+    updated[activeFileIndex] = { ...updated[activeFileIndex], content: newCode };
+    setWorkspaceFiles(updated);
 
-    // Contextual Multi-Step Loading Animation
-    setIsAnalyzing(true);
-    setLoadingStep('Fetching local Java files...');
+    if (activeLab) {
+      savePresetEdits(activeLab.id, activePresetKey, updated);
+    }
+  };
 
-    const stepTimer = setTimeout(() => {
-      setLoadingStep('Socratic analysis by muse-spark-1.3...');
-    }, 1200);
+  // Switch Physical Seat
+  const handleSeatChange = async (newSeat: string) => {
+    setSeatLabel(newSeat);
+    if (activeStudent && activeLab) {
+      try {
+        await fetch('/api/sessions/context', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentId: activeStudent.id,
+            labId: activeLab.id,
+            seatLabel: newSeat,
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to update seat:', err);
+      }
+    }
+  };
+
+  // Reset Student Session
+  const handleResetSession = async () => {
+    if (!activeStudent || !activeLab) return;
+    const confirmed = confirm(`Reset session for ${activeStudent.name} on ${activeLab.title}? This will clear dialogue history and telemetry.`);
+    if (!confirmed) return;
 
     try {
-      // If a real local folder is linked via File System Access API, re-read fresh disk contents!
-      let currentFiles = workspaceFiles;
-      if (dirHandleRef.current) {
-        currentFiles = await readJavaDirectoryRecursive(dirHandleRef.current);
-        setWorkspaceFiles(currentFiles);
-      }
-
-      const startTime = performance.now();
-
-      // Extract recent sliding-window conversation history (last 6 turns, excluding initial greeting)
-      const conversationHistory = messages
-        .filter((m) => m.id !== 'welcome')
-        .slice(-6)
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
-      // Ghost Context: Silently attach current .java files + sliding history + studentId + labSessionId
-      const response = await fetch('/api/tutor', {
+      await fetch('/api/sessions/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question: userText,
-          files: currentFiles,
-          history: conversationHistory,
-          studentId: activeProfile.id,
-          labSessionId: ACTIVE_LAB_SESSION_ID,
+          studentId: activeStudent.id,
+          labId: activeLab.id,
         }),
       });
 
-      const data = await response.json();
-      const elapsedMs = Math.round(performance.now() - startTime);
+      clearPresetEdits(activeLab.id, activePresetKey);
+      setSessionState(null);
+      setMessages([
+        {
+          id: 'welcome_reset',
+          role: 'assistant',
+          content: `Session has been reset for **${activeStudent.name}**. You are ready for a fresh start on **${activeLab.title}**!`,
+        },
+      ]);
+    } catch (err) {
+      console.error('Failed to reset session:', err);
+    }
+  };
 
-      if (data.success && data.data?.socratic_reply) {
-        const reply = data.data.socratic_reply;
+  // Core Socratic Invocation (used by both submit and 1-click hint)
+  const invokeTutor = async (userQuestion: string, isHint: boolean) => {
+    if (!activeCourse || !activeLab || workspaceFiles.length === 0 || isAnalyzing) return;
+
+    setIsAnalyzing(true);
+
+    const userMessageContent = isHint
+      ? '💡 [Asked for a Socratic Hint]'
+      : userQuestion;
+
+    setMessages((prev) => [
+      ...prev,
+      { id: Date.now().toString(), role: 'user', content: userMessageContent },
+    ]);
+
+    try {
+      // Re-read files if disk mode
+      let currentFiles = workspaceFiles;
+      if (dirHandleRef.current) {
+        currentFiles = await readDirectoryRecursive(
+          dirHandleRef.current,
+          activeCourse.file_extensions || ['.java']
+        );
+        setWorkspaceFiles(currentFiles);
+      }
+
+      const conversationHistory = messages
+        .filter((m) => !m.id.startsWith('welcome'))
+        .slice(-6)
+        .map((m) => ({ role: m.role, content: m.content }));
+
+      const res = await fetch('/api/tutor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: activeCourse.id,
+          labId: activeLab.id,
+          activityId: activeActivity?.id,
+          studentId: activeStudent.id,
+          seatLabel,
+          question: isHint ? '' : userQuestion,
+          isHintRequest: isHint,
+          files: currentFiles,
+          history: conversationHistory,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.socratic_reply) {
+        const reply = data.socratic_reply;
         setMessages((prev) => [
           ...prev,
           {
             id: Date.now().toString(),
             role: 'assistant',
             content: reply.message_markdown,
-            courseReference: reply.course_reference,
-            inspectedFiles: reply.inspected_files,
-            latencyMs: data.meta?.latency_ms || elapsedMs,
+            courseReference: reply.course_reference || null,
+            latencyMs: data.latency_ms,
           },
         ]);
 
-        // Trigger Milestone Completion celebration & competency report
-        if (data.data.is_milestone_completed) {
-          const report = data.data.competency_report;
-          const milestone = data.data.telemetry?.current_milestone || 'LAB5_ENCAPSULATION';
-          setCompletionReport(report);
-          setCompletedMilestone(milestone);
-          setIsCelebrationOpen(true);
-          playCelebrationChime();
-          triggerCelebrationConfetti();
+        if (data.session_state) {
+          setSessionState(data.session_state);
+        }
+
+        // Trigger celebration if activity or lab is completed
+        if (data.session_state?.progress_percent === 100 || data.socratic_reply?.is_lab_completed) {
+          if (data.competency_report) {
+            setCompletionReport(data.competency_report);
+            setIsCelebrationOpen(true);
+            playCelebrationChime();
+            triggerCelebrationConfetti();
+          }
         }
       } else {
         throw new Error(data.error || 'Failed to analyze code');
       }
-    } catch (error) {
-      console.error('Tutor API error:', error);
+    } catch (err) {
+      console.error('[StudentWorkspace] Tutor error:', err);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now().toString(),
           role: 'assistant',
-          content: 'Sorry, an error occurred during the analysis. Please check your connection.',
+          content: 'Sorry, an error occurred while connecting to the Socratic tutor. Please try again.',
         },
       ]);
     } finally {
-      clearTimeout(stepTimer);
       setIsAnalyzing(false);
     }
   };
 
+  // Form Submit Handler
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    const text = input.trim();
+    setInput('');
+    invokeTutor(text, false);
+  };
+
+  // 1-Click "Stuck? Ask for a Hint"
+  const handleAskForHint = () => {
+    invokeTutor('', true);
+  };
+
+  const activePresets = activeLab?.demo_presets && activeLab.demo_presets.length > 0
+    ? activeLab.demo_presets
+    : DEFAULT_JAVA_PRESETS;
+
+  const currentFile = workspaceFiles[activeFileIndex] || { name: 'untitled', content: '' };
+  const actProgress = activeActivity && sessionState?.activities_progress?.[activeActivity.id];
+
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
-      {/* LEFT PANEL: WORKSPACE (IDE Sidebar - Resizable) */}
+      {/* ==================================================================== */}
+      {/* LEFT PANEL: IDE & WORKSPACE (Resizable) */}
+      {/* ==================================================================== */}
       <div
         style={{ width: `${leftPanelWidth}px` }}
         className={`shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden ${
           isDragging ? '' : 'transition-[width] duration-100 ease-out'
         }`}
       >
-        {/* Workspace Header */}
-        <div className="p-4 border-b border-slate-800">
+        {/* Workspace Top Header: Course & Lab Selectors */}
+        <div className="p-3 border-b border-slate-800 bg-slate-950/80 space-y-2">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-emerald-400 flex items-center gap-2">
-              🦉 Socratix Workspace
-            </h1>
-            <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-[10px]">
-              Zero-Install
-            </Badge>
-          </div>
-
-          {/* Student / Workstation Selector for Demo */}
-          <div className="mt-3 space-y-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-              <UserCheck className="w-3 h-3 text-emerald-400" /> Active Session Identity
-            </label>
-            <select
-              value={activeProfile.id}
-              onChange={(e) => {
-                const found = DEMO_PROFILES.find((p) => p.id === e.target.value);
-                if (found) setActiveProfile(found);
-              }}
-              className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            <div className="flex items-center gap-2">
+              <span className="text-base font-bold text-emerald-400">🦉 Socratix</span>
+              <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] px-1.5 py-0">
+                Workspace v2
+              </Badge>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetSession}
+              className="h-7 text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-2 gap-1"
+              title="Reset current student session"
             >
-              {DEMO_PROFILES.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.label}
-                </option>
-              ))}
-            </select>
-            <div className="text-xs text-slate-400 pt-1 flex items-center justify-between">
-              <span>👤 Mode: {activeProfile.mode}</span>
-              <span>
-                📍 {activeProfile.room} - {activeProfile.pc}
-              </span>
+              <RotateCcw className="w-3 h-3" />
+              Reset
+            </Button>
+          </div>
+
+          {/* Course & Lab Pickers */}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Course</label>
+              <select
+                value={activeCourse?.id || ''}
+                onChange={(e) => {
+                  const c = courses.find((x) => x.id === e.target.value);
+                  if (c) setActiveCourse(c);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+              >
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Lab (TP)</label>
+              <select
+                value={activeLab?.id || ''}
+                onChange={(e) => {
+                  const l = labs.find((x) => x.id === e.target.value);
+                  if (l) setActiveLab(l);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+              >
+                {labs.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.code} - {l.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Persona & Seat Selector */}
+          <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80">
+            <div>
+              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Student</label>
+              <select
+                value={activeStudent.id}
+                onChange={(e) => {
+                  const p = DEMO_PERSONAS.find((x) => x.id === e.target.value);
+                  if (p) setActiveStudent(p);
+                }}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+              >
+                {DEMO_PERSONAS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.role})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Seat</label>
+              <select
+                value={seatLabel}
+                onChange={(e) => handleSeatChange(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+              >
+                {SEAT_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
-        {/* File System Access API Trigger */}
-        <div className="p-4 border-b border-slate-800 space-y-2">
-          <Button
-            onClick={handleSelectFolder}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs flex items-center justify-center gap-2"
-          >
-            <FolderOpen className="w-4 h-4" />
-            {selectedFolder ? `Linked: ${selectedFolder}` : 'Link Java Lab Folder'}
-          </Button>
-
-          {/* 1-Click Judge Presets */}
-          <div className="pt-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">
-              Judge Quick Presets (No Local Files Needed)
-            </p>
-            <div className="grid grid-cols-1 gap-1.5">
+        {/* Activity & Milestone Brief (Collapsible) */}
+        {activeLab && activeActivity && (
+          <div className="border-b border-slate-800 bg-slate-950/40 p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs font-semibold text-slate-200 truncate">
+                  Activity {activeActivity.order}: {activeActivity.title}
+                </span>
+              </div>
               <button
-                type="button"
-                onClick={() =>
-                  handleLoadPreset('buggy_encapsulation', 'Preset 1: Missing private (Lab 5)')
-                }
-                className="text-left text-[11px] px-2.5 py-1.5 rounded bg-slate-800/80 hover:bg-slate-800 text-rose-300 border border-rose-500/20 transition"
+                onClick={() => setIsBriefExpanded(!isBriefExpanded)}
+                className="text-slate-400 hover:text-slate-200 text-xs"
               >
-                🔴 Load Buggy Encapsulation (Lab 5)
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleLoadPreset('buggy_polymorphism', 'Preset 2: Array Type Error (Lab 9)')
-                }
-                className="text-left text-[11px] px-2.5 py-1.5 rounded bg-slate-800/80 hover:bg-slate-800 text-amber-300 border border-amber-500/20 transition"
-              >
-                🟠 Load Buggy Array Type (Lab 9)
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  handleLoadPreset('fixed_polymorphism', 'Preset 3: Fixed Facturable[] (Lab 9)')
-                }
-                className="text-left text-[11px] px-2.5 py-1.5 rounded bg-slate-800/80 hover:bg-slate-800 text-emerald-300 border border-emerald-500/20 transition"
-              >
-                🟢 Load Fixed Facturable[] (Flip Bob to Green!)
+                {isBriefExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* Linked Java Files List & Live Code Inspector */}
-        <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-4">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Linked Files (Yalla POS)
-              </h2>
-              <span className="text-[11px] font-mono text-emerald-400">
-                {workspaceFiles.length} file(s)
-              </span>
-            </div>
-            <ul className="space-y-1.5">
-              {workspaceFiles.map((file, idx) => (
-                <li
-                  key={idx}
-                  onClick={() => setActiveFileIndex(idx)}
-                  className={`flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md cursor-pointer transition ${
-                    activeFileIndex === idx
-                      ? 'bg-slate-800 text-emerald-300 border border-slate-700'
-                      : 'text-slate-300 hover:bg-slate-800/50'
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
-                  <FileCode className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                  <span className="font-mono truncate">{file.name}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Code Viewer / Editor with Single Source of Truth rule */}
-          {workspaceFiles[activeFileIndex] && (
-            <div className="flex-1 flex flex-col min-h-[220px]">
-              {isDiskLinked ? (
-                // Read-Only Viewer for Local Disk Folders
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center justify-between text-[11px] bg-emerald-950/40 border border-emerald-800/40 px-2.5 py-1.5 rounded-t-lg">
-                    <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[10px]">
-                      <HardDrive className="w-3.5 h-3.5 shrink-0" />
-                      <span className="font-semibold">Local Disk Linked (Read-Only)</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[220px]">
-                      {workspaceFiles[activeFileIndex].name}
-                    </span>
-                  </div>
-                  <div className="flex-1 bg-slate-950 border-x border-b border-slate-800 rounded-b-lg overflow-x-auto overflow-y-auto min-h-[220px] max-h-[480px]">
-                    <SyntaxHighlighter
-                      style={vscDarkPlus}
-                      language="java"
-                      showLineNumbers
-                      customStyle={{
-                        margin: 0,
-                        padding: '0.75rem',
-                        fontSize: '0.75rem',
-                        backgroundColor: 'transparent',
-                        whiteSpace: 'pre',
-                      }}
-                    >
-                      {workspaceFiles[activeFileIndex].content}
-                    </SyntaxHighlighter>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1 italic">
-                    Edit & save in your IDE (VS Code, IntelliJ) — Socratix auto-syncs on question/inspection.
-                  </p>
+            {/* Dual Progress Gauges */}
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
+              <div className="bg-slate-900 border border-slate-800 rounded p-1.5">
+                <div className="flex justify-between text-slate-400 mb-1">
+                  <span>Activity</span>
+                  <span className="font-semibold text-emerald-400">
+                    {actProgress ? `${actProgress.completed_milestones.length}/${actProgress.total_milestones}` : `0/${activeActivity.milestones.length}`}
+                  </span>
                 </div>
-              ) : (
-                // Interactive In-Browser Editor for Demo Presets
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center justify-between text-[11px] bg-amber-950/40 border border-amber-800/40 px-2.5 py-1.5 rounded-t-lg">
-                    <div className="flex items-center gap-1.5 text-amber-400 font-mono text-[10px]">
-                      <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                      <span className="font-semibold">Demo Preset (In-Browser Editor)</span>
-                    </div>
-                    <span className="text-[10px] text-slate-400 font-mono truncate max-w-[220px]">
-                      {workspaceFiles[activeFileIndex].name}
-                    </span>
-                  </div>
-                  <textarea
-                    value={workspaceFiles[activeFileIndex].content}
-                    onChange={(e) => {
-                      const updated = [...workspaceFiles];
-                      updated[activeFileIndex] = {
-                        ...updated[activeFileIndex],
-                        content: e.target.value,
-                      };
-                      setWorkspaceFiles(updated);
-                    }}
-                    spellCheck={false}
-                    className="w-full flex-1 min-h-[220px] max-h-[480px] bg-slate-950 border-x border-b border-slate-800 rounded-b-lg p-2.5 font-mono text-xs text-slate-300 focus:outline-none focus:border-amber-500/50 resize-none whitespace-pre overflow-x-auto"
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-full transition-all duration-300"
+                    style={{ width: `${actProgress?.percent || 0}%` }}
                   />
-                  <p className="text-[10px] text-slate-500 mt-1 italic">
-                    Hackathon Jury Demo Mode: You can edit Java code directly in this buffer.
-                  </p>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+              </div>
 
-      {/* DRAGGABLE RESIZER SPLITTER */}
-      <div
-        onMouseDown={handleStartResize}
-        className={`w-1.5 hover:w-2.5 bg-slate-800 hover:bg-emerald-500 cursor-col-resize transition-all shrink-0 relative flex items-center justify-center group z-20 select-none ${
-          isDragging ? 'bg-emerald-500 w-2.5' : ''
-        }`}
-        title="Glisser pour ajuster la largeur du code Java (280px - 800px)"
-      >
-        <div className="w-0.5 h-8 bg-slate-600 group-hover:bg-white rounded-full transition-colors" />
-      </div>
-
-      {/* RIGHT PANEL: SOCRATIC CHAT */}
-      <div className="flex-1 flex flex-col bg-slate-950 relative min-w-[320px] overflow-hidden">
-        {/* Chat Header */}
-        <div className="h-14 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50">
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <h2 className="font-semibold text-slate-100">AI Tutor - Java OOP</h2>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-mono">
-            <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-emerald-400">
-              muse-spark-1.3
-            </span>
-            <span className="hidden sm:inline text-slate-500">Prompt Caching Active</span>
-          </div>
-        </div>
-
-        {/* Pinned Milestone Completion Banner */}
-        {completionReport && (
-          <div className="mx-6 mt-4 p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40">
-                <Sparkles className="w-5 h-5 animate-pulse" />
-              </span>
-              <div>
-                <div className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-2">
-                  <span>🏆 Milestone Mastered</span>
-                  <span className="text-slate-500">•</span>
-                  <span>{completedMilestone}</span>
+              <div className="bg-slate-900 border border-slate-800 rounded p-1.5">
+                <div className="flex justify-between text-slate-400 mb-1">
+                  <span>Total Lab</span>
+                  <span className="font-semibold text-cyan-400">
+                    {sessionState?.progress_percent || 0}%
+                  </span>
                 </div>
-                <div className="text-xs text-slate-300 mt-0.5">
-                  All contracts met! Review your competency report & consolidation slides.
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-cyan-500 h-full transition-all duration-300"
+                    style={{ width: `${sessionState?.progress_percent || 0}%` }}
+                  />
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={replayCelebration}
-                className="text-xs text-slate-400 hover:text-emerald-400 h-8 px-2.5 flex items-center gap-1.5 hover:bg-slate-800"
-                title="Replay Celebration Sound & Fireworks"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                <span>Replay 🎉</span>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setIsCelebrationOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
-              >
-                View Report Card 🏆
-              </Button>
-            </div>
+
+            {/* Expanded Brief Details */}
+            {isBriefExpanded && (
+              <div className="pt-2 text-xs space-y-2 border-t border-slate-800/60">
+                <p className="text-slate-400 leading-relaxed text-[11px]">
+                  {activeActivity.instructions_markdown}
+                </p>
+                <div className="space-y-1">
+                  <div className="text-[10px] uppercase font-semibold text-slate-500">Milestones Checklist</div>
+                  {activeActivity.milestones.map((m) => {
+                    const isDone = sessionState?.completed_milestone_ids?.includes(m.id);
+                    return (
+                      <div key={m.id} className="flex items-center gap-1.5 text-[11px]">
+                        {isDone ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        ) : (
+                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        )}
+                        <span className={isDone ? 'text-emerald-300 line-through' : 'text-slate-300'}>
+                          {m.title}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Messages Stream */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* Source Switcher: Presets vs Disk */}
+        <div className="p-3 border-b border-slate-800 bg-slate-900/60 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-medium text-slate-400 flex items-center gap-1.5">
+              <FileCode className="w-3.5 h-3.5 text-emerald-400" />
+              Source: <span className="text-slate-200">{folderName}</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectFolder}
+                className="h-6 text-[10px] border-slate-700 hover:bg-slate-800 px-2 gap-1"
+              >
+                <FolderOpen className="w-3 h-3" />
+                Folder
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick Presets Buttons */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {activePresets.map((preset) => (
+              <button
+                key={preset.key}
+                onClick={() => handleSelectPreset(preset)}
+                className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                  sourceMode === 'preset' && activePresetKey === preset.key
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                }`}
+              >
+                {preset.label}
+              </button>
+            ))}
+            {sourceMode === 'preset' && (
+              <button
+                onClick={handleRestorePreset}
+                className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-slate-300"
+                title="Restore default preset code"
+              >
+                ↺ Restore
+              </button>
+            )}
+          </div>
+
+          {/* Disk Reconnection Banner after F5 */}
+          {needsDiskReconnect && (
+            <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-300 flex items-center justify-between">
+              <span>Reconnect local folder</span>
+              <Button
+                size="sm"
+                onClick={handleReconnectDisk}
+                className="h-6 text-[11px] bg-amber-600 hover:bg-amber-500 text-white px-2"
+              >
+                Allow Access
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Tab List of Files */}
+        <div className="flex bg-slate-950/70 border-b border-slate-800 overflow-x-auto text-xs px-2 pt-1 gap-1">
+          {workspaceFiles.map((file, idx) => (
+            <button
+              key={file.name}
+              onClick={() => setActiveFileIndex(idx)}
+              className={`px-3 py-1.5 rounded-t font-mono text-xs border-t border-l border-r transition-colors ${
+                activeFileIndex === idx
+                  ? 'bg-slate-900 border-slate-800 text-emerald-400 font-semibold'
+                  : 'bg-slate-950/40 border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {file.name.split('/').pop()}
+            </button>
+          ))}
+        </div>
+
+        {/* Code Editor / Viewer */}
+        <div className="flex-1 overflow-auto bg-slate-950 relative">
+          {sourceMode === 'disk' ? (
+            <div className="p-4">
+              <SyntaxHighlighter
+                language={getSyntaxLanguage(currentFile.name)}
+                style={vscDarkPlus}
+                customStyle={{
+                  background: 'transparent',
+                  margin: 0,
+                  fontSize: '12px',
+                  lineHeight: '1.5',
+                }}
+                showLineNumbers
+              >
+                {currentFile.content || '// Empty file'}
+              </SyntaxHighlighter>
+            </div>
+          ) : (
+            <textarea
+              value={currentFile.content}
+              onChange={(e) => handleCodeChange(e.target.value)}
+              className="w-full h-full p-4 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none"
+              spellCheck={false}
+            />
+          )}
+        </div>
+
+        {/* Editor Footer Status */}
+        <div className="px-3 py-1 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 flex justify-between">
+          <span>{currentFile.name}</span>
+          <span>{sourceMode === 'disk' ? 'Disk (Read Only)' : 'Preset (Editable)'}</span>
+        </div>
+      </div>
+
+      {/* Resize Handle */}
+      <div
+        onMouseDown={() => setIsDragging(true)}
+        className="w-1.5 bg-slate-800 hover:bg-emerald-500 cursor-col-resize shrink-0 transition-colors"
+      />
+
+      {/* ==================================================================== */}
+      {/* RIGHT PANEL: SOCRATIC CHAT & GUIDANCE */}
+      {/* ==================================================================== */}
+      <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
+        {/* Chat Header */}
+        <div className="p-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span className="font-semibold text-sm text-slate-100">Socratic Mentor</span>
+            {activeLab && (
+              <Badge variant="outline" className="text-xs text-slate-400 border-slate-700">
+                {activeLab.code}
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-400">Target:</span>
+            <span className="font-mono text-emerald-400 font-medium">
+              {activeStudent.name} ({seatLabel})
+            </span>
+          </div>
+        </div>
+
+        {/* Dialogue Scrollable Area */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
             >
               <div
-                className={`max-w-3xl rounded-2xl p-4 shadow-md ${
+                className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm ${
                   msg.role === 'user'
-                    ? 'bg-emerald-700 text-white rounded-br-none'
-                    : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-bl-none'
+                    ? 'bg-emerald-600 text-white rounded-br-none'
+                    : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none space-y-2'
                 }`}
               >
-                {msg.role === 'assistant' ? (
-                  <div>
-                    <div className="prose prose-invert prose-emerald max-w-none text-sm leading-relaxed">
-                      <ReactMarkdown
-                        components={{
-                          code({ className, children }: React.ComponentPropsWithoutRef<'code'>) {
-                            const match = /language-(\w+)/.exec(className || '');
-                            const codeString = String(children).replace(/\n$/, '');
-                            const isMultiLine = match || codeString.includes('\n');
+                <div className="prose prose-invert prose-xs max-w-none">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
 
-                            return isMultiLine ? (
-                              <SyntaxHighlighter
-                                style={vscDarkPlus}
-                                language={match ? match[1] : 'java'}
-                                PreTag="div"
-                                className="rounded-md my-2 text-xs"
-                              >
-                                {codeString}
-                              </SyntaxHighlighter>
-                            ) : (
-                              <code className="bg-slate-900 text-emerald-300 px-1.5 py-0.5 rounded text-xs font-mono">
-                                {children}
-                              </code>
-                            );
-                          },
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
-                    </div>
-
-                    {/* Course Slide Reference & Telemetry Footer */}
-                    {msg.courseReference && (
-                      <div className="mt-3 pt-2.5 border-t border-slate-700/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                        <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
-                          <BookOpen className="w-3.5 h-3.5" />
-                          {msg.courseReference}
-                        </span>
-                        <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
-                          {msg.inspectedFiles && msg.inspectedFiles.length > 0 && (
-                            <span>Inspected: {msg.inspectedFiles.join(', ')}</span>
-                          )}
-                          {msg.latencyMs && (
-                            <span className="text-emerald-400/80">⚡ {msg.latencyMs}ms</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                {/* Socratic Slide Citation Pill */}
+                {msg.courseReference && (
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <button
+                      onClick={() => {
+                        setActiveSlideReference(msg.courseReference || null);
+                        setIsSlideModalOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-[11px] font-medium"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>{msg.courseReference.label}</span>
+                      <span className="text-[10px] text-emerald-300 font-mono">
+                        (Slide #{msg.courseReference.page_number})
+                      </span>
+                    </button>
                   </div>
-                ) : (
-                  <div className="text-sm">{msg.content}</div>
                 )}
               </div>
+
+              {msg.latencyMs && (
+                <span className="text-[9px] text-slate-500 mt-1 px-1 font-mono">
+                  muse-spark-1.3 &bull; {msg.latencyMs}ms
+                </span>
+              )}
             </div>
           ))}
 
-          {/* Dynamic Contextual Loading Indicator */}
           {isAnalyzing && (
-            <div className="flex justify-start">
-              <div className="bg-slate-800/60 border border-slate-700 rounded-2xl rounded-bl-none p-4 flex items-center gap-3 shadow-md">
-                <div className="flex gap-1">
-                  <span
-                    className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0ms' }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '150ms' }}
-                  ></span>
-                  <span
-                    className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '300ms' }}
-                  ></span>
-                </div>
-                <span className="text-xs text-slate-400 font-mono animate-pulse">
-                  {loadingStep}
-                </span>
-              </div>
+            <div className="flex items-center gap-2 text-xs text-emerald-400 bg-slate-900/60 border border-slate-800 rounded-xl p-3 w-fit animate-pulse">
+              <Sparkles className="w-4 h-4 animate-spin" />
+              <span>Analyzing code socratic-style with muse-spark-1.3...</span>
             </div>
           )}
+
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Bar */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900">
-          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-2">
+        {/* Chat Input & Action Bar */}
+        <div className="p-3 border-t border-slate-800 bg-slate-900/40">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+            {/* 1-Click Hint Button */}
+            <Button
+              type="button"
+              onClick={handleAskForHint}
+              disabled={isAnalyzing}
+              className="h-10 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-3.5 rounded-xl gap-1.5 shadow-md shadow-amber-950/20 shrink-0"
+              title="Get an instant Socratic hint for your active milestone"
+            >
+              <Lightbulb className="w-4 h-4 text-slate-950 fill-slate-950" />
+              <span>Stuck? Hint</span>
+            </Button>
+
             <Input
-              type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              disabled={isAnalyzing || workspaceFiles.length === 0}
               placeholder={
-                workspaceFiles.length > 0
-                  ? 'Ask a question about your code...'
-                  : 'Link a Java folder to start'
+                activeActivity
+                  ? `Ask Socratix about ${activeActivity.title}...`
+                  : 'Ask Socratix a question...'
               }
-              className="flex-1 bg-slate-950 border-slate-700 text-white h-11 focus-visible:ring-emerald-500"
+              disabled={isAnalyzing}
+              className="flex-1 bg-slate-900 border-slate-800 text-xs h-10 rounded-xl focus-visible:ring-emerald-500"
             />
+
             <Button
               type="submit"
-              disabled={!input.trim() || isAnalyzing || workspaceFiles.length === 0}
-              className="h-11 px-5 bg-emerald-600 hover:bg-emerald-500 text-white"
+              disabled={isAnalyzing || !input.trim()}
+              className="h-10 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 rounded-xl gap-1.5 shadow-md shadow-emerald-950/20"
             >
-              <Send className="w-4 h-4 mr-1.5" />
-              Ask Socratix
+              <Send className="w-3.5 h-3.5" />
+              <span>Send</span>
             </Button>
           </form>
         </div>
       </div>
 
-      {/* Milestone Celebration & Pedagogical Assessment Modal */}
+      {/* Smart Slide Viewer Modal */}
+      <SmartSlideViewerModal
+        isOpen={isSlideModalOpen}
+        onClose={() => setIsSlideModalOpen(false)}
+        reference={activeSlideReference}
+        courseTitle={activeCourse?.title || 'Course Slides'}
+      />
+
+      {/* Milestone Celebration Modal */}
       <MilestoneCelebrationModal
         isOpen={isCelebrationOpen}
         onClose={() => setIsCelebrationOpen(false)}
-        milestoneId={completedMilestone || 'LAB5_ENCAPSULATION'}
         report={completionReport}
+        milestoneId={activeActivity?.title || 'Milestone Completed'}
       />
     </div>
   );
