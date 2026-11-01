@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
+import { formatRawSlideTextToMarkdown } from '@/lib/pdf-cleaner';
 import {
   computeActivitiesAndLabProgress,
   computeSessionStatus,
@@ -190,17 +191,16 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
     );
     if (refChapter && parsed.socratic_reply?.course_reference) {
       parsed.socratic_reply.course_reference.pdf_url = refChapter.pdf_url || null;
-      // Enrich with stored slide note if available
       const slidePage = refChapter.pages_json?.find(
         (p) => p.page === parsed.socratic_reply.course_reference.page_number
       );
-      if (slidePage?.en_summary && !parsed.socratic_reply.course_reference.en_note) {
-        parsed.socratic_reply.course_reference.en_note = slidePage.en_summary;
-      }
       if (slidePage) {
+        const frClean = slidePage.fr_markdown?.trim() || (slidePage.text ? formatRawSlideTextToMarkdown(slidePage.text) : undefined);
+        const enClean = slidePage.en_markdown?.trim() || undefined;
+
         parsed.socratic_reply.course_reference.slide_markdown = {
-          en: slidePage.en_markdown || (slidePage.en_summary ? `> ${slidePage.en_summary}` : undefined),
-          fr: slidePage.fr_markdown || undefined,
+          en: enClean,
+          fr: frClean,
         };
       }
     }

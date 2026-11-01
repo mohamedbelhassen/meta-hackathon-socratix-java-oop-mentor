@@ -1,9 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { cleanPdfPages } from '@/lib/pdf-cleaner';
+import { cleanPdfPages, buildAdaptivePageBatches, formatRawSlideTextToMarkdown, CleanedPage } from '@/lib/pdf-cleaner';
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
 const META_API_KEY = process.env.META_API_KEY;
+
+interface MetaChatChoice {
+  message?: {
+    content?: string;
+  };
+}
+
+async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown) {
+  const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${META_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'muse-spark-1.3',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: {
+        type: 'json_schema',
+        json_schema: jsonSchema,
+      },
+      temperature: 0.1,
+    }),
+  });
+
+  if (!metaRes.ok) {
+    const errText = await metaRes.text();
+    throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+  }
+
+  const metaData = await metaRes.json();
+  const content = (metaData.choices as MetaChatChoice[])?.[0]?.message?.content;
+  return typeof content === 'string' ? JSON.parse(content) : content;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,24 +66,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
     }
 
-    // Smart Context Budget: support both slides (short pages) and full course syllabi (dense pages)
+    // 1. Clean PDF pages using frequency-based perimeter analyzer
     const MAX_PAGES = 200;
-    const MAX_CHARS_PER_PAGE = 8000;
-    const MAX_TOTAL_CHARS = 180000;
-
     const pagesSlice = pages.slice(0, MAX_PAGES);
     const { cleanedPages } = cleanPdfPages(pagesSlice);
 
-    const totalRawChars = cleanedPages.reduce((sum: number, p: { text: string }) => sum + (p.text?.length || 0), 0);
+    if (cleanedPages.length === 0) {
+      return NextResponse.json({ error: 'No readable pages extracted from document.' }, { status: 400 });
+    }
+
+    // 2. Prepare sample for global chapter synthesis (markdown_content, title, key analogies)
+    const MAX_CHARS_PER_PAGE = 8000;
+    const MAX_TOTAL_CHARS = 180000;
+    const totalRawChars = cleanedPages.reduce((sum: number, p: CleanedPage) => sum + (p.text?.length || 0), 0);
     const dynamicPerCharLimit = totalRawChars > MAX_TOTAL_CHARS
       ? Math.max(1200, Math.floor(MAX_TOTAL_CHARS / cleanedPages.length))
       : MAX_CHARS_PER_PAGE;
 
     const pagesTextSample = cleanedPages
-      .map((p: { page: number; text: string }) => `[Page/Slide ${p.page}] ${(p.text || '').slice(0, dynamicPerCharLimit)}`)
+      .map((p: CleanedPage) => `[Page/Slide ${p.page}] ${(p.text || '').slice(0, dynamicPerCharLimit)}`)
       .join('\n');
 
-    const systemPrompt = `You are an elite educational AI curriculum engineer for Socratix.
+    // 3. Adaptive Token-Budget Batching for slide-by-slide faithful markdown & translation
+    // Light slides (30-60 words) fit easily in 1 batch. Dense A4 pages (600 words) are split into ~10k char chunks.
+    const batches = buildAdaptivePageBatches(cleanedPages, 10000, 25);
+    const collectedSlideMarkdowns: Array<{ page: number; fr_markdown: string; en_markdown: string }> = [];
+
+    let extractedTitle = { fr: title, en: title };
+    let markdownContent = '';
+    let keyAnalogies: Array<{ slide: number; concept: string; analogy_summary: string }> = [];
+
+    if (batches.length <= 1) {
+      // ------------------------------------------------------------------------
+      // SINGLE-PASS: Document fits in one call (metadata + all slide markdowns)
+      // ------------------------------------------------------------------------
+      const systemPrompt = `You are an elite educational AI curriculum engineer for Socratix.
 Course Context: "${course.title}" (${course.code}) — File extensions: ${JSON.stringify(course.file_extensions || ['.java'])}.
 Your role is to distill university course material (lecture slides or full lecture notes/polycopié) into ultra-dense, mathematically precise course chapter syntheses.
 
@@ -59,122 +113,241 @@ ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 1. Extract the official chapter title from the document title slide/header in both French ('fr') and English ('en') ('extracted_title').
 2. Synthesize the provided material in the course's content language (${course.content_language}).
 3. Include exact reference anchors "(Slide X)" or "(Page X)" (or "(Slides X-Y)" / "(Pages X-Y)") for every concept.
-4. Preserve and highlight exact code identifiers across any programming paradigm (classes, interfaces, methods, exceptions in OOP; structs, pointers, macros, headers in C/C++; functions, modules, decorators, $variables, schema keys in Python/PHP/JS/SQL) without translating code identifiers, and document explicit language-specific anti-patterns/dangers.
+4. Preserve and highlight exact code identifiers across any programming paradigm without translating code identifiers, and document explicit language-specific anti-patterns/dangers.
 5. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide or page number.
-6. Provide slide-by-slide pedagogical summaries and translations in 'pages_summary' for key slides:
-   - 'en_summary': a concise 1-2 sentence English pedagogical takeaway.
-   - 'en_markdown': a clean, beautifully formatted English Markdown transcription of the slide with code in \`\`\`java blocks, strictly omitting dates, professor names, or footer page numbers.
-   - 'fr_markdown': a clean, formatted French Markdown transcription of the slide with code in \`\`\`java blocks, strictly omitting dates, professor names, or footer page numbers.`;
+6. Provide verbatim, faithful slide-by-slide transcriptions and translations in 'pages_markdown' for ALL pages/slides (from Page ${cleanedPages[0].page} to Page ${cleanedPages[cleanedPages.length - 1].page}).
+   CRITICAL: Do NOT summarize multiple slides together (e.g. do NOT merge Slide 11 and 12). Each entry must strictly correspond to its single slide number.
+   - 'fr_markdown': clean French markdown transcription with section headers, lists, and code enclosed in \`\`\`java blocks. Strictly omit dates, university footers, and page numbers.
+   - 'en_markdown': faithful 1:1 English translation of this single slide with code in \`\`\`java blocks. Maintain exact code identifiers without translating variable or class names.`;
 
-    const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
+      const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
 
 ${pagesTextSample}`;
 
-    const jsonSchema = {
-      name: 'chapter_distillation_result',
-      strict: true,
-      schema: {
-        type: 'object',
-        properties: {
-          extracted_title: {
+      const singlePassSchema = {
+        name: 'chapter_distillation_result',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            extracted_title: {
+              type: 'object',
+              properties: {
+                fr: {
+                  type: 'string',
+                  description: 'Le titre officiel du chapitre extrait du document en français (ex: Chapitre 5 : Les Interfaces en Java).',
+                },
+                en: {
+                  type: 'string',
+                  description: 'The clean English translation of the chapter title for the international jury (e.g., Chapter 5: Interfaces in Java).',
+                },
+              },
+              required: ['fr', 'en'],
+              additionalProperties: false,
+            },
+            markdown_content: {
+              type: 'string',
+              description: 'Dense structured Markdown summary with slide/page references and code anti-patterns.',
+            },
+            key_analogies: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  slide: { type: 'integer' },
+                  concept: { type: 'string' },
+                  analogy_summary: { type: 'string' },
+                },
+                required: ['slide', 'concept', 'analogy_summary'],
+                additionalProperties: false,
+              },
+            },
+            pages_markdown: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  page: { type: 'integer' },
+                  fr_markdown: { type: 'string' },
+                  en_markdown: { type: 'string' },
+                },
+                required: ['page', 'fr_markdown', 'en_markdown'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['extracted_title', 'markdown_content', 'key_analogies', 'pages_markdown'],
+          additionalProperties: false,
+        },
+      };
+
+      const parsed = await callMetaAI(systemPrompt, userPrompt, singlePassSchema);
+      extractedTitle = parsed.extracted_title || extractedTitle;
+      markdownContent = parsed.markdown_content || '';
+      keyAnalogies = parsed.key_analogies || [];
+      if (Array.isArray(parsed.pages_markdown)) {
+        collectedSlideMarkdowns.push(...parsed.pages_markdown);
+      }
+    } else {
+      // ------------------------------------------------------------------------
+      // ADAPTIVE BATCHING: Document is dense/large. Batch 0 does global synthesis
+      // + its own pages; subsequent batches do targeted translation.
+      // ------------------------------------------------------------------------
+      const batch0 = batches[0];
+      const batch0Sample = batch0.pages
+        .map((p: CleanedPage) => `[Page/Slide ${p.page}]\n${p.text}`)
+        .join('\n\n---\n\n');
+
+      const systemPromptGlobal = `You are an elite educational AI curriculum engineer for Socratix.
+Course Context: "${course.title}" (${course.code}).
+Your role is to distill university course material into ultra-dense chapter syntheses AND provide faithful slide-by-slide markdown transcriptions.
+
+${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
+
+### INSTRUCTIONS:
+1. Extract official chapter title ('extracted_title') in French ('fr') and English ('en').
+2. Synthesize the entire chapter into 'markdown_content' with "(Slide X)" anchors and anti-patterns.
+3. Extract key analogies into 'key_analogies'.
+4. Provide verbatim transcriptions and translations in 'pages_markdown' for pages ${batch0.pages[0].page} to ${batch0.pages[batch0.pages.length - 1].page} of Batch 1.
+   Do NOT merge multiple slides. Preserve code in \`\`\`java blocks. Omit dates, footers, and page numbers.`;
+
+      const userPromptGlobal = `Distill Chapter ${chapterNumber}: "${title}" (${code}) from overall document sample:
+
+${pagesTextSample}
+
+And provide pages_markdown for Batch 1 pages:
+${batch0Sample}`;
+
+      const globalSchema = {
+        name: 'chapter_global_synthesis_result',
+        strict: true,
+        schema: {
+          type: 'object',
+          properties: {
+            extracted_title: {
+              type: 'object',
+              properties: {
+                fr: { type: 'string' },
+                en: { type: 'string' },
+              },
+              required: ['fr', 'en'],
+              additionalProperties: false,
+            },
+            markdown_content: { type: 'string' },
+            key_analogies: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  slide: { type: 'integer' },
+                  concept: { type: 'string' },
+                  analogy_summary: { type: 'string' },
+                },
+                required: ['slide', 'concept', 'analogy_summary'],
+                additionalProperties: false,
+              },
+            },
+            pages_markdown: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  page: { type: 'integer' },
+                  fr_markdown: { type: 'string' },
+                  en_markdown: { type: 'string' },
+                },
+                required: ['page', 'fr_markdown', 'en_markdown'],
+                additionalProperties: false,
+              },
+            },
+          },
+          required: ['extracted_title', 'markdown_content', 'key_analogies', 'pages_markdown'],
+          additionalProperties: false,
+        },
+      };
+
+      const parsedGlobal = await callMetaAI(systemPromptGlobal, userPromptGlobal, globalSchema);
+      extractedTitle = parsedGlobal.extracted_title || extractedTitle;
+      markdownContent = parsedGlobal.markdown_content || '';
+      keyAnalogies = parsedGlobal.key_analogies || [];
+      if (Array.isArray(parsedGlobal.pages_markdown)) {
+        collectedSlideMarkdowns.push(...parsedGlobal.pages_markdown);
+      }
+
+      // Process remaining batches
+      for (let bIdx = 1; bIdx < batches.length; bIdx++) {
+        const batch = batches[bIdx];
+        const batchSample = batch.pages
+          .map((p: CleanedPage) => `[Page/Slide ${p.page}]\n${p.text}`)
+          .join('\n\n---\n\n');
+
+        const batchSystemPrompt = `You are an elite educational AI curriculum engineer for Socratix.
+Course Context: "${course.title}" (${course.code}).
+Transcribe and translate pages ${batch.pages[0].page} through ${batch.pages[batch.pages.length - 1].page} for Chapter ${chapterNumber} ("${title}").
+For EACH page in this batch:
+- 'fr_markdown': clean French markdown transcription with section headers and \`\`\`java code blocks. Strictly omit dates and footer page numbers.
+- 'en_markdown': faithful 1:1 English translation of this single slide with code in \`\`\`java blocks.
+Do NOT summarize multiple slides together. Preserve exact class, variable, and method identifiers.`;
+
+        const batchSchema = {
+          name: 'batch_pages_markdown_result',
+          strict: true,
+          schema: {
             type: 'object',
             properties: {
-              fr: {
-                type: 'string',
-                description: 'Le titre officiel du chapitre extrait du document en français (ex: Chapitre 5 : Les Interfaces en Java).',
-              },
-              en: {
-                type: 'string',
-                description: 'The clean English translation of the chapter title for the international jury (e.g., Chapter 5: Interfaces in Java).',
+              pages_markdown: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'integer' },
+                    fr_markdown: { type: 'string' },
+                    en_markdown: { type: 'string' },
+                  },
+                  required: ['page', 'fr_markdown', 'en_markdown'],
+                  additionalProperties: false,
+                },
               },
             },
-            required: ['fr', 'en'],
+            required: ['pages_markdown'],
             additionalProperties: false,
           },
-          markdown_content: {
-            type: 'string',
-            description: 'Dense structured Markdown summary with slide/page references and code anti-patterns.',
-          },
-          key_analogies: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                slide: { type: 'integer' },
-                concept: { type: 'string' },
-                analogy_summary: { type: 'string' },
-              },
-              required: ['slide', 'concept', 'analogy_summary'],
-              additionalProperties: false,
-            },
-          },
-          pages_summary: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer' },
-                en_summary: { type: 'string' },
-                en_markdown: { type: 'string' },
-                fr_markdown: { type: 'string' },
-              },
-              required: ['page', 'en_summary', 'en_markdown', 'fr_markdown'],
-              additionalProperties: false,
-            },
-          },
-        },
-        required: ['extracted_title', 'markdown_content', 'key_analogies', 'pages_summary'],
-        additionalProperties: false,
-      },
-    };
+        };
 
-    const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${META_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'muse-spark-1.3',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: jsonSchema,
-        },
-        temperature: 0.1,
-      }),
-    });
-
-    if (!metaRes.ok) {
-      const errText = await metaRes.text();
-      throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+        const batchParsed = await callMetaAI(batchSystemPrompt, batchSample, batchSchema);
+        if (Array.isArray(batchParsed?.pages_markdown)) {
+          collectedSlideMarkdowns.push(...batchParsed.pages_markdown);
+        }
+      }
     }
 
-    const metaData = await metaRes.json();
-    const content = metaData.choices?.[0]?.message?.content;
-    const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+    // 4. Merge collected pages_markdown with cleaned pages
+    const slideMarkdownMap = new Map<number, { fr_markdown: string; en_markdown: string }>();
+    for (const sm of collectedSlideMarkdowns) {
+      if (typeof sm.page === 'number') {
+        slideMarkdownMap.set(sm.page, {
+          fr_markdown: sm.fr_markdown,
+          en_markdown: sm.en_markdown,
+        });
+      }
+    }
 
-    // Merge pages_summary with cleaned pages
-    const enrichedPages = cleanedPages.map((p: { page: number; text: string }) => {
-      const found = parsed.pages_summary?.find((s: { page: number }) => s.page === p.page);
+    const enrichedPages = cleanedPages.map((p: CleanedPage) => {
+      const found = slideMarkdownMap.get(p.page);
       return {
         page: p.page,
         text: p.text,
-        en_summary: found?.en_summary || undefined,
-        en_markdown: found?.en_markdown || undefined,
-        fr_markdown: found?.fr_markdown || undefined,
+        fr_markdown: found?.fr_markdown?.trim() || formatRawSlideTextToMarkdown(p.text),
+        en_markdown: found?.en_markdown?.trim() || undefined,
       };
     });
 
-    const rawEnTitle = parsed.extracted_title?.en?.trim() || title.trim();
+    const rawEnTitle = extractedTitle?.en?.trim() || title.trim();
     const cleanEnTitle = rawEnTitle.toLowerCase().startsWith('ch') || rawEnTitle.toLowerCase().startsWith('chapter')
       ? rawEnTitle
       : `Chapter ${chapterNumber} — ${rawEnTitle}`;
 
-    const rawFrTitle = parsed.extracted_title?.fr?.trim() || title.trim();
+    const rawFrTitle = extractedTitle?.fr?.trim() || title.trim();
     const cleanFrTitle = rawFrTitle.toLowerCase().startsWith('ch') || rawFrTitle.toLowerCase().startsWith('chapitre')
       ? rawFrTitle
       : `Chapitre ${chapterNumber} : ${rawFrTitle}`;
@@ -189,9 +362,9 @@ ${pagesTextSample}`;
         fr: cleanFrTitle,
       },
       pdf_url: pdfUrl || null,
-      markdown_content: parsed.markdown_content,
+      markdown_content: markdownContent,
       pages_json: enrichedPages,
-      key_analogies: parsed.key_analogies || [],
+      key_analogies: keyAnalogies,
       created_at: new Date().toISOString(),
     };
 
@@ -206,8 +379,10 @@ ${pagesTextSample}`;
     return NextResponse.json({
       success: true,
       chapter: savedChapter,
+      batch_count: batches.length,
     });
   } catch (err: unknown) {
+    console.error('[Chapter Analyze Error]:', err);
     const msg = err instanceof Error ? err.message : 'Chapter analysis failed';
     return NextResponse.json({ error: msg }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
-import { StudentLabSession, ChatMessage } from '@/types/socratix';
+import { StudentLabSession, ChatMessage, CourseChapter } from '@/types/socratix';
+import { formatRawSlideTextToMarkdown } from '@/lib/pdf-cleaner';
 
 export async function GET(req: NextRequest) {
   try {
@@ -47,9 +48,51 @@ export async function GET(req: NextRequest) {
       console.error('[Session Context GET] Chat messages error:', messagesError);
     }
 
+    const rawMessages = (messagesData || []) as ChatMessage[];
+    let hydratedMessages = rawMessages;
+
+    // Check if any message has course_reference that needs slide_markdown enrichment
+    const hasRefs = rawMessages.some((m) => m.course_reference?.chapter_code && m.course_reference?.page_number);
+    if (hasRefs) {
+      const { data: chaptersData } = await supabase
+        .from('course_chapters')
+        .select('code, pdf_url, pages_json')
+        .eq('course_id', session.course_id);
+
+      const chapters = (chaptersData || []) as CourseChapter[];
+      if (chapters.length > 0) {
+        hydratedMessages = rawMessages.map((msg) => {
+          if (!msg.course_reference?.chapter_code || !msg.course_reference?.page_number) {
+            return msg;
+          }
+          const refChap = chapters.find((c) => c.code === msg.course_reference!.chapter_code);
+          if (!refChap) return msg;
+
+          const slidePage = refChap.pages_json?.find((p) => p.page === msg.course_reference!.page_number);
+          const pdfUrl = refChap.pdf_url || msg.course_reference.pdf_url;
+          const currentSlideMd = msg.course_reference.slide_markdown;
+
+          const frClean = currentSlideMd?.fr || slidePage?.fr_markdown?.trim() || (slidePage?.text ? formatRawSlideTextToMarkdown(slidePage.text) : undefined);
+          const enClean = currentSlideMd?.en || slidePage?.en_markdown?.trim() || undefined;
+
+          return {
+            ...msg,
+            course_reference: {
+              ...msg.course_reference,
+              pdf_url: pdfUrl,
+              slide_markdown: {
+                en: enClean,
+                fr: frClean,
+              },
+            },
+          };
+        });
+      }
+    }
+
     return NextResponse.json({
       session,
-      messages: (messagesData || []) as ChatMessage[],
+      messages: hydratedMessages,
     });
   } catch (error) {
     console.error('[Session Context GET] Exception:', error);
