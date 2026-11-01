@@ -45,13 +45,26 @@ export async function POST(req: NextRequest) {
       .map((p: { page: number; text: string }) => `=== PAGE ${p.page} ===\n${p.text.slice(0, 15000)}`)
       .join('\n\n');
 
+    const allowedExtensions = Array.isArray(course.file_extensions) && course.file_extensions.length > 0
+      ? course.file_extensions
+      : ['.java'];
+
     const systemPrompt = `You are an elite educational AI lab curriculum engineer for Socratix.
+Course Context: "${course.title}" (${course.code}) — Allowed source file extensions: ${JSON.stringify(allowedExtensions)}.
 Your job is to read an authentic university programming lab assignment (TP), extract its official title, formulate a bilingual concise 1-2 sentence pedagogical description in both English ('en') and French ('fr'), decompose it into structured activities, derive 2 to 3 sequential milestones per activity, identify which course micro-competencies are practiced, and generate 2 1-click Demo Presets for hackathon judges.
 
 ### ABSOLUTE FIDELITY RULES (ZERO HALLUCINATIONS):
-1. STRUCTURAL INTEGRITY: Decompose the lab into ONLY the activities explicitly present in the assignment text (e.g., 'Activité N°1', 'Activité N°2'). NEVER invent activities, NEVER merge separate activities, and NEVER change the number of activities.
+1. STRUCTURAL INTEGRITY: Decompose the lab into ONLY the activities explicitly present in the assignment text (e.g., 'Activité N°1', 'Activité N°2', 'Exercice 1'). NEVER invent activities, NEVER merge separate activities, and NEVER change the number of activities.
 2. EXTRACT-THEN-TRANSLATE PROTOCOL: For all bilingual fields ('extracted_title', 'description', 'title_i18n', 'instructions_i18n', 'validation_criteria_i18n'), you MUST provide 'fr' FIRST as a faithful, verbatim extraction from the French assignment text, and 'en' SECOND as an accurate, elegant English pedagogical translation.
-3. CODE IDENTIFIERS ARE SACRED: All class names, interface names, method names, variable names, exception names, and file names (e.g. SaisieErroneeException.java, PaiementInvalideException.java, Aliment.java, Four.java, TestFour.java, Calculatrice.java, YallaPOS.java) MUST be preserved EXACTLY as written in the lab assignment in BOTH the 'fr' and 'en' fields. DO NOT translate code identifiers (e.g. do not translate Four to Oven or Aliment to Food in Java class names or target_files!). Target files must strictly match the code files required by the lab statement.
+3. CODE IDENTIFIERS ARE SACRED (MULTI-LANGUAGE & MULTI-PARADIGM): Regardless of the programming language or paradigm of the course (Java, C, C++, Python, PHP, JavaScript/TypeScript, SQL, etc.), ALL code identifiers and technical symbols mentioned in the lab assignment MUST be preserved EXACTLY as written in BOTH the 'fr' and 'en' fields:
+   - OOP (Java, C++, C#, PHP, TS): class names, interface names, abstract classes, custom exception names, method/constructor signatures, package/namespace names (e.g., SaisieErroneeException.java, PaiementInvalideException.java, Aliment.java, Four.java, TestFour.java, Calculatrice.java, YallaPOS.java, validerPaiement(), controle()).
+   - Procedural & Low-Level (C, C++): struct/union/enum/typedef names, pointer variables, #define macros, header (.h) and source (.c/.cpp) file pairs, and CLI/compiler commands (gcc, Makefile).
+   - Scripting, Functional & Web/DB (Python, JS/TS, PHP, SQL/Parse): snake_case or camelCase function/module names (e.g., calculer_moyenne), $variable names, decorators, and database/JSON schema keys (e.g., Parse.Object class and attribute keys).
+   - NEVER translate any code identifier between French and English (e.g., do NOT translate Four to Oven, Aliment to Food, or calculer_moyenne to calculate_average!). Only translate the surrounding pedagogical prose.
+4. STRICT FILE EXTENSION & TARGET FILE DISCIPLINE: Every file name in 'target_files' and 'demo_presets' MUST strictly match the files requested in the lab statement and MUST only use extensions allowed by this course (${JSON.stringify(allowedExtensions)}). In multi-file languages like C/C++, include both header (.h) and implementation (.c/.cpp) files when appropriate; never default to '.java' if the course uses another language.
+5. LANGUAGE-AUTHENTIC DEMO PRESETS: Generate 2 realistic 'demo_presets' written strictly in the course's programming language (${JSON.stringify(allowedExtensions)}):
+   - Preset 1 (Buggy Student Attempt): Contains realistic student mistakes idiomatic to the target language and lab topic (e.g., broken encapsulation/missing super()/unhandled exception in Java; uninitialized pointer/missing free()/missing header guard in C/C++; mutable default arg/scope or indentation bug in Python; loose comparison or missing async/await in PHP/JS).
+   - Preset 2 (Validated Reference Solution): Clean, complete, syntactically valid reference code satisfying all milestones of the lab.
 
 ### GOLDEN EXEMPLAR (HOW TO DECOMPOSE A LAB):
 Notice how it clearly splits assimilation from project integration, defines minimal validation criteria, and generates working code presets:
@@ -62,7 +75,7 @@ You MUST select covered concepts ONLY from this list:
 ${JSON.stringify(availableConcepts.length > 0 ? availableConcepts : ['VISIBILITY_ENCAPSULATION', 'DEFENSIVE_SETTERS', 'CONSTRUCTORS_THIS'])}
 
 ### FILE EXTENSIONS FOR THIS COURSE:
-${JSON.stringify(course.file_extensions || ['.java'])}`;
+${JSON.stringify(allowedExtensions)}`;
 
     const userPrompt = `Decompose Lab ${labNumber}: "${title}" (${code}) based on the following text:
 

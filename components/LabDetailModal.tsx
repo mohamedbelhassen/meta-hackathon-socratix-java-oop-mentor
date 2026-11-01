@@ -302,7 +302,7 @@ export default function LabDetailModal({
                     <span>Meta AI 1-Click Judge Presets</span>
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Pre-generated working Java code setups allowing judges to test Socratic mentoring on this lab without local files.
+                    Pre-generated working code setups allowing judges to test Socratic mentoring on this lab without local files.
                   </p>
                 </div>
 

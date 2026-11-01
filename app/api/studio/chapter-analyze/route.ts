@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const supabase = getServiceSupabase();
     const { data: course, error: courseError } = await supabase
       .from('courses')
-      .select('content_language, tutor_language')
+      .select('title, code, content_language, tutor_language, file_extensions')
       .eq('id', courseId)
       .single();
 
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       .join('\n');
 
     const systemPrompt = `You are an elite educational AI curriculum engineer for Socratix.
+Course Context: "${course.title}" (${course.code}) — File extensions: ${JSON.stringify(course.file_extensions || ['.java'])}.
 Your role is to distill university course material (lecture slides or full lecture notes/polycopié) into ultra-dense, mathematically precise course chapter syntheses.
 
 ### GOLDEN EXEMPLAR (HOW TO SUMMARIZE A CHAPTER):
@@ -55,9 +56,9 @@ ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 1. Extract the official chapter title from the document title slide/header in both French ('fr') and English ('en') ('extracted_title').
 2. Synthesize the provided material in the course's content language (${course.content_language}).
 3. Include exact reference anchors "(Slide X)" or "(Page X)" (or "(Slides X-Y)" / "(Pages X-Y)") for every concept.
-4. Highlight concrete code identifiers (class names, methods, keywords) and explicit anti-patterns/dangers.
+4. Preserve and highlight exact code identifiers across any programming paradigm (classes, interfaces, methods, exceptions in OOP; structs, pointers, macros, headers in C/C++; functions, modules, decorators, $variables, schema keys in Python/PHP/JS/SQL) without translating code identifiers, and document explicit language-specific anti-patterns/dangers.
 5. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide or page number.
-6. Provide a concise English translation summary ("en_summary") for 2 to 4 key slides/pages so they can be shown in the cross-lingual slide viewer.`;
+6. Provide a concise English translation summary ("en_summary") for 2 to 4 key slides/pages so they can be shown in the cross-lingual slide viewer (keeping code identifiers untouched).`;
 
     const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
 
