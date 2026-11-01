@@ -28,14 +28,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
     }
 
-    // Format slide pages text concisely
-    const pagesTextSample = pages
-      .slice(0, 100)
-      .map((p: { page: number; text: string }) => `[Slide ${p.page}] ${p.text.slice(0, 450)}`)
+    // Smart Context Budget: support both slides (short pages) and full course syllabi (dense pages)
+    const MAX_PAGES = 200;
+    const MAX_CHARS_PER_PAGE = 8000;
+    const MAX_TOTAL_CHARS = 180000;
+
+    const pagesSlice = pages.slice(0, MAX_PAGES);
+    const totalRawChars = pagesSlice.reduce((sum: number, p: { text: string }) => sum + (p.text?.length || 0), 0);
+    const dynamicPerCharLimit = totalRawChars > MAX_TOTAL_CHARS
+      ? Math.max(1200, Math.floor(MAX_TOTAL_CHARS / pagesSlice.length))
+      : MAX_CHARS_PER_PAGE;
+
+    const pagesTextSample = pagesSlice
+      .map((p: { page: number; text: string }) => `[Page/Slide ${p.page}] ${(p.text || '').slice(0, dynamicPerCharLimit)}`)
       .join('\n');
 
     const systemPrompt = `You are an elite educational AI curriculum engineer for Socratix.
-Your role is to distill university slide decks into ultra-dense, mathematically precise course chapter syntheses.
+Your role is to distill university course material (lecture slides or full lecture notes/polycopié) into ultra-dense, mathematically precise course chapter syntheses.
 
 ### GOLDEN EXEMPLAR (HOW TO SUMMARIZE A CHAPTER):
 Study the following exemplar extracted from a proven OOP curriculum. Notice the exact slide references "(Slides X-Y)", the precise class/analogy names, and the concrete anti-pattern warnings:
@@ -43,13 +52,14 @@ Study the following exemplar extracted from a proven OOP curriculum. Notice the 
 ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 
 ### INSTRUCTIONS:
-1. Synthesize the provided slides in the course's content language (${course.content_language}).
-2. Include exact slide number references "(Slide X)" or "(Slides X-Y)" for every concept.
-3. Highlight concrete code identifiers (class names, methods, keywords) and explicit anti-patterns/dangers.
-4. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide number.
-5. Provide a concise English translation summary ("en_summary") for 2 to 4 key slides so they can be shown in the cross-lingual slide viewer.`;
+1. Extract the official chapter title from the document title slide/header in both French ('fr') and English ('en') ('extracted_title').
+2. Synthesize the provided material in the course's content language (${course.content_language}).
+3. Include exact reference anchors "(Slide X)" or "(Page X)" (or "(Slides X-Y)" / "(Pages X-Y)") for every concept.
+4. Highlight concrete code identifiers (class names, methods, keywords) and explicit anti-patterns/dangers.
+5. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide or page number.
+6. Provide a concise English translation summary ("en_summary") for 2 to 4 key slides/pages so they can be shown in the cross-lingual slide viewer.`;
 
-    const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted slides:
+    const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
 
 ${pagesTextSample}`;
 
@@ -59,9 +69,24 @@ ${pagesTextSample}`;
       schema: {
         type: 'object',
         properties: {
+          extracted_title: {
+            type: 'object',
+            properties: {
+              fr: {
+                type: 'string',
+                description: 'Le titre officiel du chapitre extrait du document en français (ex: Chapitre 5 : Les Interfaces en Java).',
+              },
+              en: {
+                type: 'string',
+                description: 'The clean English translation of the chapter title for the international jury (e.g., Chapter 5: Interfaces in Java).',
+              },
+            },
+            required: ['fr', 'en'],
+            additionalProperties: false,
+          },
           markdown_content: {
             type: 'string',
-            description: 'Dense structured Markdown summary with slide references and code anti-patterns.',
+            description: 'Dense structured Markdown summary with slide/page references and code anti-patterns.',
           },
           key_analogies: {
             type: 'array',
@@ -89,7 +114,7 @@ ${pagesTextSample}`;
             },
           },
         },
-        required: ['markdown_content', 'key_analogies', 'pages_summary'],
+        required: ['extracted_title', 'markdown_content', 'key_analogies', 'pages_summary'],
         additionalProperties: false,
       },
     };
@@ -133,11 +158,25 @@ ${pagesTextSample}`;
       };
     });
 
+    const rawEnTitle = parsed.extracted_title?.en?.trim() || title.trim();
+    const cleanEnTitle = rawEnTitle.toLowerCase().startsWith('ch') || rawEnTitle.toLowerCase().startsWith('chapter')
+      ? rawEnTitle
+      : `Chapter ${chapterNumber} — ${rawEnTitle}`;
+
+    const rawFrTitle = parsed.extracted_title?.fr?.trim() || title.trim();
+    const cleanFrTitle = rawFrTitle.toLowerCase().startsWith('ch') || rawFrTitle.toLowerCase().startsWith('chapitre')
+      ? rawFrTitle
+      : `Chapitre ${chapterNumber} : ${rawFrTitle}`;
+
     const chapterRecord = {
       course_id: courseId,
       chapter_number: Number(chapterNumber),
       code: code.trim().toUpperCase(),
-      title: title.trim(),
+      title: cleanEnTitle,
+      title_i18n: {
+        en: cleanEnTitle,
+        fr: cleanFrTitle,
+      },
       pdf_url: pdfUrl || null,
       markdown_content: parsed.markdown_content,
       pages_json: enrichedPages,

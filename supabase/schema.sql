@@ -53,6 +53,7 @@ CREATE TABLE public.course_chapters (
     chapter_number INTEGER NOT NULL,
     code TEXT NOT NULL, -- e.g., 'CH1_INTRO', 'CH3_CLASSES'
     title TEXT NOT NULL,
+    title_i18n JSONB, -- { en: string, fr: string }
     pdf_url TEXT,
     markdown_content TEXT NOT NULL DEFAULT '',
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -68,8 +69,10 @@ CREATE TABLE public.labs (
     lab_number INTEGER NOT NULL,
     code TEXT NOT NULL, -- e.g., 'TP1', 'TP5', 'TP12'
     title TEXT NOT NULL,
+    title_i18n JSONB, -- { en: string, fr: string }
     description TEXT,
     pdf_url TEXT,
+    pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     activities JSONB NOT NULL DEFAULT '[]'::jsonb,
     covered_micro_concepts TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     demo_presets JSONB NOT NULL DEFAULT '[]'::jsonb,

@@ -50,6 +50,11 @@ export interface KeyAnalogy {
   analogy_summary: string;
 }
 
+export interface BilingualText {
+  en: string;
+  fr: string;
+}
+
 export interface PagedSlide {
   page: number;
   text: string;
@@ -62,6 +67,7 @@ export interface CourseChapter {
   chapter_number: number;
   code: string; // e.g., 'CH1_INTRO'
   title: string;
+  title_i18n?: BilingualText | null;
   pdf_url?: string | null;
   markdown_content: string;
   pages_json: PagedSlide[];
@@ -73,14 +79,18 @@ export interface LabMilestone {
   id: string;
   order: number;
   title: string;
+  title_i18n?: BilingualText;
   validation_criteria: string;
+  validation_criteria_i18n?: BilingualText;
 }
 
 export interface LabActivity {
   id: string;
   order: number;
   title: string;
+  title_i18n?: BilingualText;
   instructions_markdown: string;
+  instructions_i18n?: BilingualText;
   target_files: string[];
   milestones: LabMilestone[];
 }
@@ -103,8 +113,10 @@ export interface Lab {
   lab_number: number;
   code: string; // e.g., 'TP5'
   title: string;
+  title_i18n?: BilingualText | null;
   description?: string | null;
   pdf_url?: string | null;
+  pages_json?: Array<{ page: number; text: string }>;
   activities: LabActivity[];
   covered_micro_concepts: string[];
   demo_presets: DemoPreset[];

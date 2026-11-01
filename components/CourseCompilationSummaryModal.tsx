@@ -5,13 +5,11 @@ import { Course, CourseChapter } from '@/types/socratix';
 import {
   Sparkles,
   X,
-  BookOpen,
   CheckCircle2,
   FileText,
   Code2,
   ArrowRight,
   Layers,
-  HelpCircle,
   Copy,
   Check,
 } from 'lucide-react';
@@ -175,7 +173,7 @@ export default function CourseCompilationSummaryModal({
                   </div>
                   <h3 className="font-bold text-white text-sm">Pedagogical Slide Anchors</h3>
                   <p className="text-slate-400 leading-relaxed text-[11px]">
-                    Extracted the professor's signature analogies (e.g. <em>Four Slide 42</em>, <em>Félin Slide 8</em>). The Socratic AI redirects students to these exact slide numbers instead of hallucinating foreign examples.
+                    Extracted the professor&apos;s signature analogies (e.g. <em>Four Slide 42</em>, <em>Félin Slide 8</em>). The Socratic AI redirects students to these exact slide numbers instead of hallucinating foreign examples.
                   </p>
                 </div>
 

@@ -44,8 +44,12 @@ export async function POST(req: NextRequest) {
     // Combine chapters markdown
     const allChaptersSummary = chapters
       .map(
-        (c) =>
-          `### Chapitre ${c.chapter_number} : ${c.title} (${c.code})\n${c.markdown_content}\nKey Analogies: ${JSON.stringify(c.key_analogies)}`
+        (c) => {
+          const chTitle = (c.title_i18n && typeof c.title_i18n === 'object' && (c.title_i18n as { fr?: string }).fr)
+            ? (c.title_i18n as { fr: string }).fr
+            : c.title;
+          return `### Chapitre ${c.chapter_number} : ${chTitle} (${c.code})\n${c.markdown_content}\nKey Analogies: ${JSON.stringify(c.key_analogies)}`;
+        }
       )
       .join('\n\n---\n\n');
 

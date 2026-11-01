@@ -5,17 +5,14 @@ import { Lab } from '@/types/socratix';
 import {
   X,
   Layers,
-  CheckCircle2,
   ExternalLink,
   Search,
   ArrowRight,
   Eye,
-  Sparkles,
-  BookOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { parseBilingualDescription } from '@/lib/bilingual-helper';
+import { parseBilingualDescription, getLocalizedLabTitle } from '@/lib/bilingual-helper';
 
 interface LabsBatchIngestionModalProps {
   isOpen: boolean;
@@ -46,12 +43,18 @@ export default function LabsBatchIngestionModal({
   );
   const totalPresets = labs.reduce((acc, lb) => acc + (lb.demo_presets?.length || 0), 0);
 
-  const filteredLabs = labs.filter(
-    (lb) =>
-      lb.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lb.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (lb.description && lb.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredLabs = labs.filter((lb) => {
+    const q = searchQuery.toLowerCase();
+    const titleEn = lb.title_i18n?.en?.toLowerCase() || '';
+    const titleFr = lb.title_i18n?.fr?.toLowerCase() || '';
+    return (
+      lb.title.toLowerCase().includes(q) ||
+      titleEn.includes(q) ||
+      titleFr.includes(q) ||
+      lb.code.toLowerCase().includes(q) ||
+      (lb.description && lb.description.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
@@ -175,7 +178,7 @@ export default function LabsBatchIngestionModal({
                       <span className="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
                         TP {lb.lab_number}
                       </span>
-                      <h3 className="text-sm font-bold text-white truncate">{lb.title}</h3>
+                      <h3 className="text-sm font-bold text-white truncate">{getLocalizedLabTitle(lb, lang)}</h3>
                       <span className="text-xs text-slate-500 font-mono">({lb.code})</span>
                     </div>
 

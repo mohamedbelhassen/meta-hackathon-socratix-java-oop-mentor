@@ -87,7 +87,7 @@ export default function TeacherHub() {
     if (!sessionsRes.error && sessionsRes.data) {
       setSessions(sessionsRes.data as StudentLabSession[]);
     }
-  }, [selectedCourse?.id, selectedLab]);
+  }, [selectedCourse, selectedLab]);
 
   useEffect(() => {
     refreshCourseData();

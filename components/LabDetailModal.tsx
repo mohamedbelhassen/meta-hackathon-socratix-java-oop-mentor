@@ -11,13 +11,18 @@ import {
   ExternalLink,
   Copy,
   Check,
-  AlertTriangle,
   Sparkles,
   Bookmark,
+  FileText,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { parseBilingualDescription } from '@/lib/bilingual-helper';
+import {
+  parseBilingualDescription,
+  getLocalizedLabTitle,
+  getLocalizedActivity,
+  getLocalizedMilestone,
+} from '@/lib/bilingual-helper';
 
 interface LabDetailModalProps {
   isOpen: boolean;
@@ -30,7 +35,7 @@ export default function LabDetailModal({
   onClose,
   lab,
 }: LabDetailModalProps) {
-  const [activeTab, setActiveTab] = useState<'activities' | 'concepts' | 'presets'>('activities');
+  const [activeTab, setActiveTab] = useState<'activities' | 'concepts' | 'presets' | 'raw_text'>('activities');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
   const [selectedFileIdx, setSelectedFileIdx] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -62,7 +67,7 @@ export default function LabDetailModal({
                 <span className="font-mono text-cyan-400 font-bold text-sm">
                   TP {lab.lab_number} • {lab.code}
                 </span>
-                <h2 className="text-base font-bold text-white">{lab.title}</h2>
+                <h2 className="text-base font-bold text-white">{getLocalizedLabTitle(lab, lang)}</h2>
                 {lab.pdf_url && (
                   <a
                     href={lab.pdf_url}
@@ -148,6 +153,18 @@ export default function LabDetailModal({
             <FileCode2 className="w-3.5 h-3.5" />
             <span>Judge Demo Presets ({lab.demo_presets?.length || 0})</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('raw_text')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition ${
+              activeTab === 'raw_text'
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Raw PDF Text ({lab.pages_json?.length || 0} p.)</span>
+          </button>
         </div>
 
         {/* MODAL BODY */}
@@ -156,70 +173,78 @@ export default function LabDetailModal({
           {activeTab === 'activities' && (
             <div className="space-y-5">
               {lab.activities && lab.activities.length > 0 ? (
-                lab.activities.map((act: LabActivity) => (
-                  <div
-                    key={act.id}
-                    className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
-                      <div>
-                        <span className="text-[10px] font-mono uppercase text-cyan-400 tracking-wider">
-                          Activity {act.order}
-                        </span>
-                        <h3 className="text-sm font-bold text-white mt-0.5">{act.title}</h3>
+                lab.activities.map((act: LabActivity) => {
+                  const locAct = getLocalizedActivity(act, lang);
+
+                  return (
+                    <div
+                      key={act.id}
+                      className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                        <div>
+                          <span className="text-[10px] font-mono uppercase text-cyan-400 tracking-wider">
+                            Activity {act.order}
+                          </span>
+                          <h3 className="text-sm font-bold text-white mt-0.5">{locAct.title}</h3>
+                        </div>
+
+                        {act.target_files && act.target_files.length > 0 && (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] text-slate-500 font-mono">Target Files:</span>
+                            {act.target_files.map((file, fIdx) => (
+                              <Badge
+                                key={fIdx}
+                                variant="outline"
+                                className="font-mono text-[10px] bg-slate-900 border-slate-700 text-emerald-400"
+                              >
+                                {file}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      {act.target_files && act.target_files.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] text-slate-500 font-mono">Target Files:</span>
-                          {act.target_files.map((file, fIdx) => (
-                            <Badge
-                              key={fIdx}
-                              variant="outline"
-                              className="font-mono text-[10px] bg-slate-900 border-slate-700 text-emerald-400"
-                            >
-                              {file}
-                            </Badge>
-                          ))}
+                      {locAct.instructions && (
+                        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-850 text-slate-300 leading-relaxed text-xs space-y-2 whitespace-pre-wrap font-sans">
+                          {locAct.instructions}
                         </div>
                       )}
-                    </div>
 
-                    {act.instructions_markdown && (
-                      <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-850 text-slate-300 leading-relaxed text-xs space-y-2 whitespace-pre-wrap font-sans">
-                        {act.instructions_markdown}
-                      </div>
-                    )}
+                      {/* SEQUENTIAL MILESTONES */}
+                      <div className="space-y-2 pt-1">
+                        <h4 className="text-[11px] font-mono uppercase text-slate-400 flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Sequential Validation Milestones ({act.milestones?.length || 0})</span>
+                        </h4>
 
-                    {/* SEQUENTIAL MILESTONES */}
-                    <div className="space-y-2 pt-1">
-                      <h4 className="text-[11px] font-mono uppercase text-slate-400 flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Sequential Validation Milestones ({act.milestones?.length || 0})</span>
-                      </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                          {act.milestones?.map((m) => {
+                            const locM = getLocalizedMilestone(m, lang);
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                        {act.milestones?.map((m) => (
-                          <div
-                            key={m.id}
-                            className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center justify-center font-mono font-bold text-[10px]">
-                                {m.order}
-                              </span>
-                              <span className="font-semibold text-white text-xs">{m.title}</span>
-                            </div>
-                            <p className="text-[11px] text-slate-400 pl-7 leading-relaxed">
-                              <strong className="text-slate-300">Validation Criteria:</strong>{' '}
-                              {m.validation_criteria}
-                            </p>
-                          </div>
-                        ))}
+                            return (
+                              <div
+                                key={m.id}
+                                className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center justify-center font-mono font-bold text-[10px]">
+                                    {m.order}
+                                  </span>
+                                  <span className="font-semibold text-white text-xs">{locM.title}</span>
+                                </div>
+                                <p className="text-[11px] text-slate-400 pl-7 leading-relaxed">
+                                  <strong className="text-slate-300">Validation Criteria:</strong>{' '}
+                                  {locM.validationCriteria}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="py-8 text-center text-slate-500">
                   No structured activities found for this lab.
@@ -348,6 +373,61 @@ export default function LabDetailModal({
               ) : (
                 <div className="py-8 text-center text-slate-500">
                   No presets generated for this lab.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: RAW EXTRACTED PDF TEXT */}
+          {activeTab === 'raw_text' && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-cyan-400" />
+                    <span>Raw Extracted PDF Document Text</span>
+                  </h3>
+                  <Badge variant="outline" className="font-mono text-[10px] text-cyan-300 border-cyan-500/30">
+                    {lab.pages_json?.length || 0} Pages &bull;{' '}
+                    {lab.pages_json?.reduce((sum, p) => sum + (p.text?.length || 0), 0) || 0} Chars
+                  </Badge>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Verbatim text extracted page-by-page by pdfjs-dist with preserved layout and newlines. 100% inspected by Meta AI.
+                </p>
+              </div>
+
+              {lab.pages_json && lab.pages_json.length > 0 ? (
+                <div className="space-y-4">
+                  {lab.pages_json.map((p) => (
+                    <div key={p.page} className="p-4 rounded-2xl bg-slate-950 border border-slate-850 space-y-2">
+                      <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                        <span className="font-mono font-bold text-cyan-400 text-xs">
+                          Page {p.page} ({p.text?.length || 0} characters &bull; 100% preserved)
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (p.text) navigator.clipboard.writeText(p.text);
+                          }}
+                          className="text-[10px] h-6 bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                        >
+                          Copy Page
+                        </Button>
+                      </div>
+                      <pre className="p-3 rounded-xl bg-slate-900/60 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">
+                        {p.text}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-2xl text-slate-400 space-y-2">
+                  <p className="text-sm">No raw text stored for this lab yet (ingested prior to Phase F.6).</p>
+                  <p className="text-xs text-slate-500">
+                    Click <strong>&quot;⚡ Re-analyze All Labs with Meta AI&quot;</strong> in Course Studio to extract and persist full text with newlines!
+                  </p>
                 </div>
               )}
             </div>

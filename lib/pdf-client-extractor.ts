@@ -76,6 +76,38 @@ export function inferNumberAndTitle(filename: string): InferredFileInfo {
 }
 
 /**
+ * Formats extracted text items from pdfjs-dist by preserving newlines (hasEOL)
+ * and normalizing spacing without destroying document structure.
+ */
+export function formatExtractedTextContent(items: unknown[]): string {
+  let result = '';
+  for (const rawItem of items) {
+    if (!rawItem || typeof rawItem !== 'object') continue;
+    const item = rawItem as { str?: unknown; hasEOL?: unknown };
+    const str = typeof item.str === 'string' ? item.str : '';
+    const hasEOL = Boolean(item.hasEOL);
+
+    if (str) {
+      if (result.length > 0 && !result.endsWith('\n') && !result.endsWith(' ') && !str.startsWith(' ')) {
+        result += ' ';
+      }
+      result += str;
+    }
+
+    if (hasEOL) {
+      result += '\n';
+    }
+  }
+
+  return result
+    .split('\n')
+    .map((line) => line.replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/**
  * Extracts text page by page client-side using pdfjs-dist.
  * Zero Node.js SSR conflicts or native dependencies.
  */
@@ -96,11 +128,7 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item) => ('str' in item && typeof (item as { str: unknown }).str === 'string' ? (item as { str: string }).str : ''))
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const pageText = formatExtractedTextContent(textContent.items);
 
     pages.push({
       page: pageNum,
@@ -136,11 +164,7 @@ export async function extractPdfPagesFromUrl(pdfUrl: string): Promise<ExtractedP
   for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
     const page = await pdfDoc.getPage(pageNum);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item) => ('str' in item && typeof (item as { str: unknown }).str === 'string' ? (item as { str: string }).str : ''))
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
+    const pageText = formatExtractedTextContent(textContent.items);
 
     pages.push({
       page: pageNum,

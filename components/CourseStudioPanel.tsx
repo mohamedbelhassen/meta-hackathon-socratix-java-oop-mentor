@@ -27,11 +27,11 @@ import {
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
 import LabDetailModal from '@/components/LabDetailModal';
-import { parseBilingualDescription } from '@/lib/bilingual-helper';
+import { getLocalizedChapterTitle, getLocalizedLabTitle } from '@/lib/bilingual-helper';
 
 interface CourseStudioPanelProps {
   course: (Course & { course_chapters?: CourseChapter[]; labs?: Lab[] }) | null;
-  onCourseUpdated: () => void;
+  onCourseUpdated: () => void | Promise<void>;
   onOpenAnalyticsTab?: () => void;
 }
 
@@ -63,6 +63,10 @@ export default function CourseStudioPanel({
   const [showCompilationModal, setShowCompilationModal] = useState(false);
   const [showLabsIngestionModal, setShowLabsIngestionModal] = useState(false);
   const [selectedLabForInspection, setSelectedLabForInspection] = useState<Lab | null>(null);
+
+  // Studio UI language toggle & chapter re-distillation toggle
+  const [lang, setLang] = useState<'en' | 'fr'>('en');
+  const [forceRedistillChapters, setForceRedistillChapters] = useState(false);
 
   if (!course) {
     return (
@@ -139,7 +143,7 @@ export default function CourseStudioPanel({
         type: 'success',
         text: `Successfully imported and distilled ${files.length} chapter(s)! You can now compile the Knowledge Base.`,
       });
-      onCourseUpdated();
+      await onCourseUpdated();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Batch chapter upload failed';
       setStatusMessage({ type: 'error', text: msg });
@@ -216,12 +220,12 @@ export default function CourseStudioPanel({
         }
       }
 
+      await onCourseUpdated();
       setShowLabsIngestionModal(true);
       setStatusMessage({
         type: 'success',
         text: `Successfully decomposed and configured ${files.length} lab(s) with activities, milestones, and demo presets!`,
       });
-      onCourseUpdated();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Batch lab upload failed';
       setStatusMessage({ type: 'error', text: msg });
@@ -278,12 +282,12 @@ export default function CourseStudioPanel({
         }
       }
 
+      await onCourseUpdated();
       setShowLabsIngestionModal(true);
       setStatusMessage({
         type: 'success',
-        text: `All ${sortedLabs.length} lab(s) successfully re-analyzed with bilingual EN/FR descriptions, milestones, and demo presets!`,
+        text: `All ${sortedLabs.length} lab(s) successfully re-analyzed with full PDF text, 100% bilingual EN/FR activities and demo presets!`,
       });
-      onCourseUpdated();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Re-analyzing labs failed';
       setStatusMessage({ type: 'error', text: msg });
@@ -295,15 +299,58 @@ export default function CourseStudioPanel({
 
   // --------------------------------------------------------------------------
   // COMPILE COURSE (TAXONOMY + CUSTOM MENTOR PROMPT + COMPILED KB)
+  // Single intelligent button: auto-distills chapters with missing title_i18n
   // --------------------------------------------------------------------------
   const handleCompileCourse = async () => {
     setIsProcessing(true);
-    setStatusMessage({
-      type: 'info',
-      text: 'Analyzing all chapters, deduplicating competencies, and synthesizing custom tutor prompt with Golden Shots...',
-    });
+    setStatusMessage(null);
 
     try {
+      // 1. Check if chapters need re-distillation (forceRedistillChapters checked OR title_i18n missing)
+      const chaptersNeedingDistillation = chapters.filter(
+        (ch) => Boolean(ch.pdf_url) && (forceRedistillChapters || !ch.title_i18n)
+      );
+
+      if (chaptersNeedingDistillation.length > 0) {
+        const sortedChaps = [...chaptersNeedingDistillation].sort((a, b) => a.chapter_number - b.chapter_number);
+        for (let i = 0; i < sortedChaps.length; i++) {
+          const ch = sortedChaps[i];
+          setCurrentProgress({
+            stage: 'Distilling Chapters',
+            current: i + 1,
+            total: sortedChaps.length,
+            filename: `Chapter ${ch.chapter_number}: ${ch.title}`,
+          });
+
+          const pages = await extractPdfPagesFromUrl(ch.pdf_url!);
+          const res = await fetch('/api/studio/chapter-analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              courseId: course.id,
+              chapterNumber: ch.chapter_number,
+              code: ch.code,
+              title: ch.title,
+              pdfUrl: ch.pdf_url,
+              pages,
+            }),
+          });
+
+          if (!res.ok) {
+            const errData = await res.json();
+            throw new Error(`Failed to distill chapter "${ch.title}": ${errData.error || res.statusText}`);
+          }
+        }
+      }
+
+      // 2. Synthesize Course Knowledge Base & Custom Tutor Prompt
+      setCurrentProgress({
+        stage: 'Synthesizing KB & Prompt',
+        current: 1,
+        total: 1,
+        filename: `${course.title} (${course.code})`,
+      });
+
       const res = await fetch('/api/studio/compile-course', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -315,17 +362,21 @@ export default function CourseStudioPanel({
         throw new Error(errData.error || 'Failed to compile course');
       }
 
+      await onCourseUpdated();
+      setForceRedistillChapters(false);
       setShowCompilationModal(true);
       setStatusMessage({
         type: 'success',
-        text: 'Course Knowledge Base compiled successfully! Custom Mentor Prompt and Competency Taxonomy are active.',
+        text: chaptersNeedingDistillation.length > 0
+          ? `Successfully distilled ${chaptersNeedingDistillation.length} chapter(s) with full text and synthesized Course Knowledge Base & Mentor Prompt!`
+          : 'Course Knowledge Base compiled successfully! Custom Mentor Prompt and Competency Taxonomy are active.',
       });
-      onCourseUpdated();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Compilation failed';
       setStatusMessage({ type: 'error', text: msg });
     } finally {
       setIsProcessing(false);
+      setCurrentProgress(null);
     }
   };
 
@@ -340,6 +391,28 @@ export default function CourseStudioPanel({
               <Badge variant="outline" className="font-mono text-[10px] text-emerald-400 border-emerald-500/30">
                 {course.code}
               </Badge>
+              {/* STUDIO LANGUAGE TOGGLE */}
+              <div className="inline-flex items-center gap-0.5 bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-800 text-[10px] font-mono shrink-0 ml-1">
+                <button
+                  onClick={() => setLang('en')}
+                  className={`px-1.5 py-0.5 rounded transition ${
+                    lang === 'en' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                  title="Display in English for International Jury"
+                >
+                  EN
+                </button>
+                <span className="text-slate-600">|</span>
+                <button
+                  onClick={() => setLang('fr')}
+                  className={`px-1.5 py-0.5 rounded transition ${
+                    lang === 'fr' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                  title="Afficher en Français"
+                >
+                  FR
+                </button>
+              </div>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Languages: <span className="text-slate-200 uppercase font-mono">{course.content_language}</span> (Slides) ➔{' '}
@@ -566,7 +639,7 @@ export default function CourseStudioPanel({
                   >
                     <div className="flex items-center gap-2 truncate">
                       <span className="font-mono text-[10px] text-emerald-400">Ch.{ch.chapter_number}</span>
-                      <span className="text-slate-200 truncate">{ch.title}</span>
+                      <span className="text-slate-200 truncate">{getLocalizedChapterTitle(ch, lang)}</span>
                     </div>
                     {ch.pdf_url && (
                       <a
@@ -585,13 +658,32 @@ export default function CourseStudioPanel({
           </div>
 
           {/* COMPILE BUTTON */}
-          <div className="pt-3 border-t border-slate-800">
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={forceRedistillChapters}
+                  onChange={(e) => setForceRedistillChapters(e.target.checked)}
+                  disabled={isProcessing}
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0 w-3.5 h-3.5"
+                />
+                <span>Re-distill chapter PDFs from Storage</span>
+              </label>
+              <span className="text-[10px] text-emerald-400 font-mono">Auto-detects missing title_i18n</span>
+            </div>
+
             <Button
               onClick={handleCompileCourse}
               disabled={isProcessing || chapters.length === 0}
               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
             >
-              {isProcessing ? (
+              {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Distilling Chapters ({currentProgress.current}/{currentProgress.total})...
+                </>
+              ) : isProcessing ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                   Synthesizing Taxonomy & Prompt with Meta AI...
@@ -673,7 +765,7 @@ export default function CourseStudioPanel({
                   >
                     <div className="flex items-center gap-2 truncate">
                       <span className="font-mono text-[10px] text-cyan-400 font-semibold">TP {lb.lab_number}</span>
-                      <span className="text-slate-200 truncate">{lb.title}</span>
+                      <span className="text-slate-200 truncate">{getLocalizedLabTitle(lb, lang)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       <button

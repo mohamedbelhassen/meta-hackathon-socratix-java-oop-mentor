@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
-import { CheckCircle2, ArrowRight, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, ArrowRight, X } from 'lucide-react';
 
 interface VerifiedUser {
   id: string;

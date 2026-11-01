@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
-import { CheckCircle2, ArrowRight, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -92,7 +92,7 @@ export default function AuthCallbackPage() {
           <div className="py-8 space-y-4">
             <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mx-auto" />
             <h1 className="text-lg font-bold text-slate-100">Vérification de votre compte...</h1>
-            <p className="text-xs text-slate-400">Finalisation de l'authentification et synchronisation de votre profil.</p>
+            <p className="text-xs text-slate-400">Finalisation de l&apos;authentification et synchronisation de votre profil.</p>
           </div>
         )}
 
