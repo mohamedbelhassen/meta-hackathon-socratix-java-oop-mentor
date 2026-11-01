@@ -197,6 +197,12 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       if (slidePage?.en_summary && !parsed.socratic_reply.course_reference.en_note) {
         parsed.socratic_reply.course_reference.en_note = slidePage.en_summary;
       }
+      if (slidePage) {
+        parsed.socratic_reply.course_reference.slide_markdown = {
+          en: slidePage.en_markdown || (slidePage.en_summary ? `> ${slidePage.en_summary}` : undefined),
+          fr: slidePage.fr_markdown || undefined,
+        };
+      }
     }
 
     // Merge multi-occurrence micro-competencies non-destructively

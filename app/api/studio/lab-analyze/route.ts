@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { cleanPdfPages, cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import { GOLDEN_LAB_DECOMPOSITION_SHOT } from '@/lib/meta-prompt-exemplars';
 
 const META_API_KEY = process.env.META_API_KEY;
@@ -40,7 +41,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const pagesTextSample = pages
+    const { cleanedPages } = cleanPdfPages(pages);
+
+    const pagesTextSample = cleanedPages
       .slice(0, 30)
       .map((p: { page: number; text: string }) => `=== PAGE ${p.page} ===\n${p.text.slice(0, 15000)}`)
       .join('\n\n');
@@ -66,6 +69,13 @@ Your job is to read an authentic university programming lab assignment (TP), ext
    - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy'). Contains realistic student mistakes idiomatic to the target language and this specific activity (e.g., broken encapsulation/missing exception in Java; uninitialized pointer in C; mutable default arg in Python).
    - Preset 2 (Validated Reference Solution): preset_type 'solution', key '<act_id>_solution' (e.g., 'act_1_solution', 'act_2_solution'). Clean, complete, syntactically valid code satisfying all milestones of this activity.
    Every activity MUST have its own couple of presets (e.g. if the lab has 2 activities, 'demo_presets' must contain 4 presets total: 2 for act_1 and 2 for act_2).
+6. STRUCTURED MARKDOWN INSTRUCTIONS (NO REDUNDANT TITLE HEADERS):
+   - In both 'instructions_i18n.fr' and 'instructions_i18n.en', format the activity instructions in clean, readable Markdown.
+   - DO NOT repeat the activity title (e.g. NEVER start with '### Activité N°1' or '### Activity 1').
+   - Structure each activity with:
+     - A concise 1-sentence scenario / objective.
+     - An 'Implementation Steps' / 'Étapes de réalisation' numbered list (1., 2., 3.) with bullet details.
+     - Mandatory code identifiers (classes, methods, exceptions, variables) enclosed in backticks (\`ClassName\`, \`methodName()\`).
 
 ### GOLDEN EXEMPLAR (HOW TO DECOMPOSE A LAB):
 Notice how it clearly splits assimilation from project integration, defines minimal validation criteria, and generates working code presets:
@@ -300,8 +310,8 @@ ${pagesTextSample}`;
     const mappedActivities = (parsed.activities || []).map((act: ParsedActivityRaw) => {
       const actTitleEn = act.title_i18n?.en?.trim() || act.title || `Activity ${act.order}`;
       const actTitleFr = act.title_i18n?.fr?.trim() || act.title || `Activité ${act.order}`;
-      const actInstructionsEn = act.instructions_i18n?.en?.trim() || act.instructions_markdown || '';
-      const actInstructionsFr = act.instructions_i18n?.fr?.trim() || act.instructions_markdown || '';
+      const actInstructionsEn = cleanInstructionsMarkdown(act.instructions_i18n?.en?.trim() || act.instructions_markdown || '');
+      const actInstructionsFr = cleanInstructionsMarkdown(act.instructions_i18n?.fr?.trim() || act.instructions_markdown || '');
 
       const mappedMilestones = (act.milestones || []).map((m: ParsedMilestoneRaw) => ({
         id: m.id,
@@ -371,7 +381,7 @@ ${pagesTextSample}`;
           ? JSON.stringify(parsed.description)
           : (typeof parsed.description === 'string' ? parsed.description.trim() : (description?.trim() || null)),
       pdf_url: pdfUrl || null,
-      pages_json: pages,
+      pages_json: cleanedPages,
       activities: mappedActivities,
       covered_micro_concepts: parsed.covered_micro_concepts || [],
       demo_presets: mappedPresets,

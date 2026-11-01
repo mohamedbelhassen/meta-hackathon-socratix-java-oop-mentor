@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Lab, LabActivity, DemoPreset } from '@/types/socratix';
+import { cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import {
   X,
   Layers,
@@ -206,8 +208,10 @@ export default function LabDetailModal({
                       </div>
 
                       {locAct.instructions && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-850 text-slate-300 leading-relaxed text-xs space-y-2 whitespace-pre-wrap font-sans">
-                          {locAct.instructions}
+                        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-300 leading-relaxed text-xs space-y-2 font-sans prose prose-invert prose-xs max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-950 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[11px] [&_strong]:text-white [&_p]:my-1">
+                          <ReactMarkdown>
+                            {cleanInstructionsMarkdown(locAct.instructions)}
+                          </ReactMarkdown>
                         </div>
                       )}
 

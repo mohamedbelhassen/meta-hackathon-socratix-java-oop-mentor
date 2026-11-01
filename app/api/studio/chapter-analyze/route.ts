@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { cleanPdfPages } from '@/lib/pdf-cleaner';
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
 const META_API_KEY = process.env.META_API_KEY;
@@ -34,12 +35,14 @@ export async function POST(req: NextRequest) {
     const MAX_TOTAL_CHARS = 180000;
 
     const pagesSlice = pages.slice(0, MAX_PAGES);
-    const totalRawChars = pagesSlice.reduce((sum: number, p: { text: string }) => sum + (p.text?.length || 0), 0);
+    const { cleanedPages } = cleanPdfPages(pagesSlice);
+
+    const totalRawChars = cleanedPages.reduce((sum: number, p: { text: string }) => sum + (p.text?.length || 0), 0);
     const dynamicPerCharLimit = totalRawChars > MAX_TOTAL_CHARS
-      ? Math.max(1200, Math.floor(MAX_TOTAL_CHARS / pagesSlice.length))
+      ? Math.max(1200, Math.floor(MAX_TOTAL_CHARS / cleanedPages.length))
       : MAX_CHARS_PER_PAGE;
 
-    const pagesTextSample = pagesSlice
+    const pagesTextSample = cleanedPages
       .map((p: { page: number; text: string }) => `[Page/Slide ${p.page}] ${(p.text || '').slice(0, dynamicPerCharLimit)}`)
       .join('\n');
 
@@ -58,7 +61,10 @@ ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 3. Include exact reference anchors "(Slide X)" or "(Page X)" (or "(Slides X-Y)" / "(Pages X-Y)") for every concept.
 4. Preserve and highlight exact code identifiers across any programming paradigm (classes, interfaces, methods, exceptions in OOP; structs, pointers, macros, headers in C/C++; functions, modules, decorators, $variables, schema keys in Python/PHP/JS/SQL) without translating code identifiers, and document explicit language-specific anti-patterns/dangers.
 5. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide or page number.
-6. Provide a concise English translation summary ("en_summary") for 2 to 4 key slides/pages so they can be shown in the cross-lingual slide viewer (keeping code identifiers untouched).`;
+6. Provide slide-by-slide pedagogical summaries and translations in 'pages_summary' for key slides:
+   - 'en_summary': a concise 1-2 sentence English pedagogical takeaway.
+   - 'en_markdown': a clean, beautifully formatted English Markdown transcription of the slide with code in \`\`\`java blocks, strictly omitting dates, professor names, or footer page numbers.
+   - 'fr_markdown': a clean, formatted French Markdown transcription of the slide with code in \`\`\`java blocks, strictly omitting dates, professor names, or footer page numbers.`;
 
     const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
 
@@ -109,8 +115,10 @@ ${pagesTextSample}`;
               properties: {
                 page: { type: 'integer' },
                 en_summary: { type: 'string' },
+                en_markdown: { type: 'string' },
+                fr_markdown: { type: 'string' },
               },
-              required: ['page', 'en_summary'],
+              required: ['page', 'en_summary', 'en_markdown', 'fr_markdown'],
               additionalProperties: false,
             },
           },
@@ -149,13 +157,15 @@ ${pagesTextSample}`;
     const content = metaData.choices?.[0]?.message?.content;
     const parsed = typeof content === 'string' ? JSON.parse(content) : content;
 
-    // Merge pages_summary with extracted pages
-    const enrichedPages = pages.map((p: { page: number; text: string }) => {
+    // Merge pages_summary with cleaned pages
+    const enrichedPages = cleanedPages.map((p: { page: number; text: string }) => {
       const found = parsed.pages_summary?.find((s: { page: number }) => s.page === p.page);
       return {
         page: p.page,
         text: p.text,
         en_summary: found?.en_summary || undefined,
+        en_markdown: found?.en_markdown || undefined,
+        fr_markdown: found?.fr_markdown || undefined,
       };
     });
 

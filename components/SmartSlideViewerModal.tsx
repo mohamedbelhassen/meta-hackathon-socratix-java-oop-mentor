@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { StructuredCourseReference } from '@/types/socratix';
 import { ExternalLink, X, BookOpen, Sparkles, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getSlideCleanMarkdown } from '@/lib/pdf-cleaner';
 
 interface SmartSlideViewerModalProps {
   isOpen: boolean;
@@ -19,7 +21,12 @@ export default function SmartSlideViewerModal({
   reference,
   courseTitle,
 }: SmartSlideViewerModalProps) {
+  const [slideViewMode, setSlideViewMode] = useState<'clean_en' | 'pdf' | 'clean_fr'>('clean_en');
+
   if (!isOpen || !reference) return null;
+
+  const cleanEnText = getSlideCleanMarkdown(reference, 'en');
+  const cleanFrText = getSlideCleanMarkdown(reference, 'fr');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
@@ -68,26 +75,78 @@ export default function SmartSlideViewerModal({
           </div>
         </div>
 
-        {/* Modal Body: 2 Columns (65% PDF Slide + 35% Cross-Lingual Note) */}
+        {/* Modal Body: 2 Columns (65% Slide View + 35% Cross-Lingual Note) */}
         <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-0 overflow-hidden">
-          {/* Left Column: Embedded Slide (Page X) */}
+          {/* Left Column: Multi-View Slide (Clean English | Official PDF | Clean French) */}
           <div className="md:col-span-8 p-4 bg-slate-950/80 flex flex-col h-full overflow-hidden">
-            {reference.pdf_url ? (
-              <iframe
-                key={`${reference.pdf_url}#page=${reference.page_number}`}
-                src={`${reference.pdf_url}#page=${reference.page_number}&view=FitH`}
-                className="w-full h-full rounded-xl border border-slate-800 bg-white shadow-inner"
-                title={`Slide ${reference.page_number}`}
-              />
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 border border-dashed border-slate-800 rounded-xl text-slate-500">
-                <FileText className="w-12 h-12 mb-3 text-slate-600" />
-                <p className="font-medium text-slate-300 mb-1">Slide PDF Not Attached</p>
-                <p className="text-xs max-w-md">
-                  This chapter was compiled from curriculum notes. Reference: Chapter {reference.chapter_code}, Slide {reference.page_number}.
-                </p>
-              </div>
-            )}
+            {/* View Switcher Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 mb-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => setSlideViewMode('clean_en')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  slideViewMode === 'clean_en'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="View clean English markdown translation (Jury recommended)"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                <span>✨ Clean English Slide</span>
+                <span className="text-[9px] uppercase font-mono px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Jury
+                </span>
+              </button>
+
+              {reference.pdf_url && (
+                <button
+                  type="button"
+                  onClick={() => setSlideViewMode('pdf')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                    slideViewMode === 'pdf'
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="View original official PDF slide"
+                >
+                  <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>📄 Official PDF (French)</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSlideViewMode('clean_fr')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
+                  slideViewMode === 'clean_fr'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="View clean French markdown without page boilerplate"
+              >
+                <span>🇫🇷 Clean French Slide</span>
+              </button>
+            </div>
+
+            {/* Slide Content Display Area */}
+            <div className="flex-1 overflow-hidden relative">
+              {slideViewMode === 'pdf' && reference.pdf_url ? (
+                <iframe
+                  key={`${reference.pdf_url}#page=${reference.page_number}`}
+                  src={`${reference.pdf_url}#page=${reference.page_number}&view=FitH`}
+                  className="w-full h-full rounded-xl border border-slate-800 bg-white shadow-inner"
+                  title={`Slide ${reference.page_number}`}
+                />
+              ) : (
+                <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto shadow-inner">
+                  <div className="prose prose-invert prose-sm max-w-none text-slate-200 leading-relaxed space-y-3 [&_h3]:text-emerald-400 [&_h3]:text-base [&_h3]:font-bold [&_h4]:text-slate-100 [&_h4]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-slate-950 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-slate-950 [&_pre]:border [&_pre]:border-slate-800 [&_pre]:p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-500/50 [&_blockquote]:bg-emerald-950/20 [&_blockquote]:p-3 [&_blockquote]:rounded-r-lg [&_strong]:text-emerald-200">
+                    <ReactMarkdown>
+                      {slideViewMode === 'clean_en' ? cleanEnText : cleanFrText}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right Column: AI Cross-Lingual Pedagogical Note */}

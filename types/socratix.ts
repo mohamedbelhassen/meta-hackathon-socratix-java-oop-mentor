@@ -59,6 +59,8 @@ export interface PagedSlide {
   page: number;
   text: string;
   en_summary?: string;
+  en_markdown?: string;
+  fr_markdown?: string;
 }
 
 export interface CourseChapter {
@@ -203,6 +205,10 @@ export interface StructuredCourseReference {
   page_number: number; // e.g., 42
   pdf_url?: string | null;
   en_note: string; // English pedagogical synthesis note
+  slide_markdown?: {
+    en?: string;
+    fr?: string;
+  };
 }
 
 export interface ChatMessage {

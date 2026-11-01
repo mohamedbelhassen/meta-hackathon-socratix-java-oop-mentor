@@ -40,6 +40,7 @@ import MilestoneCelebrationModal, {
   replayCelebration,
 } from './MilestoneCelebrationModal';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
+import { cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import {
   saveActiveContext,
   loadActiveContext,
@@ -147,6 +148,7 @@ export default function StudentWorkspace() {
   const [completedMilestone, setCompletedMilestone] = useState<string | null>(null);
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
+  const [briefLang, setBriefLang] = useState<'en' | 'fr'>('en');
 
   // Layout Resizing (1/3 of screen width initially, freely draggable)
   const [leftPanelWidth, setLeftPanelWidth] = useState<number>(480);
@@ -1003,9 +1005,46 @@ export default function StudentWorkspace() {
             {/* Expanded Brief Details */}
             {isBriefExpanded && (
               <div className="pt-2 text-xs space-y-2 border-t border-slate-800/60">
-                <p className="text-slate-400 leading-relaxed text-[11px]">
-                  {activeActivity.instructions_markdown}
-                </p>
+                <div className="flex items-center justify-between pb-0.5">
+                  <span className="text-[10px] uppercase font-semibold text-slate-500">
+                    Activity Instructions:
+                  </span>
+                  {activeActivity.instructions_i18n?.fr && (
+                    <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setBriefLang('en')}
+                        className={`font-semibold transition ${
+                          briefLang === 'en' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300'
+                        }`}
+                        title="English instructions"
+                      >
+                        EN
+                      </button>
+                      <span className="text-slate-700">|</span>
+                      <button
+                        type="button"
+                        onClick={() => setBriefLang('fr')}
+                        className={`font-semibold transition ${
+                          briefLang === 'fr' ? 'text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-300'
+                        }`}
+                        title="French original instructions"
+                      >
+                        FR
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="prose prose-invert prose-xs max-w-none text-slate-300 leading-relaxed text-[11px] space-y-1.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-900 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[10px] [&_strong]:text-slate-100 [&_p]:my-1">
+                  <ReactMarkdown>
+                    {cleanInstructionsMarkdown(
+                      briefLang === 'fr' && activeActivity.instructions_i18n?.fr
+                        ? activeActivity.instructions_i18n.fr
+                        : (activeActivity.instructions_i18n?.en || activeActivity.instructions_markdown)
+                    )}
+                  </ReactMarkdown>
+                </div>
                 <div className="space-y-1">
                   <div className="text-[10px] uppercase font-semibold text-slate-500">Milestones Checklist</div>
                   {activeActivity.milestones.map((m) => {
