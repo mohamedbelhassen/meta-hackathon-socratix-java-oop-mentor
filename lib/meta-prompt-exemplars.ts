@@ -148,7 +148,9 @@ export const GOLDEN_LAB_DECOMPOSITION_SHOT = {
   covered_micro_concepts: ['VISIBILITY_ENCAPSULATION', 'DEFENSIVE_SETTERS', 'CONSTRUCTORS_THIS'],
   demo_presets: [
     {
-      key: 'buggy_encapsulation',
+      key: 'act_1_buggy',
+      activity_id: 'act_1',
+      preset_type: 'buggy',
       label: '1. Buggy Encapsulation (Public Fields)',
       description: 'Item price has no visibility modifier and is corrupted directly.',
       files: [
@@ -163,8 +165,10 @@ export const GOLDEN_LAB_DECOMPOSITION_SHOT = {
       ],
     },
     {
-      key: 'validated_solution',
-      label: '2. Validated Reference Solution',
+      key: 'act_1_solution',
+      activity_id: 'act_1',
+      preset_type: 'solution',
+      label: '2. Validated Solution (Item Encapsulation)',
       description: 'Clean encapsulation with private attributes and guarded setter.',
       files: [
         {
@@ -174,6 +178,40 @@ export const GOLDEN_LAB_DECOMPOSITION_SHOT = {
         {
           name: 'YallaPOS.java',
           content: 'public class YallaPOS {\n  public static void main(String[] args) {\n    Item item = new Item("Coffee", 4.5);\n    item.setPrice(-100.0);\n    System.out.println(item.getPrice());\n  }\n}',
+        },
+      ],
+    },
+    {
+      key: 'act_2_buggy',
+      activity_id: 'act_2',
+      preset_type: 'buggy',
+      label: '1. Buggy Order (Uncapped Discount)',
+      description: 'Order discount does not validate ceiling and accepts negative or invalid rates.',
+      files: [
+        {
+          name: 'Order.java',
+          content: 'public class Order {\n  double total = 100.0;\n  public void applyDiscount(double percent) {\n    this.total = this.total * (1 - percent / 100.0);\n  }\n}',
+        },
+        {
+          name: 'YallaPOS.java',
+          content: 'public class YallaPOS {\n  public static void main(String[] args) {\n    Order order = new Order();\n    order.applyDiscount(90.0);\n  }\n}',
+        },
+      ],
+    },
+    {
+      key: 'act_2_solution',
+      activity_id: 'act_2',
+      preset_type: 'solution',
+      label: '2. Validated Solution (Order Discount)',
+      description: 'Defensive discount method strictly capping discount to 50% max.',
+      files: [
+        {
+          name: 'Order.java',
+          content: 'public class Order {\n  double total = 100.0;\n  public void applyDiscount(double percent) {\n    if (percent < 0 || percent > 50) return;\n    this.total = this.total * (1 - percent / 100.0);\n  }\n  public double getTotal() { return this.total; }\n}',
+        },
+        {
+          name: 'YallaPOS.java',
+          content: 'public class YallaPOS {\n  public static void main(String[] args) {\n    Order order = new Order();\n    order.applyDiscount(50.0);\n    System.out.println(order.getTotal());\n  }\n}',
         },
       ],
     },

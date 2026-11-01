@@ -116,6 +116,7 @@ CREATE TABLE public.student_lab_sessions (
 CREATE TABLE public.chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     student_lab_session_id UUID REFERENCES public.student_lab_sessions(id) ON DELETE CASCADE NOT NULL,
+    activity_id TEXT,
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'teacher_hint')),
     content TEXT NOT NULL,
     course_reference JSONB,
@@ -135,6 +136,7 @@ CREATE INDEX idx_student_lab_sessions_lookup ON public.student_lab_sessions(cour
 CREATE INDEX idx_student_lab_sessions_student ON public.student_lab_sessions(student_id);
 CREATE INDEX idx_student_lab_sessions_status ON public.student_lab_sessions(status);
 CREATE INDEX idx_chat_messages_session ON public.chat_messages(student_lab_session_id);
+CREATE INDEX idx_chat_messages_activity ON public.chat_messages(student_lab_session_id, activity_id);
 CREATE INDEX idx_chat_messages_created ON public.chat_messages(created_at);
 
 -- ============================================================================

@@ -235,6 +235,15 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       newlyCompleted.length
     );
 
+    // Attach activity-specific completion report non-destructively
+    if (activeActivity?.id && progressData.activities_progress[activeActivity.id]) {
+      if (isActivityCompleted || isMilestoneCompleted || progressData.activities_progress[activeActivity.id].percent === 100) {
+        progressData.activities_progress[activeActivity.id].completion_report = parsed.competency_report;
+      } else if (existingSession?.activities_progress?.[activeActivity.id]?.completion_report) {
+        progressData.activities_progress[activeActivity.id].completion_report = existingSession.activities_progress[activeActivity.id].completion_report;
+      }
+    }
+
     // Persist session state via Supabase UPSERT
     const sessionUpsertPayload = {
       course_id: courseId,
@@ -271,9 +280,10 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       );
     }
 
-    // Persist chat messages in single batch
+    // Persist chat messages tagged with current activity_id
     const userMessageRecord = {
       student_lab_session_id: savedSession.id,
+      activity_id: activeActivity?.id || null,
       role: 'user',
       content: isHintRequest ? '💡 [Asked for a Hint]' : question,
       code_snapshot: files,
@@ -281,6 +291,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
 
     const assistantMessageRecord = {
       student_lab_session_id: savedSession.id,
+      activity_id: activeActivity?.id || null,
       role: 'assistant',
       content: parsed.socratic_reply?.message_markdown || '',
       course_reference: parsed.socratic_reply?.course_reference || null,

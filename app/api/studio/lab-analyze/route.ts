@@ -62,9 +62,10 @@ Your job is to read an authentic university programming lab assignment (TP), ext
    - Scripting, Functional & Web/DB (Python, JS/TS, PHP, SQL/Parse): snake_case or camelCase function/module names (e.g., calculer_moyenne), $variable names, decorators, and database/JSON schema keys (e.g., Parse.Object class and attribute keys).
    - NEVER translate any code identifier between French and English (e.g., do NOT translate Four to Oven, Aliment to Food, or calculer_moyenne to calculate_average!). Only translate the surrounding pedagogical prose.
 4. STRICT FILE EXTENSION & TARGET FILE DISCIPLINE: Every file name in 'target_files' and 'demo_presets' MUST strictly match the files requested in the lab statement and MUST only use extensions allowed by this course (${JSON.stringify(allowedExtensions)}). In multi-file languages like C/C++, include both header (.h) and implementation (.c/.cpp) files when appropriate; never default to '.java' if the course uses another language.
-5. LANGUAGE-AUTHENTIC DEMO PRESETS: Generate 2 realistic 'demo_presets' written strictly in the course's programming language (${JSON.stringify(allowedExtensions)}):
-   - Preset 1 (Buggy Student Attempt): Contains realistic student mistakes idiomatic to the target language and lab topic (e.g., broken encapsulation/missing super()/unhandled exception in Java; uninitialized pointer/missing free()/missing header guard in C/C++; mutable default arg/scope or indentation bug in Python; loose comparison or missing async/await in PHP/JS).
-   - Preset 2 (Validated Reference Solution): Clean, complete, syntactically valid reference code satisfying all milestones of the lab.
+5. PER-ACTIVITY DEMO PRESETS (BUGGY + VALIDATED PER ACTIVITY): For EVERY activity extracted from the lab, generate exactly 2 1-click Demo Presets in 'demo_presets' targeting the specific files and concepts of THAT activity:
+   - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy'). Contains realistic student mistakes idiomatic to the target language and this specific activity (e.g., broken encapsulation/missing exception in Java; uninitialized pointer in C; mutable default arg in Python).
+   - Preset 2 (Validated Reference Solution): preset_type 'solution', key '<act_id>_solution' (e.g., 'act_1_solution', 'act_2_solution'). Clean, complete, syntactically valid code satisfying all milestones of this activity.
+   Every activity MUST have its own couple of presets (e.g. if the lab has 2 activities, 'demo_presets' must contain 4 presets total: 2 for act_1 and 2 for act_2).
 
 ### GOLDEN EXEMPLAR (HOW TO DECOMPOSE A LAB):
 Notice how it clearly splits assimilation from project integration, defines minimal validation criteria, and generates working code presets:
@@ -203,6 +204,15 @@ ${pagesTextSample}`;
               type: 'object',
               properties: {
                 key: { type: 'string' },
+                activity_id: {
+                  type: 'string',
+                  description: 'The exact id of the activity this preset belongs to (e.g. act_1, act_2).',
+                },
+                preset_type: {
+                  type: 'string',
+                  enum: ['buggy', 'solution'],
+                  description: 'Whether this preset illustrates a buggy attempt or a validated reference solution.',
+                },
                 label: { type: 'string' },
                 description: { type: 'string' },
                 files: {
@@ -218,7 +228,7 @@ ${pagesTextSample}`;
                   },
                 },
               },
-              required: ['key', 'label', 'description', 'files'],
+              required: ['key', 'activity_id', 'preset_type', 'label', 'description', 'files'],
               additionalProperties: false,
             },
           },
@@ -326,6 +336,27 @@ ${pagesTextSample}`;
       };
     });
 
+    interface ParsedPresetRaw {
+      key?: string;
+      activity_id?: string;
+      preset_type?: 'buggy' | 'solution';
+      label?: string;
+      description?: string;
+      files?: Array<{ name: string; content: string }>;
+    }
+
+    const mappedPresets = (parsed.demo_presets || []).map((p: ParsedPresetRaw, idx: number) => {
+      const actId = p.activity_id?.trim() || mappedActivities[0]?.id || 'act_1';
+      return {
+        key: p.key?.trim() || `${actId}_preset_${idx}`,
+        activity_id: actId,
+        preset_type: p.preset_type === 'buggy' ? 'buggy' : 'solution',
+        label: p.label?.trim() || `Preset ${idx + 1}`,
+        description: p.description?.trim() || '',
+        files: Array.isArray(p.files) ? p.files : [],
+      };
+    });
+
     const labRecord = {
       course_id: courseId,
       lab_number: Number(labNumber),
@@ -343,7 +374,7 @@ ${pagesTextSample}`;
       pages_json: pages,
       activities: mappedActivities,
       covered_micro_concepts: parsed.covered_micro_concepts || [],
-      demo_presets: parsed.demo_presets || [],
+      demo_presets: mappedPresets,
       is_active: true,
       created_at: new Date().toISOString(),
     };

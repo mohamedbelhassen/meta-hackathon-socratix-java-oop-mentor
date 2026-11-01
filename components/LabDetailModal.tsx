@@ -307,25 +307,34 @@ export default function LabDetailModal({
                 </div>
 
                 {lab.demo_presets && lab.demo_presets.length > 0 && (
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {lab.demo_presets.map((preset, pIdx) => (
-                      <Button
-                        key={preset.key}
-                        size="sm"
-                        variant={selectedPresetIdx === pIdx ? 'default' : 'outline'}
-                        onClick={() => {
-                          setSelectedPresetIdx(pIdx);
-                          setSelectedFileIdx(0);
-                        }}
-                        className={`text-xs h-8 ${
-                          selectedPresetIdx === pIdx
-                            ? 'bg-cyan-600 text-white hover:bg-cyan-500'
-                            : 'bg-slate-900 border-slate-800 text-slate-300'
-                        }`}
-                      >
-                        {preset.label}
-                      </Button>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                    {lab.demo_presets.map((preset, pIdx) => {
+                      const act = lab.activities?.find((a) => a.id === preset.activity_id);
+                      const actLabel = act ? `Act ${act.order}` : null;
+                      return (
+                        <Button
+                          key={preset.key}
+                          size="sm"
+                          variant={selectedPresetIdx === pIdx ? 'default' : 'outline'}
+                          onClick={() => {
+                            setSelectedPresetIdx(pIdx);
+                            setSelectedFileIdx(0);
+                          }}
+                          className={`text-xs h-8 gap-1.5 ${
+                            selectedPresetIdx === pIdx
+                              ? 'bg-cyan-600 text-white hover:bg-cyan-500'
+                              : 'bg-slate-900 border-slate-800 text-slate-300'
+                          }`}
+                        >
+                          {actLabel && (
+                            <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-950/80 text-cyan-300 border border-cyan-500/30">
+                              {actLabel}
+                            </span>
+                          )}
+                          <span>{preset.label}</span>
+                        </Button>
+                      );
+                    })}
                   </div>
                 )}
               </div>

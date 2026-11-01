@@ -102,6 +102,8 @@ export interface DemoPresetFile {
 
 export interface DemoPreset {
   key: string;
+  activity_id?: string;
+  preset_type?: 'buggy' | 'solution';
   label: string;
   description?: string;
   files: DemoPresetFile[];
@@ -153,6 +155,7 @@ export interface ActivityProgress {
   total_milestones: number;
   percent: number;
   status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED';
+  completion_report?: CompletionReport | null;
 }
 
 export type SessionStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED' | 'COMPLETED';
@@ -205,6 +208,7 @@ export interface StructuredCourseReference {
 export interface ChatMessage {
   id: string;
   student_lab_session_id: string;
+  activity_id?: string | null;
   role: 'user' | 'assistant' | 'teacher_hint';
   content: string;
   course_reference?: StructuredCourseReference | null;

@@ -18,6 +18,8 @@ interface MilestoneCelebrationModalProps {
   onClose: () => void;
   milestoneId?: string;
   report: CompetencyReport | null;
+  onContinueNext?: () => void;
+  nextActivityLabel?: string;
 }
 
 // Zero-dependency Major Arpeggio Synthesizer via HTML5 Web Audio API
@@ -103,6 +105,8 @@ export default function MilestoneCelebrationModal({
   onClose,
   milestoneId = 'LAB5_ENCAPSULATION',
   report,
+  onContinueNext,
+  nextActivityLabel,
 }: MilestoneCelebrationModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -206,7 +210,7 @@ export default function MilestoneCelebrationModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
           <Button
             type="button"
             variant="ghost"
@@ -218,13 +222,28 @@ export default function MilestoneCelebrationModal({
             <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
             <span>Replay Fireworks & Chime 🎉</span>
           </Button>
-          <Button
-            type="button"
-            onClick={onClose}
-            className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-6 py-2 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/30"
-          >
-            Inspect Completed Workspace
-          </Button>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {onContinueNext && nextActivityLabel && (
+              <Button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onContinueNext();
+                }}
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-cyan-600/30 flex items-center gap-1.5"
+              >
+                <span>Continue to {nextActivityLabel} →</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              onClick={onClose}
+              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30"
+            >
+              Inspect Completed Workspace
+            </Button>
+          </div>
         </div>
       </div>
     </div>

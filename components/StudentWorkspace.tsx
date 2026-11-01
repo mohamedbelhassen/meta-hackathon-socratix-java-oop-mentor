@@ -60,6 +60,7 @@ const SEAT_OPTIONS = Array.from({ length: 20 }, (_, i) => `PC ${String(i + 1).pa
 
 interface ChatItem {
   id: string;
+  activityId?: string | null;
   role: 'user' | 'assistant';
   content: string;
   courseReference?: StructuredCourseReference | null;
@@ -318,12 +319,14 @@ export default function StudentWorkspace() {
         if (data.messages && data.messages.length > 0) {
           const chatItems: ChatItem[] = data.messages.map((m: {
             id: string;
+            activity_id?: string | null;
             role: 'user' | 'assistant';
             content: string;
             course_reference?: StructuredCourseReference;
             latency_ms?: number;
           }) => ({
             id: m.id,
+            activityId: m.activity_id || null,
             role: m.role,
             content: m.content,
             courseReference: m.course_reference || null,
@@ -499,6 +502,22 @@ export default function StudentWorkspace() {
     setActiveFileIndex(0);
   };
 
+  // Switch Active Activity & Synchronize Presets
+  const handleSelectActivity = (act: LabActivity) => {
+    setActiveActivity(act);
+    setIsBriefExpanded(false);
+
+    if (sourceMode === 'preset' && activeLab) {
+      const allPresets = activeLab.demo_presets && activeLab.demo_presets.length > 0
+        ? activeLab.demo_presets
+        : DEFAULT_JAVA_PRESETS;
+      const actPresets = allPresets.filter((p) => p.activity_id === act.id);
+      if (actPresets.length > 0 && !actPresets.some((p) => p.key === activePresetKey)) {
+        handleSelectPreset(actPresets[0]);
+      }
+    }
+  };
+
   // Restore Default Preset
   const handleRestorePreset = () => {
     if (!activeLab) return;
@@ -588,7 +607,7 @@ export default function StudentWorkspace() {
 
     setMessages((prev) => [
       ...prev,
-      { id: Date.now().toString(), role: 'user', content: userMessageContent },
+      { id: Date.now().toString(), role: 'user', content: userMessageContent, activityId: activeActivity?.id },
     ]);
 
     try {
@@ -602,8 +621,9 @@ export default function StudentWorkspace() {
         setWorkspaceFiles(currentFiles);
       }
 
+      // Filter conversation history strictly to the active activity to prevent cross-activity contamination
       const conversationHistory = messages
-        .filter((m) => !m.id.startsWith('welcome'))
+        .filter((m) => !m.id.startsWith('welcome') && (!m.activityId || m.activityId === activeActivity?.id))
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
@@ -635,6 +655,7 @@ export default function StudentWorkspace() {
             content: reply.message_markdown,
             courseReference: reply.course_reference || null,
             latencyMs: data.latency_ms,
+            activityId: activeActivity?.id,
           },
         ]);
 
@@ -693,12 +714,29 @@ export default function StudentWorkspace() {
     invokeTutor('', true);
   };
 
-  const activePresets = activeLab?.demo_presets && activeLab.demo_presets.length > 0
+  const allLabPresets = activeLab?.demo_presets && activeLab.demo_presets.length > 0
     ? activeLab.demo_presets
     : DEFAULT_JAVA_PRESETS;
 
+  const activePresets = activeActivity && allLabPresets.some((p) => p.activity_id === activeActivity.id)
+    ? allLabPresets.filter((p) => p.activity_id === activeActivity.id)
+    : allLabPresets;
+
   const currentFile = workspaceFiles[activeFileIndex] || { name: 'untitled', content: '' };
   const actProgress = activeActivity && sessionState?.activities_progress?.[activeActivity.id];
+
+  const isCurrentActivityCompleted = actProgress?.percent === 100;
+  const activeActivityReport = isCurrentActivityCompleted
+    ? (actProgress?.completion_report || completionReport)
+    : (sessionState?.progress_percent === 100 ? completionReport : null);
+
+  const nextActivity = activeLab?.activities?.find(
+    (a) => a.order === (activeActivity?.order || 0) + 1
+  );
+
+  const currentActivityMessages = messages.filter(
+    (m) => !m.activityId || m.activityId === activeActivity?.id
+  );
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
@@ -822,7 +860,7 @@ export default function StudentWorkspace() {
                     <button
                       key={act.id}
                       type="button"
-                      onClick={() => setActiveActivity(act)}
+                      onClick={() => handleSelectActivity(act)}
                       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 ${
                         isSelected
                           ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm'
@@ -1091,7 +1129,7 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Pinned Milestone Completion Banner (v0-socratix) */}
-        {completionReport && (
+        {activeActivityReport && (
           <div className="mx-4 mt-3 p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300 shrink-0">
             <div className="flex items-center gap-3">
               <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40">
@@ -1101,7 +1139,7 @@ export default function StudentWorkspace() {
                 <div className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-2">
                   <span>🏆 Milestone Mastered</span>
                   <span className="text-slate-500">•</span>
-                  <span>{completedMilestone || activeActivity?.title || 'Milestone Mastered'}</span>
+                  <span>{activeActivity?.title || completedMilestone || 'Milestone Mastered'}</span>
                 </div>
                 <div className="text-xs text-slate-300 mt-0.5">
                   All contracts met! Review your competency report & consolidation slides.
@@ -1123,18 +1161,47 @@ export default function StudentWorkspace() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => setIsCelebrationOpen(true)}
+                onClick={() => {
+                  setCompletionReport(activeActivityReport);
+                  setIsCelebrationOpen(true);
+                }}
                 className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
               >
                 View Report Card 🏆
               </Button>
+              {nextActivity && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleSelectActivity(nextActivity)}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs h-8 px-3 rounded-lg shadow-md flex items-center gap-1 shrink-0"
+                  title={`Continue to Activity ${nextActivity.order}`}
+                >
+                  <span>Next: Act. {nextActivity.order} →</span>
+                </Button>
+              )}
             </div>
           </div>
         )}
 
         {/* Dialogue Scrollable Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg) => (
+          {currentActivityMessages.length === 0 && (
+            <div className="flex flex-col items-start">
+              <div className="max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none space-y-2">
+                <div className="prose prose-invert prose-xs max-w-none">
+                  <p>
+                    Hello <strong>{activeStudent.name}</strong>! You are working on <strong>Activity {activeActivity?.order}: {activeActivity?.title}</strong>.
+                  </p>
+                  <p className="text-slate-400 text-[11px]">
+                    Ask me a question or click <strong>&quot;💡 Stuck? Ask for a Hint&quot;</strong> to get guided on this activity!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentActivityMessages.map((msg) => (
             <div
               key={msg.id}
               className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
@@ -1241,6 +1308,8 @@ export default function StudentWorkspace() {
         onClose={() => setIsCelebrationOpen(false)}
         report={completionReport}
         milestoneId={completedMilestone || activeActivity?.title || 'Milestone Completed'}
+        onContinueNext={nextActivity ? () => handleSelectActivity(nextActivity) : undefined}
+        nextActivityLabel={nextActivity ? `Activity ${nextActivity.order}` : undefined}
       />
 
       {/* Custom Dark-Themed Reset Confirmation Modal */}
