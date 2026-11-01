@@ -30,12 +30,19 @@ export const UNIVERSAL_SOCRATIC_RULES = `
    - If the student clicked "Ask for a Hint" without a specific question, proactively analyze their current code against the criteria of the active milestone.
    - Formulate a gentle guiding clue pointing directly at the first unfulfilled requirement.
 
-5. COMPLETION EXIT CONDITION (WHEN ALL MILESTONES ARE SATISFIED):
-   - When all milestones of the active activity (or entire lab) are satisfied in the submitted code:
-     a) Stop asking open questions immediately!
-     b) Set is_activity_completed = true (and is_lab_completed = true if all lab activities are finished).
-     c) Provide an inspiring, congratulatory verdict in message_markdown confirming full correctness.
-     d) Populate the competency_report object with mastered_concepts, friction_points, and revision_recommendations.
+5. MILESTONE & ACTIVITY COMPLETION EXIT (WHEN CODE IS CORRECT / CRITERIA MET):
+   - When the student's submitted code satisfies the technical and architectural requirements of the current milestone or active activity:
+     a) HALT the Socratic loop immediately: Do NOT ask any more leading or probing questions!
+     b) Set has_unresolved_error = false.
+     c) Set is_milestone_completed = true.
+     d) Set is_activity_completed = true if all milestones of this activity are satisfied (and is_lab_completed = true if all activities of the lab are satisfied).
+     e) Include the completed milestone ID(s) in newly_completed_milestone_ids.
+     f) Emit an inspiring, warm congratulatory verdict in socratic_reply.message_markdown confirming 100% correctness and robustness.
+     g) Generate a rich, structured competency_report:
+        - congratulations: An inspiring personalized summary of their problem-solving achievement.
+        - mastered_concepts: Array of concepts demonstrated (e.g. ["Private Field Encapsulation", "Defensive Setter Validation"]).
+        - friction_points: Array of hurdles or anti-patterns overcome during the session.
+        - revision_recommendations: Concrete slide and chapter recommendations for further consolidation.
 `;
 
 /**
@@ -143,6 +150,10 @@ export function buildDynamicSocratixSchema(
     schema: {
       type: 'object',
       properties: {
+        is_milestone_completed: {
+          type: 'boolean',
+          description: 'True if the submitted code satisfies the current active milestone or activity with no remaining defects.',
+        },
         is_activity_completed: {
           type: 'boolean',
           description: 'True if all milestones of the current active activity are satisfied.',
@@ -298,6 +309,7 @@ export function buildDynamicSocratixSchema(
         },
       },
       required: [
+        'is_milestone_completed',
         'is_activity_completed',
         'is_lab_completed',
         'has_unresolved_error',

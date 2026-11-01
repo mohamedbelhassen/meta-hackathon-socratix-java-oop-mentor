@@ -214,11 +214,22 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       newlyCompleted
     );
 
+    // Compute milestone and activity completion flags (aligned with v0-socratix)
+    const isActivityCompleted = Boolean(parsed.is_activity_completed);
+    const isLabCompleted = Boolean(parsed.is_lab_completed) || progressData.progress_percent === 100;
+    const isMilestoneCompleted = Boolean(
+      parsed.is_milestone_completed ||
+      isActivityCompleted ||
+      isLabCompleted ||
+      (newlyCompleted.length > 0 && !parsed.has_unresolved_error) ||
+      (!parsed.has_unresolved_error && Array.isArray(parsed.competency_report?.mastered_concepts) && parsed.competency_report.mastered_concepts.length > 0)
+    );
+
     // Compute deterministic session status (IN_PROGRESS, BLOCKED, COMPLETED)
     const sessionStatus = computeSessionStatus(
       existingSession,
       course.stuck_threshold_turns || 2,
-      parsed.is_lab_completed,
+      isLabCompleted,
       progressData.progress_percent,
       parsed.has_unresolved_error,
       newlyCompleted.length
@@ -239,7 +250,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       consecutive_errors: sessionStatus.consecutive_errors,
       micro_competencies_state: updatedMicroCompetencies,
       last_diagnostic_note: incomingSignals[0]?.diagnostic_note || null,
-      completion_report: parsed.is_lab_completed || progressData.progress_percent === 100
+      completion_report: isMilestoneCompleted
         ? parsed.competency_report
         : (existingSession?.completion_report || null),
       last_stuck_at: sessionStatus.last_stuck_at,
@@ -289,6 +300,10 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       socratic_reply: parsed.socratic_reply,
       session_state: savedSession,
       competency_report: parsed.competency_report,
+      is_milestone_completed: isMilestoneCompleted,
+      is_activity_completed: isActivityCompleted,
+      is_lab_completed: isLabCompleted,
+      newly_completed_milestone_ids: newlyCompleted,
       meta_usage: metaData.usage,
       latency_ms: latencyMs,
     });

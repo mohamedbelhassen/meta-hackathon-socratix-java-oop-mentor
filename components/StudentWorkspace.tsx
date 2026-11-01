@@ -36,6 +36,7 @@ import MilestoneCelebrationModal, {
   CompetencyReport,
   playCelebrationChime,
   triggerCelebrationConfetti,
+  replayCelebration,
 } from './MilestoneCelebrationModal';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
 import {
@@ -141,6 +142,7 @@ export default function StudentWorkspace() {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [completionReport, setCompletionReport] = useState<CompetencyReport | null>(null);
+  const [completedMilestone, setCompletedMilestone] = useState<string | null>(null);
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
 
@@ -253,6 +255,8 @@ export default function StudentWorkspace() {
     const targetPreset = labPresets.find((p) => p.key === targetPresetKey) || labPresets[0];
 
     setActivePresetKey(targetPreset.key);
+    setCompletionReport(null);
+    setCompletedMilestone(null);
 
     if (savedCtx?.sourceMode === 'disk') {
       setSourceMode('disk');
@@ -306,6 +310,10 @@ export default function StudentWorkspace() {
           if (data.session.seat_label) {
             setSeatLabel(data.session.seat_label);
           }
+          if (data.session.completion_report) {
+            setCompletionReport(data.session.completion_report);
+            setCompletedMilestone(activeActivity?.title || 'Milestone Mastered');
+          }
         }
         if (data.messages && data.messages.length > 0) {
           const chatItems: ChatItem[] = data.messages.map((m: {
@@ -336,7 +344,7 @@ export default function StudentWorkspace() {
       }
     }
     restoreSessionContext();
-  }, [activeStudent, activeLab]);
+  }, [activeStudent, activeLab, activeActivity?.title]);
 
   // 5. Persist Active Context on Change
   useEffect(() => {
@@ -551,6 +559,8 @@ export default function StudentWorkspace() {
 
       clearPresetEdits(activeLab.id, activePresetKey);
       setSessionState(null);
+      setCompletionReport(null);
+      setCompletedMilestone(null);
       setMessages([
         {
           id: 'welcome_reset',
@@ -632,14 +642,24 @@ export default function StudentWorkspace() {
           setSessionState(data.session_state);
         }
 
-        // Trigger celebration if activity or lab is completed
-        if (data.session_state?.progress_percent === 100 || data.socratic_reply?.is_lab_completed) {
-          if (data.competency_report) {
-            setCompletionReport(data.competency_report);
-            setIsCelebrationOpen(true);
-            playCelebrationChime();
-            triggerCelebrationConfetti();
-          }
+        // Trigger Milestone Completion celebration & competency report (aligned with v0-socratix)
+        const isCompleted = Boolean(
+          data.is_milestone_completed ||
+          data.is_activity_completed ||
+          data.is_lab_completed ||
+          data.session_state?.progress_percent === 100 ||
+          (data.session_state?.activities_progress && activeActivity?.id && data.session_state.activities_progress[activeActivity.id]?.percent === 100) ||
+          (Array.isArray(data.competency_report?.mastered_concepts) && data.competency_report.mastered_concepts.length > 0 && !data.session_state?.has_unresolved_error)
+        );
+
+        if (isCompleted && data.competency_report) {
+          const report = data.competency_report;
+          const milestone = activeActivity?.title || activeLab?.title || 'Milestone Mastered';
+          setCompletionReport(report);
+          setCompletedMilestone(milestone);
+          setIsCelebrationOpen(true);
+          playCelebrationChime();
+          triggerCelebrationConfetti();
         }
       } else {
         throw new Error(data.error || 'Failed to analyze code');
@@ -791,16 +811,60 @@ export default function StudentWorkspace() {
         {/* Activity & Milestone Brief (Collapsible) */}
         {activeLab && activeActivity && (
           <div className="border-b border-slate-800 bg-slate-950/40 p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+            {/* Multi-Activity 1-Click Tab Bar (Option B) */}
+            {activeLab.activities && activeLab.activities.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 border-b border-slate-800/70">
+                {activeLab.activities.map((act) => {
+                  const isSelected = activeActivity.id === act.id;
+                  const actProg = sessionState?.activities_progress?.[act.id];
+                  const isCompleted = actProg?.percent === 100;
+                  return (
+                    <button
+                      key={act.id}
+                      type="button"
+                      onClick={() => setActiveActivity(act)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 ${
+                        isSelected
+                          ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      }`}
+                      title={`Switch to Activity ${act.order}: ${act.title}`}
+                    >
+                      {isCompleted ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      ) : (
+                        <span
+                          className={`w-2 h-2 rounded-full shrink-0 ${
+                            isSelected ? 'bg-emerald-400 ring-2 ring-emerald-500/30' : 'bg-slate-600'
+                          }`}
+                        />
+                      )}
+                      <span className="truncate max-w-[150px] sm:max-w-[200px]">
+                        Act. {act.order}: {act.title}
+                      </span>
+                      {actProg && (
+                        <span className="text-[10px] opacity-75 font-mono">
+                          ({actProg.completed_milestones.length}/{actProg.total_milestones})
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                 <span className="text-xs font-semibold text-slate-200 truncate">
                   Activity {activeActivity.order}: {activeActivity.title}
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setIsBriefExpanded(!isBriefExpanded)}
-                className="text-slate-400 hover:text-slate-200 text-xs"
+                className="text-slate-400 hover:text-slate-200 text-xs shrink-0 p-1 hover:bg-slate-800/80 rounded transition-colors"
+                title={isBriefExpanded ? "Hide activity brief & milestones" : "Show activity brief & milestones"}
               >
                 {isBriefExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
@@ -863,6 +927,21 @@ export default function StudentWorkspace() {
                     );
                   })}
                 </div>
+
+                {activeActivity.target_files && activeActivity.target_files.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-800/60">
+                    <span className="text-[10px] uppercase font-semibold text-slate-500">Target Files:</span>
+                    {activeActivity.target_files.map((file) => (
+                      <Badge
+                        key={file}
+                        variant="outline"
+                        className="text-[10px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0"
+                      >
+                        {file}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1011,6 +1090,48 @@ export default function StudentWorkspace() {
           </div>
         </div>
 
+        {/* Pinned Milestone Completion Banner (v0-socratix) */}
+        {completionReport && (
+          <div className="mx-4 mt-3 p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300 shrink-0">
+            <div className="flex items-center gap-3">
+              <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40">
+                <Sparkles className="w-5 h-5 animate-pulse" />
+              </span>
+              <div>
+                <div className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-2">
+                  <span>🏆 Milestone Mastered</span>
+                  <span className="text-slate-500">•</span>
+                  <span>{completedMilestone || activeActivity?.title || 'Milestone Mastered'}</span>
+                </div>
+                <div className="text-xs text-slate-300 mt-0.5">
+                  All contracts met! Review your competency report & consolidation slides.
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={replayCelebration}
+                className="text-xs text-slate-400 hover:text-emerald-400 h-8 px-2.5 flex items-center gap-1.5 hover:bg-slate-800"
+                title="Replay Celebration Sound & Fireworks"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <span>Replay 🎉</span>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setIsCelebrationOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
+              >
+                View Report Card 🏆
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Dialogue Scrollable Area */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {messages.map((msg) => (
@@ -1119,7 +1240,7 @@ export default function StudentWorkspace() {
         isOpen={isCelebrationOpen}
         onClose={() => setIsCelebrationOpen(false)}
         report={completionReport}
-        milestoneId={activeActivity?.title || 'Milestone Completed'}
+        milestoneId={completedMilestone || activeActivity?.title || 'Milestone Completed'}
       />
 
       {/* Custom Dark-Themed Reset Confirmation Modal */}
