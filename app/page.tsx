@@ -1,9 +1,13 @@
 import Link from 'next/link';
 import { Sparkles, GraduationCap, BarChart3, ArrowRight, LogIn } from 'lucide-react';
+import AuthHashListener from '@/components/AuthHashListener';
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 font-sans relative">
+      {/* Toast / Banner on Email Confirmation Redirect */}
+      <AuthHashListener />
+
       {/* Top Bar with Login / Sign In */}
       <header className="absolute top-6 right-6 flex items-center gap-3">
         <Link

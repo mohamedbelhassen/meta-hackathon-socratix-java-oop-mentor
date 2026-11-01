@@ -27,7 +27,8 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -35,20 +36,55 @@ export default function LoginPage() {
               display_name: displayName || email.split('@')[0],
               role,
             },
+            emailRedirectTo: redirectUrl,
           },
         });
         if (error) throw error;
+
+        // Auto-sync profile if user object is returned immediately
+        if (data?.user) {
+          await fetch('/api/auth/sync-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.user.id,
+              email: data.user.email,
+              display_name: displayName || email.split('@')[0],
+              role,
+            }),
+          }).catch(console.error);
+        }
+
         setMessage({
           type: 'success',
           text: 'Account created! Please check your email to confirm your registration or log in.',
         });
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        router.push(role === 'teacher' ? '/teacher' : '/student');
+
+        if (data?.user) {
+          const userRole = (data.user.user_metadata?.role as 'teacher' | 'student') || role;
+          const userDisplayName = (data.user.user_metadata?.display_name as string) || email.split('@')[0];
+
+          await fetch('/api/auth/sync-profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: data.user.id,
+              email: data.user.email,
+              display_name: userDisplayName,
+              role: userRole,
+            }),
+          }).catch(console.error);
+
+          router.push(userRole === 'teacher' ? '/teacher' : '/student');
+        } else {
+          router.push(role === 'teacher' ? '/teacher' : '/student');
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An error occurred during authentication.';

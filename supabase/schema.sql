@@ -158,6 +158,9 @@ CREATE TRIGGER update_student_lab_sessions_updated_at
 -- ============================================================================
 -- 10. AUTH SYNC TRIGGER (auth.users -> public.profiles)
 -- ============================================================================
+-- Automatically provisions or updates public.profiles whenever a user signs up
+-- in Supabase Auth (auth.users). Dual-layer resilience is ensured with the Next.js
+-- server endpoint /api/auth/sync-profile.
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -171,7 +174,8 @@ BEGIN
     )
     ON CONFLICT (id) DO UPDATE SET
         email = EXCLUDED.email,
-        display_name = EXCLUDED.display_name;
+        display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
+        role = COALESCE(EXCLUDED.role, public.profiles.role);
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
