@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   extractPdfPagesInBrowser,
+  extractPdfPagesFromUrl,
   inferNumberAndTitle,
   slugifyStorageKey,
   uploadCoursePdf,
@@ -20,16 +21,24 @@ import {
   Layers,
   Code2,
   Loader2,
+  Eye,
+  Zap,
 } from 'lucide-react';
+import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
+import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
+import LabDetailModal from '@/components/LabDetailModal';
+import { parseBilingualDescription } from '@/lib/bilingual-helper';
 
 interface CourseStudioPanelProps {
   course: (Course & { course_chapters?: CourseChapter[]; labs?: Lab[] }) | null;
   onCourseUpdated: () => void;
+  onOpenAnalyticsTab?: () => void;
 }
 
 export default function CourseStudioPanel({
   course,
   onCourseUpdated,
+  onOpenAnalyticsTab,
 }: CourseStudioPanelProps) {
   // Batch processing state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -49,6 +58,11 @@ export default function CourseStudioPanel({
   // Inspector modal / view
   const [inspectingPrompt, setInspectingPrompt] = useState(false);
   const [inspectingKB, setInspectingKB] = useState(false);
+
+  // Modals for Jury & Teacher Storytelling
+  const [showCompilationModal, setShowCompilationModal] = useState(false);
+  const [showLabsIngestionModal, setShowLabsIngestionModal] = useState(false);
+  const [selectedLabForInspection, setSelectedLabForInspection] = useState<Lab | null>(null);
 
   if (!course) {
     return (
@@ -202,6 +216,7 @@ export default function CourseStudioPanel({
         }
       }
 
+      setShowLabsIngestionModal(true);
       setStatusMessage({
         type: 'success',
         text: `Successfully decomposed and configured ${files.length} lab(s) with activities, milestones, and demo presets!`,
@@ -214,6 +229,67 @@ export default function CourseStudioPanel({
       setIsProcessing(false);
       setCurrentProgress(null);
       e.target.value = '';
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // RE-ANALYZE ALL LABS DIRECTLY FROM SUPABASE STORAGE (1-CLICK FOR JUDGES)
+  // --------------------------------------------------------------------------
+  const handleReanalyzeAllLabs = async () => {
+    if (!labs || labs.length === 0) return;
+
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    // Sort naturally: TP1, TP2, ..., TP12
+    const sortedLabs = [...labs].sort((a, b) => a.lab_number - b.lab_number);
+
+    try {
+      for (let i = 0; i < sortedLabs.length; i++) {
+        const lb = sortedLabs[i];
+        if (!lb.pdf_url) continue;
+
+        setCurrentProgress({
+          stage: 'Re-analyzing Labs',
+          current: i + 1,
+          total: sortedLabs.length,
+          filename: `TP ${lb.lab_number} (${lb.code})`,
+        });
+
+        // Extract PDF pages client-side from public Storage URL
+        const pages = await extractPdfPagesFromUrl(lb.pdf_url);
+
+        const res = await fetch('/api/studio/lab-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: course.id,
+            labNumber: lb.lab_number,
+            code: lb.code,
+            title: lb.title,
+            pdfUrl: lb.pdf_url,
+            pages,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(`Failed to re-analyze TP ${lb.lab_number}: ${errData.error || res.statusText}`);
+        }
+      }
+
+      setShowLabsIngestionModal(true);
+      setStatusMessage({
+        type: 'success',
+        text: `All ${sortedLabs.length} lab(s) successfully re-analyzed with bilingual EN/FR descriptions, milestones, and demo presets!`,
+      });
+      onCourseUpdated();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Re-analyzing labs failed';
+      setStatusMessage({ type: 'error', text: msg });
+    } finally {
+      setIsProcessing(false);
+      setCurrentProgress(null);
     }
   };
 
@@ -239,6 +315,7 @@ export default function CourseStudioPanel({
         throw new Error(errData.error || 'Failed to compile course');
       }
 
+      setShowCompilationModal(true);
       setStatusMessage({
         type: 'success',
         text: 'Course Knowledge Base compiled successfully! Custom Mentor Prompt and Competency Taxonomy are active.',
@@ -272,6 +349,17 @@ export default function CourseStudioPanel({
           </div>
 
           <div className="flex items-center gap-2">
+            {hasTaxonomy && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCompilationModal(true)}
+                className="text-xs h-8 bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:text-white"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                Curriculum Synthesis 🧠
+              </Button>
+            )}
             {hasCompiledPrompt && (
               <Button
                 variant="outline"
@@ -528,9 +616,22 @@ export default function CourseStudioPanel({
                 </div>
                 <h3 className="text-sm font-bold text-white">Lab Exercises (TP)</h3>
               </div>
-              <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
-                {labs.length} TP
-              </Badge>
+              <div className="flex items-center gap-2">
+                {labs.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowLabsIngestionModal(true)}
+                    className="text-[11px] h-7 bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:text-white"
+                  >
+                    <Layers className="w-3 h-3 mr-1" />
+                    All TP Briefing
+                  </Button>
+                )}
+                <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
+                  {labs.length} TP
+                </Badge>
+              </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Upload your lab statements (e.g. <code className="text-slate-300 font-mono">TP1.pdf</code> to <code className="text-slate-300 font-mono">TP12.pdf</code>).
@@ -568,13 +669,21 @@ export default function CourseStudioPanel({
                 {labs.map((lb) => (
                   <div
                     key={lb.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs"
+                    className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs hover:border-slate-750 transition"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono text-[10px] text-cyan-400">TP {lb.lab_number}</span>
+                      <span className="font-mono text-[10px] text-cyan-400 font-semibold">TP {lb.lab_number}</span>
                       <span className="text-slate-200 truncate">{lb.title}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      <button
+                        onClick={() => setSelectedLabForInspection(lb)}
+                        className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded-md hover:bg-cyan-900/40 transition font-medium"
+                        title="Inspect activities, milestones and presets"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>Inspect</span>
+                      </button>
                       <span className="text-[10px] text-slate-500">
                         {lb.activities?.length || 0} act.
                       </span>
@@ -583,7 +692,7 @@ export default function CourseStudioPanel({
                           href={lb.pdf_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[10px] text-cyan-400 hover:underline"
+                          className="text-[10px] text-slate-400 hover:text-slate-200 hover:underline"
                         >
                           PDF ↗
                         </a>
@@ -595,12 +704,67 @@ export default function CourseStudioPanel({
             )}
           </div>
 
-          <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-            <span>Automatic natural sorting: TP1, TP2, ..., TP12</span>
-            <span className="text-emerald-400 font-mono">100% Client-Side</span>
+          {/* RE-ANALYZE ALL LABS BUTTON (1-CLICK FOR JUDGES) */}
+          <div className="pt-3 border-t border-slate-800 space-y-2">
+            <Button
+              onClick={handleReanalyzeAllLabs}
+              disabled={isProcessing || labs.length === 0 || !hasTaxonomy}
+              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
+            >
+              {isProcessing && currentProgress?.stage === 'Re-analyzing Labs' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Re-analyzing Labs with Meta AI ({currentProgress.current}/{currentProgress.total})...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5 mr-1.5 text-cyan-200" />
+                  ⚡ Re-analyze All Labs with Meta AI
+                </>
+              )}
+            </Button>
+            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+              <span>Automatic natural sorting: TP1, TP2, ..., TP12</span>
+              <span className="text-cyan-400 font-mono">1-Click Remote PDF Re-analysis</span>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* MODAL 1: COURSE COMPILATION SUMMARY */}
+      {showCompilationModal && course && (
+        <CourseCompilationSummaryModal
+          isOpen={showCompilationModal}
+          onClose={() => setShowCompilationModal(false)}
+          course={course}
+          onProceedToLabs={() => {
+            setShowCompilationModal(false);
+          }}
+        />
+      )}
+
+      {/* MODAL 2: LABS BATCH INGESTION SUMMARY */}
+      {showLabsIngestionModal && (
+        <LabsBatchIngestionModal
+          isOpen={showLabsIngestionModal}
+          onClose={() => setShowLabsIngestionModal(false)}
+          labs={labs}
+          onInspectLab={(lb) => {
+            setShowLabsIngestionModal(false);
+            setSelectedLabForInspection(lb);
+          }}
+          onOpenAnalytics={onOpenAnalyticsTab}
+        />
+      )}
+
+      {/* MODAL 3: INDIVIDUAL LAB INSPECTOR */}
+      {selectedLabForInspection && (
+        <LabDetailModal
+          isOpen={Boolean(selectedLabForInspection)}
+          onClose={() => setSelectedLabForInspection(null)}
+          lab={selectedLabForInspection}
+        />
+      )}
     </div>
   );
 }

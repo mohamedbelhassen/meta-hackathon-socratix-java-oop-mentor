@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       .join('\n');
 
     const systemPrompt = `You are an elite educational AI lab curriculum engineer for Socratix.
-Your job is to read a university programming lab assignment (TP), decompose it into structured activities, derive 2 to 3 sequential milestones per activity, identify which course micro-competencies are practiced, and generate 2 1-click Demo Presets for hackathon judges.
+Your job is to read a university programming lab assignment (TP), formulate a bilingual concise 1-2 sentence pedagogical description in both English ('en') and French ('fr') explaining what the student learns and implements, decompose it into structured activities, derive 2 to 3 sequential milestones per activity, identify which course micro-competencies are practiced, and generate 2 1-click Demo Presets for hackathon judges.
 
 ### GOLDEN EXEMPLAR (HOW TO DECOMPOSE A LAB):
 Notice how it clearly splits assimilation from project integration, defines minimal validation criteria, and generates working code presets:
@@ -69,6 +69,21 @@ ${pagesTextSample}`;
       schema: {
         type: 'object',
         properties: {
+          description: {
+            type: 'object',
+            properties: {
+              en: {
+                type: 'string',
+                description: 'A concise 1-2 sentence pedagogical summary of what this lab assignment teaches and implements in English.',
+              },
+              fr: {
+                type: 'string',
+                description: 'Un résumé pédagogique concis en 1 à 2 phrases des compétences et objectifs du TP en français.',
+              },
+            },
+            required: ['en', 'fr'],
+            additionalProperties: false,
+          },
           activities: {
             type: 'array',
             items: {
@@ -131,7 +146,7 @@ ${pagesTextSample}`;
             },
           },
         },
-        required: ['activities', 'covered_micro_concepts', 'demo_presets'],
+        required: ['description', 'activities', 'covered_micro_concepts', 'demo_presets'],
         additionalProperties: false,
       },
     };
@@ -170,7 +185,10 @@ ${pagesTextSample}`;
       lab_number: Number(labNumber),
       code: code.trim().toUpperCase(),
       title: title.trim(),
-      description: description?.trim() || null,
+      description:
+        typeof parsed.description === 'object' && parsed.description !== null
+          ? JSON.stringify(parsed.description)
+          : (typeof parsed.description === 'string' ? parsed.description.trim() : (description?.trim() || null)),
       pdf_url: pdfUrl || null,
       activities: parsed.activities || [],
       covered_micro_concepts: parsed.covered_micro_concepts || [],

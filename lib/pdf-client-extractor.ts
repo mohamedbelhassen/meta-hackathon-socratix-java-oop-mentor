@@ -112,6 +112,46 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
 }
 
 /**
+ * Extracts text page by page client-side directly from a Supabase Storage public PDF URL.
+ * Enables 1-click re-analysis without requiring local files from judges.
+ */
+export async function extractPdfPagesFromUrl(pdfUrl: string): Promise<ExtractedPage[]> {
+  const res = await fetch(pdfUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch PDF from URL: ${res.statusText}`);
+  }
+
+  const arrayBuffer = await res.arrayBuffer();
+  const pdfjsLib = await import('pdfjs-dist');
+
+  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+  }
+
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdfDoc = await loadingTask.promise;
+
+  const pages: ExtractedPage[] = [];
+
+  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+    const page = await pdfDoc.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ('str' in item && typeof (item as { str: unknown }).str === 'string' ? (item as { str: string }).str : ''))
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    pages.push({
+      page: pageNum,
+      text: pageText,
+    });
+  }
+
+  return pages;
+}
+
+/**
  * Uploads a course PDF to the public 'course-pdfs' Supabase Storage bucket
  * and returns its public URL for the SmartSlideViewerModal iframe.
  */

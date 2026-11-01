@@ -307,6 +307,7 @@ export default function TeacherHub() {
               <CourseStudioPanel
                 course={selectedCourse}
                 onCourseUpdated={refreshCourseData}
+                onOpenAnalyticsTab={() => setActiveTab('analytics')}
               />
             )}
           </>
