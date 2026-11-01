@@ -82,8 +82,9 @@ Notice how it clearly splits assimilation from project integration, defines mini
 ${JSON.stringify(GOLDEN_LAB_DECOMPOSITION_SHOT, null, 2)}
 
 ### CANONICAL COURSE MICRO-COMPETENCIES:
-You MUST select covered concepts ONLY from this list:
+Primary Rule: You MUST prefer selecting covered concepts from this established course list whenever applicable:
 ${JSON.stringify(availableConcepts.length > 0 ? availableConcepts : ['VISIBILITY_ENCAPSULATION', 'DEFENSIVE_SETTERS', 'CONSTRUCTORS_THIS'])}
+Practical Flexibility: If this lab assignment explicitly introduces a purely practical programming technique not covered in the theoretical syllabus (e.g. keyboard Scanner input, specific file I/O, custom test harnesses), you may generate an appropriate new SCREAMING_SNAKE_CASE code for it so it can be tracked in telemetry and curriculum analytics.
 
 ### FILE EXTENSIONS FOR THIS COURSE:
 ${JSON.stringify(allowedExtensions)}`;

@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Course, Lab, StudentLabSession } from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   BarChart3,
   Layers,
@@ -11,6 +12,8 @@ import {
   BookOpen,
   Check,
   Compass,
+  Terminal,
+  X,
 } from 'lucide-react';
 
 interface TeacherAnalyticsCoverageTabProps {
@@ -18,6 +21,7 @@ interface TeacherAnalyticsCoverageTabProps {
   labs: Lab[];
   selectedLab: Lab | null;
   sessions: StudentLabSession[];
+  onCourseUpdated?: () => void;
 }
 
 export default function TeacherAnalyticsCoverageTab({
@@ -25,9 +29,126 @@ export default function TeacherAnalyticsCoverageTab({
   labs,
   selectedLab,
   sessions,
+  onCourseUpdated,
 }: TeacherAnalyticsCoverageTabProps) {
   const labSessions = sessions.filter((s) => s.lab_id === selectedLab?.id);
   const totalStudents = labSessions.length;
+
+  // Dialog state for unanchored lab competency actions
+  const [activeUnanchoredAction, setActiveUnanchoredAction] = useState<{
+    conceptCode: string;
+    action: 'assign' | 'alias';
+  } | null>(null);
+  const [selectedChapterCode, setSelectedChapterCode] = useState<string>('');
+  const [selectedCanonicalCode, setSelectedCanonicalCode] = useState<string>('');
+  const [customSlideRef, setCustomSlideRef] = useState<string>('');
+  const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const normalizeCode = (c: string) => (c || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
+
+  const chaptersTaxonomy = course.competency_matrix || [];
+
+  // Inverted index for canonical concept resolution: code or alias -> canonical code
+  const codeToCanonicalMap = new Map<string, string>();
+  const allCanonicalCodes = new Set<string>();
+
+  for (const chapter of chaptersTaxonomy) {
+    for (const mc of chapter.micro_competencies || []) {
+      allCanonicalCodes.add(mc.code);
+      codeToCanonicalMap.set(mc.code, mc.code);
+      codeToCanonicalMap.set(normalizeCode(mc.code), mc.code);
+      if (Array.isArray(mc.aliases)) {
+        for (const alias of mc.aliases) {
+          codeToCanonicalMap.set(alias, mc.code);
+          codeToCanonicalMap.set(normalizeCode(alias), mc.code);
+        }
+      }
+    }
+  }
+
+  // 3. Compute Global Curriculum Coverage Matrix: Course Competency Matrix vs Labs
+  // Map micro-competencies across all labs
+  const conceptToLabsMap = new Map<string, string[]>();
+  const unanchoredConceptsMap = new Map<string, { labs: string[]; labTitles: string[] }>();
+
+  for (const lab of labs) {
+    for (const rawConcept of lab.covered_micro_concepts || []) {
+      const canonicalCode = codeToCanonicalMap.get(rawConcept) || codeToCanonicalMap.get(normalizeCode(rawConcept));
+      if (canonicalCode) {
+        const list = conceptToLabsMap.get(canonicalCode) || [];
+        if (!list.includes(lab.code)) {
+          list.push(lab.code);
+        }
+        conceptToLabsMap.set(canonicalCode, list);
+      } else {
+        const entry = unanchoredConceptsMap.get(rawConcept) || { labs: [], labTitles: [] };
+        if (!entry.labs.includes(lab.code)) {
+          entry.labs.push(lab.code);
+          entry.labTitles.push(lab.title);
+        }
+        unanchoredConceptsMap.set(rawConcept, entry);
+      }
+    }
+  }
+
+  const handleExecuteAction = async () => {
+    if (!activeUnanchoredAction || !course.id) return;
+    setIsSubmittingAction(true);
+    setActionError(null);
+
+    try {
+      let bodyPayload: Record<string, unknown> = {
+        courseId: course.id,
+      };
+
+      if (activeUnanchoredAction.action === 'assign') {
+        if (!selectedChapterCode) {
+          throw new Error('Please select a course chapter.');
+        }
+        bodyPayload = {
+          ...bodyPayload,
+          action: 'assign_to_chapter',
+          conceptCode: activeUnanchoredAction.conceptCode,
+          chapterCode: selectedChapterCode,
+          slideRef: customSlideRef.trim() || 'Assigned from Lab (Practical)',
+        };
+      } else {
+        if (!selectedCanonicalCode) {
+          throw new Error('Please select an existing target concept to link as alias.');
+        }
+        bodyPayload = {
+          ...bodyPayload,
+          action: 'link_alias',
+          conceptCode: activeUnanchoredAction.conceptCode,
+          targetConceptCode: selectedCanonicalCode,
+        };
+      }
+
+      const res = await fetch('/api/studio/courses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bodyPayload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to update competency matrix');
+      }
+
+      setActiveUnanchoredAction(null);
+      setSelectedChapterCode('');
+      setSelectedCanonicalCode('');
+      setCustomSlideRef('');
+      if (onCourseUpdated) {
+        onCourseUpdated();
+      }
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
 
   // 1. Calculate Milestone Completion Rates for Active Lab
   const milestoneStats: Array<{
@@ -100,21 +221,6 @@ export default function TeacherAnalyticsCoverageTab({
     });
   }
 
-  // 3. Compute Global Curriculum Coverage Matrix: Course Competency Matrix vs Labs
-  // Map micro-competencies across all labs
-  const conceptToLabsMap = new Map<string, string[]>();
-
-  for (const lab of labs) {
-    for (const concept of lab.covered_micro_concepts || []) {
-      const list = conceptToLabsMap.get(concept) || [];
-      if (!list.includes(lab.code)) {
-        list.push(lab.code);
-      }
-      conceptToLabsMap.set(concept, list);
-    }
-  }
-
-  const chaptersTaxonomy = course.competency_matrix || [];
 
   return (
     <div className="space-y-6">
@@ -311,6 +417,11 @@ export default function TeacherAnalyticsCoverageTab({
                           {statusBadge}
                         </div>
                         <p className="text-[11px] text-slate-400 line-clamp-1">{micro.title}</p>
+                        {micro.aliases && micro.aliases.length > 0 && (
+                          <div className="text-[10px] text-cyan-400/80 font-mono truncate">
+                            Aliases: {micro.aliases.join(', ')}
+                          </div>
+                        )}
                         {micro.slide_ref && (
                           <div className="text-[10px] text-slate-500 font-mono">
                             Ref: {micro.slide_ref}
@@ -322,6 +433,195 @@ export default function TeacherAnalyticsCoverageTab({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ==================================================================== */}
+        {/* 3. UNANCHORED / LAB-SPECIFIC COMPETENCIES (TP -> Course Feedback) */}
+        {/* ==================================================================== */}
+        {unanchoredConceptsMap.size > 0 && (
+          <div className="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-3 mt-6">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                  <Terminal className="w-4 h-4" />
+                </span>
+                <div>
+                  <h4 className="text-xs font-semibold text-amber-300 flex items-center gap-2">
+                    <span>⚡ Practical / Lab-Specific Competencies</span>
+                    <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] font-mono">
+                      {unanchoredConceptsMap.size} Unanchored in Syllabus
+                    </Badge>
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Assessed in practical TP labs but not indexed in theoretical chapter slides. Keep as lab-only or assign/link them.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {Array.from(unanchoredConceptsMap.entries()).map(([conceptCode, data]) => (
+                <div
+                  key={conceptCode}
+                  className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2 flex flex-col justify-between"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-mono text-[11px] font-semibold text-slate-200 truncate">
+                        {conceptCode}
+                      </span>
+                      <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[9px] shrink-0">
+                        {data.labs.join(', ')}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-slate-400 line-clamp-1">
+                      Practiced in: {data.labTitles.slice(0, 2).join(' • ')}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveUnanchoredAction({ conceptCode, action: 'assign' });
+                        setSelectedChapterCode(chaptersTaxonomy[0]?.chapter_code || '');
+                        setActionError(null);
+                      }}
+                      className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 flex-1"
+                    >
+                      ➕ Assign Chapter
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setActiveUnanchoredAction({ conceptCode, action: 'alias' });
+                        const firstCat = chaptersTaxonomy[0]?.micro_competencies?.[0]?.code || '';
+                        setSelectedCanonicalCode(firstCat);
+                        setActionError(null);
+                      }}
+                      className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 flex-1"
+                    >
+                      🔗 Link Alias
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Unanchored Action (Assign or Link Alias) */}
+        {activeUnanchoredAction && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-5 space-y-4 text-slate-100">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  {activeUnanchoredAction.action === 'assign' ? '➕ Assign Concept to Chapter' : '🔗 Link Concept as Alias'}
+                </h3>
+                <button
+                  onClick={() => setActiveUnanchoredAction(null)}
+                  className="text-slate-400 hover:text-slate-200 p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="text-xs text-slate-300 space-y-1">
+                <div>Concept: <span className="font-mono text-emerald-400 font-semibold">{activeUnanchoredAction.conceptCode}</span></div>
+                <div className="text-slate-400 text-[11px]">
+                  {activeUnanchoredAction.action === 'assign'
+                    ? 'Attach this lab competency to a course chapter so it appears in the theoretical syllabus.'
+                    : 'Map this lab concept as an alternative name/synonym of an existing course competency.'}
+                </div>
+              </div>
+
+              {actionError && (
+                <div className="p-2.5 rounded bg-rose-950/50 border border-rose-500/50 text-rose-300 text-xs">
+                  {actionError}
+                </div>
+              )}
+
+              {activeUnanchoredAction.action === 'assign' ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
+                      Target Chapter
+                    </label>
+                    <select
+                      value={selectedChapterCode}
+                      onChange={(e) => setSelectedChapterCode(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
+                    >
+                      {chaptersTaxonomy.map((ch) => (
+                        <option key={ch.chapter_code} value={ch.chapter_code}>
+                          {ch.chapter_code}: {ch.competency_title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
+                      Slide Reference (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Ch.2 Slide 15 or Practical Lab"
+                      value={customSlideRef}
+                      onChange={(e) => setCustomSlideRef(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
+                      Existing Target Concept
+                    </label>
+                    <select
+                      value={selectedCanonicalCode}
+                      onChange={(e) => setSelectedCanonicalCode(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
+                    >
+                      {chaptersTaxonomy.flatMap((ch) =>
+                        (ch.micro_competencies || []).map((mc) => (
+                          <option key={mc.code} value={mc.code}>
+                            {mc.code} ({mc.title})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveUnanchoredAction(null)}
+                  className="text-xs text-slate-400 hover:text-slate-200"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={isSubmittingAction}
+                  onClick={handleExecuteAction}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold text-xs"
+                >
+                  {isSubmittingAction ? 'Saving...' : 'Confirm'}
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </div>

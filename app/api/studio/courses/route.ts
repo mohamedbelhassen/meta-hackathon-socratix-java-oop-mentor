@@ -105,3 +105,125 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const {
+      courseId,
+      action,
+      conceptCode,
+      chapterCode,
+      targetConceptCode,
+      title,
+      slideRef,
+      description,
+      competency_matrix,
+    } = body;
+
+    if (!courseId) {
+      return NextResponse.json({ error: 'courseId is required.' }, { status: 400 });
+    }
+
+    const supabase = getServiceSupabase();
+    const { data: course, error: fetchErr } = await supabase
+      .from('courses')
+      .select('id, competency_matrix')
+      .eq('id', courseId)
+      .single();
+
+    if (fetchErr || !course) {
+      return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
+    }
+
+    type ChapterTaxonomy = {
+      chapter_code: string;
+      competency_title: string;
+      micro_competencies: Array<{
+        code: string;
+        title: string;
+        slide_ref?: string;
+        description?: string;
+        aliases?: string[];
+      }>;
+    };
+
+    let matrix: ChapterTaxonomy[] = Array.isArray(course.competency_matrix)
+      ? (course.competency_matrix as ChapterTaxonomy[])
+      : [];
+
+    if (action === 'assign_to_chapter') {
+      if (!chapterCode || !conceptCode) {
+        return NextResponse.json({ error: 'chapterCode and conceptCode are required.' }, { status: 400 });
+      }
+
+      const formattedCode = conceptCode.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+      const humanTitle = title?.trim() || formattedCode.replace(/_/g, ' ');
+
+      matrix = matrix.map((ch) => {
+        if (ch.chapter_code === chapterCode) {
+          const exists = ch.micro_competencies?.some((mc) => mc.code === formattedCode);
+          if (!exists) {
+            return {
+              ...ch,
+              micro_competencies: [
+                ...(ch.micro_competencies || []),
+                {
+                  code: formattedCode,
+                  title: humanTitle,
+                  slide_ref: slideRef?.trim() || 'Assigned from Lab (Practical)',
+                  description: description?.trim() || 'Practical competency from TP lab assigned to chapter syllabus.',
+                  aliases: [],
+                },
+              ],
+            };
+          }
+        }
+        return ch;
+      });
+    } else if (action === 'link_alias') {
+      if (!targetConceptCode || !conceptCode) {
+        return NextResponse.json({ error: 'targetConceptCode and conceptCode are required.' }, { status: 400 });
+      }
+
+      const formattedAlias = conceptCode.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+
+      matrix = matrix.map((ch) => ({
+        ...ch,
+        micro_competencies: (ch.micro_competencies || []).map((mc) => {
+          if (mc.code === targetConceptCode) {
+            const currentAliases = mc.aliases || [];
+            if (!currentAliases.includes(formattedAlias) && formattedAlias !== mc.code) {
+              return {
+                ...mc,
+                aliases: [...currentAliases, formattedAlias],
+              };
+            }
+          }
+          return mc;
+        }),
+      }));
+    } else if (action === 'update_matrix' && Array.isArray(competency_matrix)) {
+      matrix = competency_matrix;
+    } else {
+      return NextResponse.json({ error: `Unsupported action: ${action}` }, { status: 400 });
+    }
+
+    const { data: updated, error: updateErr } = await supabase
+      .from('courses')
+      .update({
+        competency_matrix: matrix,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', courseId)
+      .select()
+      .single();
+
+    if (updateErr) throw updateErr;
+
+    return NextResponse.json({ course: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Failed to update competency matrix';
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
+}

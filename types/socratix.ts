@@ -36,6 +36,7 @@ export interface MicroCompetencyDefinition {
   title: string;
   slide_ref?: string; // e.g., 'Ch.3 Slide 42'
   description?: string;
+  aliases?: string[]; // e.g., ['ENCAPSULATION', 'PRIVATE_VISIBILITY']
 }
 
 export interface ChapterCompetencyTaxonomy {

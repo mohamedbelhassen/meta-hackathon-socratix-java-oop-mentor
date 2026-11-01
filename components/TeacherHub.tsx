@@ -300,6 +300,7 @@ export default function TeacherHub() {
                 labs={labs}
                 selectedLab={selectedLab}
                 sessions={sessions}
+                onCourseUpdated={refreshCourseData}
               />
             )}
 

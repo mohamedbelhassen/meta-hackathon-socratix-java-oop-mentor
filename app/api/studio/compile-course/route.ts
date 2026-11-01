@@ -41,6 +41,38 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
+    // Fetch existing labs to discover established micro-competency codes
+    const { data: existingLabs } = await supabase
+      .from('labs')
+      .select('code, title, covered_micro_concepts')
+      .eq('course_id', courseId);
+
+    // Extract established taxonomy for continuity & anti-drift
+    const establishedCourseConcepts: Array<{ code: string; title?: string; chapter_code?: string; aliases?: string[] }> = [];
+    if (Array.isArray(course.competency_matrix)) {
+      for (const ch of course.competency_matrix) {
+        if (Array.isArray(ch.micro_competencies)) {
+          for (const mc of ch.micro_competencies) {
+            establishedCourseConcepts.push({
+              code: mc.code,
+              title: mc.title,
+              chapter_code: ch.chapter_code,
+              aliases: mc.aliases || [],
+            });
+          }
+        }
+      }
+    }
+
+    const labReferencedCodes = new Set<string>();
+    if (Array.isArray(existingLabs)) {
+      for (const l of existingLabs) {
+        for (const c of l.covered_micro_concepts || []) {
+          labReferencedCodes.add(c);
+        }
+      }
+    }
+
     // Combine chapters markdown
     const allChaptersSummary = chapters
       .map(
@@ -63,7 +95,20 @@ ${JSON.stringify(GOLDEN_COMPETENCY_TAXONOMY_SHOT, null, 2)}
 ### GOLDEN EXEMPLAR 2: CUSTOM TUTOR PROMPT (PEDAGOGICAL ANCHORING & FEW-SHOTS)
 Notice how this anchors errors to exact slide numbers and provides 2 domain-specific reasoning examples:
 ${GOLDEN_TUTOR_PROMPT_SHOT}
+${(establishedCourseConcepts.length > 0 || labReferencedCodes.size > 0) ? `
+### ESTABLISHED TAXONOMY CONTINUITY (MANDATORY RULE):
+The following micro-competency codes are ALREADY ESTABLISHED in the syllabus or actively referenced by existing practical TP labs:
+${JSON.stringify({
+  established_course_concepts: establishedCourseConcepts,
+  active_lab_referenced_codes: Array.from(labReferencedCodes),
+}, null, 2)}
 
+TAXONOMY CONTINUITY INSTRUCTIONS:
+1. STABILITY FIRST: You MUST preserve and reuse the exact SCREAMING_SNAKE_CASE codes listed above whenever those topics are covered in the chapters. Do NOT arbitrarily rename, invent synonyms, or alter established codes (e.g. NEVER change 'VISIBILITY_ENCAPSULATION' to 'ENCAPSULATION_ACCESSORS').
+2. ALIAS PRESERVATION: If an established code had aliases or if you refine a concept, preserve the established code as 'code' and include alternative terms in 'aliases'.
+3. NO DISRUPTION: Existing TP exercises and live telemetry depend on these exact codes.
+4. NEW CONCEPTS: Only generate new codes for genuinely new topics not present in the established list.
+` : ''}
 ### INSTRUCTIONS:
 1. Generate "competency_matrix": an array of chapters, each with 2 to 4 canonical micro-competencies in SCREAMING_SNAKE_CASE. Deduplicate concepts so no concept is defined twice across chapters.
 2. Generate "compiled_tutor_prompt":
@@ -96,8 +141,13 @@ ${allChaptersSummary}`;
                       title: { type: 'string' },
                       slide_ref: { type: 'string' },
                       description: { type: 'string' },
+                      aliases: {
+                        type: 'array',
+                        items: { type: 'string' },
+                        description: 'Synonyms or legacy codes recognized for this competency.',
+                      },
                     },
-                    required: ['code', 'title', 'slide_ref', 'description'],
+                    required: ['code', 'title', 'slide_ref', 'description', 'aliases'],
                     additionalProperties: false,
                   },
                 },
@@ -163,11 +213,37 @@ ${parsed.competency_matrix
   )
   .join('\n\n')}`;
 
+    // Merge established aliases to guarantee zero backward-compatibility loss
+    type OutputMicroCompetency = {
+      code: string;
+      title: string;
+      slide_ref: string;
+      description: string;
+      aliases?: string[];
+    };
+    type OutputChapterTaxonomy = {
+      chapter_code: string;
+      competency_title: string;
+      micro_competencies: OutputMicroCompetency[];
+    };
+
+    const finalTaxonomy = (parsed.competency_matrix as OutputChapterTaxonomy[]).map((ch) => ({
+      ...ch,
+      micro_competencies: ch.micro_competencies.map((mc) => {
+        const prev = establishedCourseConcepts.find((ec) => ec.code === mc.code);
+        const combinedAliases = Array.from(new Set([...(prev?.aliases || []), ...(mc.aliases || [])]));
+        return {
+          ...mc,
+          aliases: combinedAliases,
+        };
+      }),
+    }));
+
     // Update the course
     const { data: updatedCourse, error: updateError } = await supabase
       .from('courses')
       .update({
-        competency_matrix: parsed.competency_matrix,
+        competency_matrix: finalTaxonomy,
         compiled_tutor_prompt: parsed.compiled_tutor_prompt,
         compiled_knowledge_base: compiledKnowledgeBase,
         updated_at: new Date().toISOString(),
