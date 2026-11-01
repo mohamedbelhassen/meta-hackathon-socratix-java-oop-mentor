@@ -31,6 +31,7 @@ import {
   ChevronUp,
   Layers,
   AlertTriangle,
+  Info,
 } from 'lucide-react';
 import MilestoneCelebrationModal, {
   CompetencyReport,
@@ -147,10 +148,17 @@ export default function StudentWorkspace() {
   const [isCelebrationOpen, setIsCelebrationOpen] = useState(false);
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
 
-  // Layout Resizing
-  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(440);
+  // Layout Resizing (1/3 of screen width initially, freely draggable)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(480);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize divider position to 1/3 of available screen width on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setLeftPanelWidth(Math.round(window.innerWidth / 3));
+    }
+  }, []);
 
   // Helper: Get syntax highlighting language
   const getSyntaxLanguage = (filename: string): string => {
@@ -247,15 +255,14 @@ export default function StudentWorkspace() {
       || null;
     setActiveActivity(act);
 
-    // Setup Presets
+    // Setup Presets scoped to active activity
     const labPresets = activeLab.demo_presets && activeLab.demo_presets.length > 0
       ? activeLab.demo_presets
       : DEFAULT_JAVA_PRESETS;
 
-    const targetPresetKey = savedCtx?.activePresetKey || labPresets[0].key;
-    const targetPreset = labPresets.find((p) => p.key === targetPresetKey) || labPresets[0];
+    const isFirstAct = !act || !activeLab.activities?.length || act.id === activeLab.activities[0]?.id;
+    const actPresets = labPresets.filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct));
 
-    setActivePresetKey(targetPreset.key);
     setCompletionReport(null);
     setCompletedMilestone(null);
 
@@ -291,9 +298,31 @@ export default function StudentWorkspace() {
       });
     } else {
       setSourceMode('preset');
-      const editedFiles = loadPresetEdits(activeLab.id, targetPreset.key);
-      setWorkspaceFiles(editedFiles || targetPreset.files);
-      setFolderName(`Preset: ${targetPreset.label}`);
+      if (actPresets.length > 0) {
+        const targetPresetKey = (savedCtx?.activePresetKey && actPresets.some((p) => p.key === savedCtx.activePresetKey))
+          ? savedCtx.activePresetKey
+          : actPresets[0].key;
+        const targetPreset = actPresets.find((p) => p.key === targetPresetKey) || actPresets[0];
+
+        setActivePresetKey(targetPreset.key);
+        const editedFiles = loadPresetEdits(activeLab.id, targetPreset.key);
+        setWorkspaceFiles(editedFiles || targetPreset.files);
+        setFolderName(`Preset: ${targetPreset.label}`);
+      } else {
+        // No presets for this activity: initialize clean starter skeleton based on target_files
+        setActivePresetKey('');
+        setFolderName(act ? `Activity ${act.order}: ${act.title}` : 'Starter Files');
+        const starterFiles: DemoPresetFile[] = (act?.target_files && act.target_files.length > 0)
+          ? act.target_files.map((fname) => {
+              const className = fname.replace(/\.java$/, '');
+              return {
+                name: fname,
+                content: `// ${fname} — Activity ${act.order}: ${act.title}\npublic class ${className} {\n    public static void main(String[] args) {\n        // TODO: Implement your solution for Activity ${act.order}\n        System.out.println("Starting ${className}...");\n    }\n}\n`,
+              };
+            })
+          : [{ name: 'Main.java', content: `// Activity ${act?.order || 1}: ${act?.title || 'Main'}\npublic class Main {\n    public static void main(String[] args) {\n        // TODO: Implement your solution here\n    }\n}\n` }];
+        setWorkspaceFiles(starterFiles);
+      }
       setActiveFileIndex(0);
     }
   }, [activeLab, activeCourse, activeStudent.id, readDirectoryRecursive]);
@@ -412,8 +441,8 @@ export default function StudentWorkspace() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDragging) return;
-      const maxAllowed = Math.min(800, window.innerWidth * 0.65);
-      const newWidth = Math.max(300, Math.min(e.clientX, maxAllowed));
+      const maxAllowed = Math.max(800, window.innerWidth * 0.75);
+      const newWidth = Math.max(280, Math.min(e.clientX, maxAllowed));
       setLeftPanelWidth(newWidth);
     };
 
@@ -511,22 +540,44 @@ export default function StudentWorkspace() {
       const allPresets = activeLab.demo_presets && activeLab.demo_presets.length > 0
         ? activeLab.demo_presets
         : DEFAULT_JAVA_PRESETS;
-      const actPresets = allPresets.filter((p) => p.activity_id === act.id);
-      if (actPresets.length > 0 && !actPresets.some((p) => p.key === activePresetKey)) {
-        handleSelectPreset(actPresets[0]);
+      const isFirstAct = act.id === activeLab.activities?.[0]?.id;
+      const actPresets = allPresets.filter((p) => (p.activity_id ? p.activity_id === act.id : isFirstAct));
+
+      if (actPresets.length > 0) {
+        if (!actPresets.some((p) => p.key === activePresetKey)) {
+          handleSelectPreset(actPresets[0]);
+        }
+      } else {
+        // No presets for this activity (e.g. before lab re-analysis)
+        // Cleanly switch workspace files to target_files starter skeleton instead of stale files from other activities
+        setActivePresetKey('');
+        setFolderName(`Activity ${act.order}: ${act.title}`);
+        const starterFiles: DemoPresetFile[] = (act.target_files && act.target_files.length > 0)
+          ? act.target_files.map((fname) => {
+              const className = fname.replace(/\.java$/, '');
+              return {
+                name: fname,
+                content: `// ${fname} — Activity ${act.order}: ${act.title}\npublic class ${className} {\n    public static void main(String[] args) {\n        // TODO: Implement your solution for Activity ${act.order}\n        System.out.println("Starting ${className}...");\n    }\n}\n`,
+              };
+            })
+          : [{ name: 'Main.java', content: `// Activity ${act.order}: ${act.title}\npublic class Main {\n    public static void main(String[] args) {\n        // TODO: Implement your solution here\n    }\n}\n` }];
+        setWorkspaceFiles(starterFiles);
+        setActiveFileIndex(0);
       }
     }
   };
 
   // Restore Default Preset
   const handleRestorePreset = () => {
-    if (!activeLab) return;
+    if (!activeLab || !activePresetKey) return;
     clearPresetEdits(activeLab.id, activePresetKey);
     const presets = activeLab.demo_presets && activeLab.demo_presets.length > 0
       ? activeLab.demo_presets
       : DEFAULT_JAVA_PRESETS;
-    const currentPreset = presets.find((p) => p.key === activePresetKey) || presets[0];
-    setWorkspaceFiles(currentPreset.files);
+    const currentPreset = presets.find((p) => p.key === activePresetKey);
+    if (currentPreset) {
+      setWorkspaceFiles(currentPreset.files);
+    }
   };
 
   // Handle File Content Edit (in Preset Mode)
@@ -622,8 +673,9 @@ export default function StudentWorkspace() {
       }
 
       // Filter conversation history strictly to the active activity to prevent cross-activity contamination
+      const isFirstAct = !activeActivity || !activeLab?.activities?.length || activeActivity.id === activeLab.activities[0]?.id;
       const conversationHistory = messages
-        .filter((m) => !m.id.startsWith('welcome') && (!m.activityId || m.activityId === activeActivity?.id))
+        .filter((m) => !m.id.startsWith('welcome') && (m.activityId ? m.activityId === activeActivity?.id : isFirstAct))
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
@@ -718,8 +770,11 @@ export default function StudentWorkspace() {
     ? activeLab.demo_presets
     : DEFAULT_JAVA_PRESETS;
 
-  const activePresets = activeActivity && allLabPresets.some((p) => p.activity_id === activeActivity.id)
-    ? allLabPresets.filter((p) => p.activity_id === activeActivity.id)
+  // Filter presets strictly for the active activity.
+  // Legacy backward-compatibility: if presets lack activity_id, attribute them strictly to Activity 1 (activities[0]).
+  const isFirstActivity = !activeActivity || !activeLab?.activities?.length || activeActivity.id === activeLab.activities[0]?.id;
+  const activePresets = activeActivity
+    ? allLabPresets.filter((p) => (p.activity_id ? p.activity_id === activeActivity.id : isFirstActivity))
     : allLabPresets;
 
   const currentFile = workspaceFiles[activeFileIndex] || { name: 'untitled', content: '' };
@@ -734,9 +789,13 @@ export default function StudentWorkspace() {
     (a) => a.order === (activeActivity?.order || 0) + 1
   );
 
-  const currentActivityMessages = messages.filter(
-    (m) => !m.activityId || m.activityId === activeActivity?.id
-  );
+  const currentActivityMessages = messages.filter((m) => {
+    if (m.activityId) {
+      return m.activityId === activeActivity?.id;
+    }
+    // Legacy messages with no activityId: attribute strictly to Activity 1
+    return isFirstActivity;
+  });
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
@@ -1006,28 +1065,37 @@ export default function StudentWorkspace() {
           </div>
 
           {/* Quick Presets Buttons */}
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {activePresets.map((preset) => (
-              <button
-                key={preset.key}
-                onClick={() => handleSelectPreset(preset)}
-                className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-                  sourceMode === 'preset' && activePresetKey === preset.key
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                    : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
-            {sourceMode === 'preset' && (
-              <button
-                onClick={handleRestorePreset}
-                className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-slate-300"
-                title="Restore default preset code"
-              >
-                ↺ Restore
-              </button>
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            {activePresets.length > 0 ? (
+              <>
+                {activePresets.map((preset) => (
+                  <button
+                    key={preset.key}
+                    onClick={() => handleSelectPreset(preset)}
+                    className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                      sourceMode === 'preset' && activePresetKey === preset.key
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+                {sourceMode === 'preset' && activePresetKey && (
+                  <button
+                    onClick={handleRestorePreset}
+                    className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-slate-300"
+                    title="Restore default preset code"
+                  >
+                    ↺ Restore
+                  </button>
+                )}
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-400 italic flex items-center gap-1.5 py-0.5">
+                <Info className="w-3 h-3 text-slate-500 shrink-0" />
+                No presets for Act. {activeActivity?.order || 1} (Re-analyze lab in Studio to auto-generate)
+              </span>
             )}
           </div>
 
@@ -1246,8 +1314,8 @@ export default function StudentWorkspace() {
           ))}
 
           {isAnalyzing && (
-            <div className="flex items-center gap-2 text-xs text-emerald-400 bg-slate-900/60 border border-slate-800 rounded-xl p-3 w-fit animate-pulse">
-              <Sparkles className="w-4 h-4 animate-spin" />
+            <div className="flex items-center gap-2.5 text-xs font-medium text-emerald-400 bg-slate-900/80 border border-emerald-500/30 rounded-xl px-4 py-3 w-fit min-w-[360px] whitespace-nowrap shadow-md shadow-emerald-950/30 animate-pulse">
+              <Sparkles className="w-4 h-4 animate-spin shrink-0" />
               <span>Analyzing code socratic-style with muse-spark-1.3...</span>
             </div>
           )}
