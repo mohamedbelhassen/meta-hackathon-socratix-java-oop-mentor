@@ -117,8 +117,8 @@ ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 5. Extract key analogies (e.g. Oven, Animals, Download Manager, etc.) with their slide or page number.
 6. Provide verbatim, faithful slide-by-slide transcriptions and translations in 'pages_markdown' for ALL pages/slides (from Page ${cleanedPages[0].page} to Page ${cleanedPages[cleanedPages.length - 1].page}).
    CRITICAL: Do NOT summarize multiple slides together (e.g. do NOT merge Slide 11 and 12). Each entry must strictly correspond to its single slide number.
-   - 'fr_markdown': clean French markdown transcription with section headers, lists, and code enclosed in \`\`\`java blocks. Strictly omit dates, university footers, and page numbers.
-   - 'en_markdown': faithful 1:1 English translation of this single slide with code in \`\`\`java blocks. Maintain exact code identifiers without translating variable or class names.`;
+   - 'fr_markdown': clean French markdown transcription. ALWAYS start with a descriptive header (### Titre de la diapositive). Include section headers, lists, and code enclosed in \`\`\`java blocks. Strictly omit dates, university footers, and page numbers.
+   - 'en_markdown': faithful 1:1 English translation of this single slide. ALWAYS start with a descriptive header (### Slide Title). Include code in \`\`\`java blocks. Maintain exact code identifiers without translating variable or class names.`;
 
       const userPrompt = `Distill Chapter ${chapterNumber}: "${title}" (${code}) based on the following extracted document text:
 
@@ -209,7 +209,7 @@ ${GOLDEN_CHAPTER_SYNTHESIS_SHOT}
 2. Synthesize the entire chapter into 'markdown_content' with "(Slide X)" anchors and anti-patterns.
 3. Extract key analogies into 'key_analogies'.
 4. Provide verbatim transcriptions and translations in 'pages_markdown' for pages ${batch0.pages[0].page} to ${batch0.pages[batch0.pages.length - 1].page} of Batch 1.
-   Do NOT merge multiple slides. Preserve code in \`\`\`java blocks. Omit dates, footers, and page numbers.`;
+   Do NOT merge multiple slides. ALWAYS begin each slide with a descriptive header (### Slide Title). Preserve code in \`\`\`java blocks. Omit dates, footers, and page numbers.`;
 
       const userPromptGlobal = `Distill Chapter ${chapterNumber}: "${title}" (${code}) from overall document sample:
 
@@ -285,8 +285,8 @@ ${batch0Sample}`;
 Course Context: "${course.title}" (${course.code}).
 Transcribe and translate pages ${batch.pages[0].page} through ${batch.pages[batch.pages.length - 1].page} for Chapter ${chapterNumber} ("${title}").
 For EACH page in this batch:
-- 'fr_markdown': clean French markdown transcription with section headers and \`\`\`java code blocks. Strictly omit dates and footer page numbers.
-- 'en_markdown': faithful 1:1 English translation of this single slide with code in \`\`\`java blocks.
+- 'fr_markdown': clean French markdown transcription. ALWAYS start with a descriptive header (### Titre de la diapositive), section headers, and \`\`\`java code blocks. Strictly omit dates and footer page numbers.
+- 'en_markdown': faithful 1:1 English translation of this single slide. ALWAYS start with a descriptive header (### Slide Title) and code in \`\`\`java blocks.
 Do NOT summarize multiple slides together. Preserve exact class, variable, and method identifiers.`;
 
         const batchSchema = {

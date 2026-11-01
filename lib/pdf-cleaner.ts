@@ -25,124 +25,39 @@ export interface BoilerplateDetectionResult {
 }
 
 /**
- * Normalizes a line for fuzzy frequency comparison.
- */
-function normalizeLine(line: string): string {
-  return line
-    .trim()
-    .toLowerCase()
-    .replace(/[ \t]+/g, ' ')
-    // Replace variable page numbers and dates with placeholders so slightly varying headers match
-    .replace(/\b\d{1,3}\s*\/\s*\d{1,3}\b/g, '#page#')
-    .replace(/\bpage\s*\d+\b/gi, '#page#')
-    .replace(/\b\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}\b/g, '#date#');
-}
-
-/**
  * Common pure pagination and date regex patterns.
  */
 const PURE_PAGINATION_REGEX = /^(?:page\s*\d+|\d+\s*\/\s*\d+|\d+)$/i;
 const PURE_DATE_REGEX = /^\d{2}[\/\-.]\d{2}[\/\-.]\d{2,4}$/;
 
 /**
- * Analyzes pages and strips boilerplate lines that repeat in top/bottom perimeters across pages.
+ * Deterministically cleans extracted PDF pages.
+ * Strips standalone pagination numbers and pure dates from perimeter lines (top 2 / bottom 2).
+ * Aggressive statistical frequency-based text stripping is intentionally omitted to prevent
+ * any risk of deleting legitimate slide titles, syllabus topics, or valid slide content.
  *
  * @param pages Array of pages with page number and extracted text
- * @param frequencyThreshold Fraction of pages (0.0 to 1.0) on which a line must appear to be considered boilerplate
+ * @param _frequencyThreshold Kept for interface compatibility
  */
 export function cleanPdfPages(
-  pages: Array<{ page: number; text: string }>,
-  frequencyThreshold = 0.35
+  pages: Array<{ page: number; text: string }>
 ): BoilerplateDetectionResult {
   if (!pages || pages.length === 0) {
     return { cleanedPages: [], detectedHeaders: [], detectedFooters: [] };
   }
 
-  // If document has only 1 page, we cannot do frequency analysis across pages
-  if (pages.length === 1) {
-    const lines = pages[0].text.split('\n').filter((l) => {
-      const trimmed = l.trim();
-      return !PURE_PAGINATION_REGEX.test(trimmed) && !PURE_DATE_REGEX.test(trimmed);
-    });
-    return {
-      cleanedPages: [{ page: pages[0].page, text: lines.join('\n').trim() }],
-      detectedHeaders: [],
-      detectedFooters: [],
-    };
-  }
-
-  const topLinesFrequency: Record<string, { count: number; sample: string }> = {};
-  const bottomLinesFrequency: Record<string, { count: number; sample: string }> = {};
-
-  // 1. Gather perimeter lines (top 3 and bottom 3 lines of each page)
-  for (const p of pages) {
-    const rawLines = p.text
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    const topSlice = rawLines.slice(0, 3);
-    const bottomSlice = rawLines.slice(-3);
-
-    for (const line of topSlice) {
-      if (line.length < 3) continue;
-      const norm = normalizeLine(line);
-      if (!topLinesFrequency[norm]) {
-        topLinesFrequency[norm] = { count: 0, sample: line };
-      }
-      topLinesFrequency[norm].count += 1;
-    }
-
-    for (const line of bottomSlice) {
-      if (line.length < 3) continue;
-      const norm = normalizeLine(line);
-      if (!bottomLinesFrequency[norm]) {
-        bottomLinesFrequency[norm] = { count: 0, sample: line };
-      }
-      bottomLinesFrequency[norm].count += 1;
-    }
-  }
-
-  // 2. Identify repeating boilerplates exceeding the frequency threshold
-  const minOccurrences = Math.max(2, Math.ceil(pages.length * frequencyThreshold));
-  const detectedHeadersSet = new Set<string>();
-  const detectedFootersSet = new Set<string>();
-
-  const detectedHeaders: string[] = [];
-  const detectedFooters: string[] = [];
-
-  for (const [norm, data] of Object.entries(topLinesFrequency)) {
-    if (data.count >= minOccurrences) {
-      detectedHeadersSet.add(norm);
-      detectedHeaders.push(data.sample);
-    }
-  }
-
-  for (const [norm, data] of Object.entries(bottomLinesFrequency)) {
-    if (data.count >= minOccurrences) {
-      detectedFootersSet.add(norm);
-      detectedFooters.push(data.sample);
-    }
-  }
-
-  // 3. Filter pages removing boilerplate lines
   const cleanedPages: CleanedPage[] = pages.map((p) => {
-    const rawLines = p.text.split('\n');
+    const rawLines = (p.text || '').split('\n');
     const filteredLines = rawLines.filter((line, idx, arr) => {
       const trimmed = line.trim();
       if (!trimmed) return true; // keep blank separator lines
 
-      // Always strip standalone pagination or dates on the first 2 or last 2 lines
+      // Only strip standalone pure pagination or pure dates on perimeter lines
       const isPerimeter = idx < 2 || idx >= arr.length - 2;
       if (isPerimeter) {
         if (PURE_PAGINATION_REGEX.test(trimmed) || PURE_DATE_REGEX.test(trimmed)) {
           return false;
         }
-      }
-
-      const norm = normalizeLine(trimmed);
-      if (detectedHeadersSet.has(norm) || detectedFootersSet.has(norm)) {
-        return false;
       }
 
       return true;
@@ -162,8 +77,8 @@ export function cleanPdfPages(
 
   return {
     cleanedPages,
-    detectedHeaders,
-    detectedFooters,
+    detectedHeaders: [],
+    detectedFooters: [],
   };
 }
 
@@ -350,14 +265,19 @@ export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: st
   flushCode();
 
   let result = formattedBlocks.join('\n').replace(/\n{3,}/g, '\n\n').trim();
-  if (fallbackTitle && !result.toLowerCase().includes(fallbackTitle.toLowerCase())) {
-    result = `### ${fallbackTitle}\n\n${result}`;
+  if (fallbackTitle) {
+    const hasHeader = /^#{1,4}\s+/m.test(result);
+    if (!hasHeader) {
+      result = `### ${fallbackTitle}\n\n${result}`;
+    }
   }
   return result;
 }
 
 /**
  * Generates or retrieves clean markdown content for a slide reference.
+ * Guarantees that the slide title is ALWAYS prominently displayed at the top of the markdown,
+ * even if the original PDF slide used an image or vector shape for its title.
  */
 export function getSlideCleanMarkdown(
   reference: {
@@ -369,27 +289,45 @@ export function getSlideCleanMarkdown(
   },
   lang: 'en' | 'fr'
 ): string {
+  // Extract clean slide title from reference.label
+  // e.g. "Chapter 2 (Slide 23): Transtypage explicite / Cast" -> "Transtypage explicite / Cast"
+  let cleanTitle = reference.label || `Slide #${reference.page_number}`;
+  const colonIdx = cleanTitle.indexOf(':');
+  if (colonIdx !== -1) {
+    const extracted = cleanTitle.slice(colonIdx + 1).trim();
+    if (extracted.length > 0) cleanTitle = extracted;
+  }
+
+  const ensureHeader = (markdownText: string, title: string): string => {
+    const trimmed = markdownText.trim();
+    if (/^#{1,4}\s+/m.test(trimmed)) {
+      return trimmed;
+    }
+    return `### ${title}\n\n${trimmed}`;
+  };
+
   if (lang === 'en') {
     if (reference.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0) {
-      return reference.slide_markdown.en;
+      return ensureHeader(reference.slide_markdown.en, cleanTitle);
     }
     // If English markdown is pending, display French clean markdown if available
     if (reference.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0) {
-      return `> 💡 *Clean English translation pending recompilation. Displaying official clean slide content below:*\n\n${reference.slide_markdown.fr}`;
+      const frContent = ensureHeader(reference.slide_markdown.fr, cleanTitle);
+      return `> 💡 *Clean English translation pending recompilation. Displaying official clean slide content below:*\n\n${frContent}`;
     }
-    return `### ${reference.label || `Slide #${reference.page_number}`}\n\n` +
+    return `### ${cleanTitle}\n\n` +
       `**Curriculum Reference:** Chapter \`${reference.chapter_code}\` (Slide ${reference.page_number})\n\n` +
       `#### Key Architectural Concept:\n` +
       `> ${reference.en_note || 'This slide presents the core concept and architectural invariant relevant to your current implementation hurdle.'}\n\n` +
       `*Tip: Run "Recompile Knowledge Base" with "Re-distill PDFs" checked in Course Studio to generate full verbatim slide-by-slide translations.*`;
   } else {
     if (reference.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0) {
-      return reference.slide_markdown.fr;
+      return ensureHeader(reference.slide_markdown.fr, cleanTitle);
     }
     if (reference.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0) {
-      return reference.slide_markdown.en;
+      return ensureHeader(reference.slide_markdown.en, cleanTitle);
     }
-    return `### ${reference.label || `Diapositive #${reference.page_number}`}\n\n` +
+    return `### ${cleanTitle}\n\n` +
       `**Référence officielle du cours :** Chapitre \`${reference.chapter_code}\` (Diapositive ${reference.page_number})\n\n` +
       `Consultez l'original officiel en cliquant sur l'onglet **"📄 Official PDF (French)"** ci-dessus.`;
   }
