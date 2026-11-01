@@ -265,6 +265,7 @@ export default function StudentWorkspace() {
     const isFirstAct = !act || !activeLab.activities?.length || act.id === activeLab.activities[0]?.id;
     const actPresets = labPresets.filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct));
 
+    setSessionState(null);
     setCompletionReport(null);
     setCompletedMilestone(null);
 
@@ -308,7 +309,12 @@ export default function StudentWorkspace() {
 
         setActivePresetKey(targetPreset.key);
         const editedFiles = loadPresetEdits(activeLab.id, targetPreset.key);
-        setWorkspaceFiles(editedFiles || targetPreset.files);
+        let finalFiles = targetPreset.files;
+        if (editedFiles) {
+          const missing = targetPreset.files.filter((pf) => !editedFiles.some((ef) => ef.name === pf.name));
+          finalFiles = missing.length > 0 ? [...editedFiles, ...missing] : editedFiles;
+        }
+        setWorkspaceFiles(finalFiles);
         setFolderName(`Preset: ${targetPreset.label}`);
       } else {
         // No presets for this activity: initialize clean starter skeleton based on target_files
@@ -345,7 +351,14 @@ export default function StudentWorkspace() {
           if (data.session.completion_report) {
             setCompletionReport(data.session.completion_report);
             setCompletedMilestone(activeActivity?.title || 'Milestone Mastered');
+          } else {
+            setCompletionReport(null);
+            setCompletedMilestone(null);
           }
+        } else {
+          setSessionState(null);
+          setCompletionReport(null);
+          setCompletedMilestone(null);
         }
         if (data.messages && data.messages.length > 0) {
           const chatItems: ChatItem[] = data.messages.map((m: {
@@ -526,7 +539,12 @@ export default function StudentWorkspace() {
 
     if (activeLab) {
       const edited = loadPresetEdits(activeLab.id, preset.key);
-      setWorkspaceFiles(edited || preset.files);
+      let finalFiles = preset.files;
+      if (edited) {
+        const missing = preset.files.filter((pf) => !edited.some((ef) => ef.name === pf.name));
+        finalFiles = missing.length > 0 ? [...edited, ...missing] : edited;
+      }
+      setWorkspaceFiles(finalFiles);
     } else {
       setWorkspaceFiles(preset.files);
     }
@@ -689,6 +707,7 @@ export default function StudentWorkspace() {
           labId: activeLab.id,
           activityId: activeActivity?.id,
           studentId: activeStudent.id,
+          studentName: activeStudent?.name,
           seatLabel,
           question: isHint ? '' : userQuestion,
           isHintRequest: isHint,
@@ -717,15 +736,10 @@ export default function StudentWorkspace() {
           setSessionState(data.session_state);
         }
 
-        // Trigger Activity/Lab Completion celebration & competency report ONLY when the activity is actually 100% completed
-        const isActivityCompleted = Boolean(
-          data.is_activity_completed ||
-          data.is_lab_completed ||
-          data.session_state?.progress_percent === 100 ||
-          (data.session_state?.activities_progress && activeActivity?.id && data.session_state.activities_progress[activeActivity.id]?.percent === 100)
-        );
+        // Trigger celebration ONLY when the activity or lab was newly mastered in this specific turn
+        const isNewlyMastered = Boolean(data.is_activity_completed || data.is_lab_completed);
 
-        if (isActivityCompleted && data.competency_report) {
+        if (isNewlyMastered && data.competency_report) {
           const report = data.competency_report;
           const milestone = activeActivity?.title || activeLab?.title || 'Activity Mastered';
           setCompletionReport(report);
@@ -783,10 +797,11 @@ export default function StudentWorkspace() {
   const currentFile = workspaceFiles[activeFileIndex] || { name: 'untitled', content: '' };
   const actProgress = activeActivity && sessionState?.activities_progress?.[activeActivity.id];
 
-  const isCurrentActivityCompleted = actProgress?.percent === 100;
+  const isBuggyPreset = sourceMode === 'preset' && activePresets.find((p) => p.key === activePresetKey)?.preset_type === 'buggy';
+  const isCurrentActivityCompleted = actProgress?.percent === 100 && !isBuggyPreset;
   const activeActivityReport = isCurrentActivityCompleted
     ? (actProgress?.completion_report || completionReport)
-    : (sessionState?.progress_percent === 100 ? completionReport : null);
+    : (!isBuggyPreset && sessionState?.progress_percent === 100 ? completionReport : null);
 
   const nextActivity = activeLab?.activities?.find(
     (a) => a.order === (activeActivity?.order || 0) + 1
@@ -858,7 +873,19 @@ export default function StudentWorkspace() {
                 value={activeLab?.id || ''}
                 onChange={(e) => {
                   const l = labs.find((x) => x.id === e.target.value);
-                  if (l) setActiveLab(l);
+                  if (l) {
+                    setActiveLab(l);
+                    setSessionState(null);
+                    setCompletionReport(null);
+                    setCompletedMilestone(null);
+                    const firstAct = l.activities?.[0] || null;
+                    setActiveActivity(firstAct);
+                    saveActiveContext({
+                      labId: l.id,
+                      activityId: firstAct?.id,
+                      activePresetKey: undefined,
+                    });
+                  }
                 }}
                 className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               >
@@ -879,7 +906,13 @@ export default function StudentWorkspace() {
                 value={activeStudent.id}
                 onChange={(e) => {
                   const p = DEMO_PERSONAS.find((x) => x.id === e.target.value);
-                  if (p) setActiveStudent(p);
+                  if (p) {
+                    setActiveStudent(p);
+                    setSessionState(null);
+                    setCompletionReport(null);
+                    setCompletedMilestone(null);
+                    saveActiveContext({ studentId: p.id });
+                  }
                 }}
                 className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               >
@@ -1416,6 +1449,8 @@ export default function StudentWorkspace() {
         onClose={() => setIsCelebrationOpen(false)}
         report={completionReport}
         milestoneId={completedMilestone || activeActivity?.title || 'Milestone Completed'}
+        studentName={activeStudent?.name}
+        seatLabel={seatLabel}
         onContinueNext={nextActivity ? () => handleSelectActivity(nextActivity) : undefined}
         nextActivityLabel={nextActivity ? `Activity ${nextActivity.order}` : undefined}
       />

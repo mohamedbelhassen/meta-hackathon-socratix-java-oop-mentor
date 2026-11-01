@@ -20,6 +20,8 @@ interface MilestoneCelebrationModalProps {
   report: CompetencyReport | null;
   onContinueNext?: () => void;
   nextActivityLabel?: string;
+  studentName?: string;
+  seatLabel?: string;
 }
 
 // Zero-dependency Major Arpeggio Synthesizer via HTML5 Web Audio API
@@ -103,10 +105,12 @@ export function replayCelebration() {
 export default function MilestoneCelebrationModal({
   isOpen,
   onClose,
-  milestoneId = 'LAB5_ENCAPSULATION',
+  milestoneId = 'Activity Mastered',
   report,
   onContinueNext,
   nextActivityLabel,
+  studentName,
+  seatLabel,
 }: MilestoneCelebrationModalProps) {
   useEffect(() => {
     if (isOpen) {
@@ -117,9 +121,23 @@ export default function MilestoneCelebrationModal({
 
   if (!isOpen || !report) return null;
 
+  // Format student address (e.g. "Guest Explorer (PC 05)" or "Bob (PC 02)")
+  const studentTag = studentName
+    ? (seatLabel ? `${studentName} (${seatLabel})` : studentName)
+    : (seatLabel ? `Student (${seatLabel})` : 'Student');
+
+  let rawCongratulations = report.congratulations ||
+    'Outstanding work! Your Java code meets all architectural contracts and passes every verification step.';
+
+  // Normalize "Bravo PC 05!" or "Congratulations PC 05!" to "Bravo {studentTag}!"
+  rawCongratulations = rawCongratulations.replace(
+    /\b(?:Bravo|Congratulations|Good job)\s+(?:PC\s*\d+|PC\d+)\b!*/gi,
+    `Bravo ${studentTag}!`
+  );
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-slate-900 border-2 border-emerald-500/50 rounded-2xl shadow-2xl shadow-emerald-500/20 p-6 md:p-8 text-slate-100 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-3xl md:max-w-4xl bg-slate-900 border-2 border-emerald-500/50 rounded-2xl shadow-2xl shadow-emerald-500/20 p-6 md:p-8 text-slate-100 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -130,21 +148,30 @@ export default function MilestoneCelebrationModal({
         </button>
 
         {/* Celebration Header */}
-        <div className="flex flex-col items-center text-center gap-2">
+        <div className="flex flex-col items-center text-center gap-3">
           <div className="flex items-center gap-2">
             <span className="p-3 rounded-full bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40">
               <Sparkles className="w-8 h-8 animate-pulse" />
             </span>
           </div>
-          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-xs px-3 py-1 font-mono uppercase tracking-wider">
-            Milestone Completed • {milestoneId}
-          </Badge>
+          
+          {/* Badge & Activity Subtitle without overflow */}
+          <div className="flex flex-col items-center gap-2 max-w-2xl px-2">
+            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-xs px-3.5 py-1 font-mono uppercase tracking-wider shrink-0">
+              🏆 Activity Mastered
+            </Badge>
+            {milestoneId && (
+              <span className="text-xs font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-full text-center leading-relaxed break-words line-clamp-2 max-w-full">
+                {milestoneId}
+              </span>
+            )}
+          </div>
+
           <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
             Activity Successfully Mastered!
           </h2>
-          <p className="text-sm md:text-base text-slate-300 max-w-lg mt-1 leading-relaxed">
-            {report.congratulations ||
-              'Outstanding work! Your Java code meets all architectural contracts and passes every verification step.'}
+          <p className="text-sm md:text-base text-slate-300 max-w-2xl mt-1 leading-relaxed">
+            {rawCongratulations}
           </p>
         </div>
 

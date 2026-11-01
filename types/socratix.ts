@@ -228,6 +228,7 @@ export interface TutorRequestBody {
   labId: string;
   activityId?: string;
   studentId: string;
+  studentName?: string;
   seatLabel?: string;
   question: string;
   isHintRequest?: boolean;

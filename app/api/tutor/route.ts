@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       labId,
       activityId,
       studentId,
+      studentName,
       seatLabel,
       question,
       isHintRequest,
@@ -107,12 +108,15 @@ export async function POST(req: NextRequest) {
     // Fetch existing student session
     const { data: existingSessionData } = await supabase
       .from('student_lab_sessions')
-      .select('*')
+      .select('*, profiles(display_name, is_guest)')
       .eq('student_id', studentId)
       .eq('lab_id', labId)
       .maybeSingle();
 
     const existingSession = existingSessionData as StudentLabSession | null;
+    const resolvedStudentName = (studentName && studentName.trim())
+      || (existingSessionData as unknown as { profiles?: { display_name?: string } })?.profiles?.display_name
+      || 'Student';
 
     // Assemble dynamic 3-layer system prompt & strict schema
     const systemPrompt = buildCourseSystemPrompt(course, chapters, lab, activeActivity);
@@ -125,9 +129,11 @@ export async function POST(req: NextRequest) {
 
     const userMessageContent = `
 STUDENT METADATA:
+- Student Name: ${resolvedStudentName}
 - Seat: ${seatLabel || existingSession?.seat_label || 'PC 01'}
 - Active Activity: ${activeActivity ? `[${activeActivity.id}] ${activeActivity.title}` : 'General'}
 - Is Hint Request: ${Boolean(isHintRequest)}
+- Addressing Guideline: When addressing or congratulating the student in 'socratic_reply' or 'competency_report.congratulations', warmly address them by their name (e.g. "Bravo ${resolvedStudentName} (${seatLabel || 'PC 01'})!" or "Bravo ${resolvedStudentName}!"). Never refer to the student as only a machine number like "PC 05".
 
 STUDENT CODE SNAPSHOT:
 ${filesContext}
@@ -205,6 +211,15 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       }
     }
 
+    // Normalize congratulations text to always address student by name
+    if (parsed.competency_report?.congratulations) {
+      const studentTag = seatLabel ? `${resolvedStudentName} (${seatLabel})` : resolvedStudentName;
+      parsed.competency_report.congratulations = parsed.competency_report.congratulations.replace(
+        /\b(?:Bravo|Congratulations|Good job)\s+(?:PC\s*\d+|PC\d+)\b!*/gi,
+        `Bravo ${studentTag}!`
+      );
+    }
+
     // Merge multi-occurrence micro-competencies non-destructively
     const incomingSignals: RawConceptSignal[] = parsed.concept_signals || [];
     const updatedMicroCompetencies = mergeMicroCompetenciesState(
@@ -220,25 +235,35 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       newlyCompleted
     );
 
-    // Compute milestone and activity completion flags
+    // Compute deterministic milestone and activity completion flags strictly for THIS turn
+    const hasUnresolvedError = Boolean(parsed.has_unresolved_error);
     const currentActivityProgress = activeActivity?.id ? progressData.activities_progress[activeActivity.id] : null;
-    const isActivityCompleted = Boolean(
+
+    // An activity is newly completed in this turn ONLY when:
+    // 1. Code has NO unresolved errors, AND
+    // 2. Either the AI explicitly marks is_activity_completed, OR newly completed milestones brought this activity to 100%
+    const isActivityNewlyCompleted = !hasUnresolvedError && Boolean(
       parsed.is_activity_completed ||
-      (currentActivityProgress && currentActivityProgress.percent === 100)
+      (newlyCompleted.length > 0 && currentActivityProgress && currentActivityProgress.percent === 100)
     );
-    const isLabCompleted = Boolean(parsed.is_lab_completed) || progressData.progress_percent === 100;
-    const isMilestoneCompleted = Boolean(
+
+    const isLabNewlyCompleted = !hasUnresolvedError && Boolean(
+      parsed.is_lab_completed ||
+      (newlyCompleted.length > 0 && progressData.progress_percent === 100)
+    );
+
+    const isMilestoneNewlyCompleted = !hasUnresolvedError && Boolean(
       parsed.is_milestone_completed ||
-      isActivityCompleted ||
-      isLabCompleted ||
-      (newlyCompleted.length > 0 && !parsed.has_unresolved_error)
+      isActivityNewlyCompleted ||
+      isLabNewlyCompleted ||
+      newlyCompleted.length > 0
     );
 
     // Compute deterministic session status (IN_PROGRESS, BLOCKED, COMPLETED)
     const sessionStatus = computeSessionStatus(
       existingSession,
       course.stuck_threshold_turns || 2,
-      isLabCompleted,
+      isLabNewlyCompleted,
       progressData.progress_percent,
       parsed.has_unresolved_error,
       newlyCompleted.length
@@ -246,7 +271,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
 
     // Attach activity-specific completion report non-destructively
     if (activeActivity?.id && progressData.activities_progress[activeActivity.id]) {
-      if (isActivityCompleted || isLabCompleted || progressData.activities_progress[activeActivity.id].percent === 100) {
+      if (isActivityNewlyCompleted || isLabNewlyCompleted) {
         progressData.activities_progress[activeActivity.id].completion_report = parsed.competency_report;
       } else if (existingSession?.activities_progress?.[activeActivity.id]?.completion_report) {
         progressData.activities_progress[activeActivity.id].completion_report = existingSession.activities_progress[activeActivity.id].completion_report;
@@ -268,7 +293,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       consecutive_errors: sessionStatus.consecutive_errors,
       micro_competencies_state: updatedMicroCompetencies,
       last_diagnostic_note: incomingSignals[0]?.diagnostic_note || null,
-      completion_report: (isActivityCompleted || isLabCompleted)
+      completion_report: (isActivityNewlyCompleted || isLabNewlyCompleted)
         ? parsed.competency_report
         : (existingSession?.completion_report || null),
       last_stuck_at: sessionStatus.last_stuck_at,
@@ -319,10 +344,10 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
     return NextResponse.json({
       socratic_reply: parsed.socratic_reply,
       session_state: savedSession,
-      competency_report: parsed.competency_report,
-      is_milestone_completed: isMilestoneCompleted,
-      is_activity_completed: isActivityCompleted,
-      is_lab_completed: isLabCompleted,
+      competency_report: isActivityNewlyCompleted || isLabNewlyCompleted ? parsed.competency_report : null,
+      is_milestone_completed: isMilestoneNewlyCompleted,
+      is_activity_completed: isActivityNewlyCompleted,
+      is_lab_completed: isLabNewlyCompleted,
       newly_completed_milestone_ids: newlyCompleted,
       meta_usage: metaData.usage,
       latency_ms: latencyMs,
