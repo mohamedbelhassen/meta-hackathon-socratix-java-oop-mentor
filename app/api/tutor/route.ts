@@ -220,15 +220,18 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       newlyCompleted
     );
 
-    // Compute milestone and activity completion flags (aligned with v0-socratix)
-    const isActivityCompleted = Boolean(parsed.is_activity_completed);
+    // Compute milestone and activity completion flags
+    const currentActivityProgress = activeActivity?.id ? progressData.activities_progress[activeActivity.id] : null;
+    const isActivityCompleted = Boolean(
+      parsed.is_activity_completed ||
+      (currentActivityProgress && currentActivityProgress.percent === 100)
+    );
     const isLabCompleted = Boolean(parsed.is_lab_completed) || progressData.progress_percent === 100;
     const isMilestoneCompleted = Boolean(
       parsed.is_milestone_completed ||
       isActivityCompleted ||
       isLabCompleted ||
-      (newlyCompleted.length > 0 && !parsed.has_unresolved_error) ||
-      (!parsed.has_unresolved_error && Array.isArray(parsed.competency_report?.mastered_concepts) && parsed.competency_report.mastered_concepts.length > 0)
+      (newlyCompleted.length > 0 && !parsed.has_unresolved_error)
     );
 
     // Compute deterministic session status (IN_PROGRESS, BLOCKED, COMPLETED)
@@ -243,7 +246,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
 
     // Attach activity-specific completion report non-destructively
     if (activeActivity?.id && progressData.activities_progress[activeActivity.id]) {
-      if (isActivityCompleted || isMilestoneCompleted || progressData.activities_progress[activeActivity.id].percent === 100) {
+      if (isActivityCompleted || isLabCompleted || progressData.activities_progress[activeActivity.id].percent === 100) {
         progressData.activities_progress[activeActivity.id].completion_report = parsed.competency_report;
       } else if (existingSession?.activities_progress?.[activeActivity.id]?.completion_report) {
         progressData.activities_progress[activeActivity.id].completion_report = existingSession.activities_progress[activeActivity.id].completion_report;
@@ -265,7 +268,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       consecutive_errors: sessionStatus.consecutive_errors,
       micro_competencies_state: updatedMicroCompetencies,
       last_diagnostic_note: incomingSignals[0]?.diagnostic_note || null,
-      completion_report: isMilestoneCompleted
+      completion_report: (isActivityCompleted || isLabCompleted)
         ? parsed.competency_report
         : (existingSession?.completion_report || null),
       last_stuck_at: sessionStatus.last_stuck_at,

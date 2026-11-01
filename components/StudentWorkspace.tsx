@@ -717,24 +717,25 @@ export default function StudentWorkspace() {
           setSessionState(data.session_state);
         }
 
-        // Trigger Milestone Completion celebration & competency report (aligned with v0-socratix)
-        const isCompleted = Boolean(
-          data.is_milestone_completed ||
+        // Trigger Activity/Lab Completion celebration & competency report ONLY when the activity is actually 100% completed
+        const isActivityCompleted = Boolean(
           data.is_activity_completed ||
           data.is_lab_completed ||
           data.session_state?.progress_percent === 100 ||
-          (data.session_state?.activities_progress && activeActivity?.id && data.session_state.activities_progress[activeActivity.id]?.percent === 100) ||
-          (Array.isArray(data.competency_report?.mastered_concepts) && data.competency_report.mastered_concepts.length > 0 && !data.session_state?.has_unresolved_error)
+          (data.session_state?.activities_progress && activeActivity?.id && data.session_state.activities_progress[activeActivity.id]?.percent === 100)
         );
 
-        if (isCompleted && data.competency_report) {
+        if (isActivityCompleted && data.competency_report) {
           const report = data.competency_report;
-          const milestone = activeActivity?.title || activeLab?.title || 'Milestone Mastered';
+          const milestone = activeActivity?.title || activeLab?.title || 'Activity Mastered';
           setCompletionReport(report);
           setCompletedMilestone(milestone);
           setIsCelebrationOpen(true);
           playCelebrationChime();
           triggerCelebrationConfetti();
+        } else if (Array.isArray(data.newly_completed_milestone_ids) && data.newly_completed_milestone_ids.length > 0) {
+          // Subtle audio confirmation for intermediate milestone without interrupting student with full celebration modal
+          playCelebrationChime();
         }
       } else {
         throw new Error(data.error || 'Failed to analyze code');
