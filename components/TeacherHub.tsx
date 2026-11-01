@@ -54,8 +54,9 @@ export default function TeacherHub() {
 
     const supabase = getBrowserSupabase();
 
-    // Fetch labs and chapters
-    const [labsRes, chaptersRes, sessionsRes] = await Promise.all([
+    // Fetch updated course row, labs, chapters, and sessions
+    const [courseRes, labsRes, chaptersRes, sessionsRes] = await Promise.all([
+      supabase.from('courses').select('*').eq('id', selectedCourse.id).single(),
       supabase.from('labs').select('*').eq('course_id', selectedCourse.id).order('lab_number', { ascending: true }),
       supabase.from('course_chapters').select('*').eq('course_id', selectedCourse.id).order('chapter_number', { ascending: true }),
       supabase.from('student_lab_sessions').select('*, profiles(display_name, is_guest, email)').eq('course_id', selectedCourse.id),
@@ -69,22 +70,24 @@ export default function TeacherHub() {
       }
     }
 
-    if (!chaptersRes.error && chaptersRes.data) {
-      setSelectedCourse((prev) =>
-        prev
-          ? {
-              ...prev,
-              course_chapters: chaptersRes.data as CourseChapter[],
-              labs: labsRes.data as Lab[],
-            }
-          : prev
-      );
-    }
+    const fetchedCourse = (!courseRes.error && courseRes.data) ? (courseRes.data as Course) : null;
+    const fetchedChapters = (!chaptersRes.error && chaptersRes.data) ? (chaptersRes.data as CourseChapter[]) : [];
+    const fetchedLabsList = (!labsRes.error && labsRes.data) ? (labsRes.data as Lab[]) : [];
+
+    setSelectedCourse((prev) => {
+      const base = fetchedCourse || prev;
+      if (!base) return null;
+      return {
+        ...base,
+        course_chapters: fetchedChapters.length > 0 ? fetchedChapters : prev?.course_chapters || [],
+        labs: fetchedLabsList.length > 0 ? fetchedLabsList : prev?.labs || [],
+      };
+    });
 
     if (!sessionsRes.error && sessionsRes.data) {
       setSessions(sessionsRes.data as StudentLabSession[]);
     }
-  }, [selectedCourse, selectedLab]);
+  }, [selectedCourse?.id, selectedLab]);
 
   useEffect(() => {
     refreshCourseData();

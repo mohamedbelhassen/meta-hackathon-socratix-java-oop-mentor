@@ -19,6 +19,7 @@ import {
   FileText,
   Layers,
   Code2,
+  Loader2,
 } from 'lucide-react';
 
 interface CourseStudioPanelProps {
@@ -500,10 +501,19 @@ export default function CourseStudioPanel({
             <Button
               onClick={handleCompileCourse}
               disabled={isProcessing || chapters.length === 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
             >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              {hasTaxonomy ? 'Recompile Knowledge Base & Mentor Prompt' : 'Compile Knowledge Base & Prompt'}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  Synthesizing Taxonomy & Prompt with Meta AI...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  {hasTaxonomy ? 'Recompile Knowledge Base & Mentor Prompt' : 'Compile Knowledge Base & Prompt'}
+                </>
+              )}
             </Button>
           </div>
         </div>
