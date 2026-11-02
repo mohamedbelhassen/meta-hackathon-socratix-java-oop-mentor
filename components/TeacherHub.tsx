@@ -71,8 +71,8 @@ export default function TeacherHub() {
     // Fetch updated course row, labs, chapters, and sessions (excluding raw pages_json for PERF-01/PERF-03)
     const [courseRes, labsRes, chaptersRes, sessionsRes] = await Promise.all([
       supabase.from('courses').select('id, code, title, description, content_language, tutor_language, file_extensions, competency_matrix, compiled_knowledge_base, compiled_tutor_prompt, is_published, teacher_id').eq('id', courseId).single(),
-      supabase.from('labs').select('id, course_id, lab_number, code, title, title_i18n, description, is_active, target_chapter_codes, covered_micro_concepts, activities, demo_presets').eq('course_id', courseId).order('lab_number', { ascending: true }),
-      supabase.from('course_chapters').select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, key_concepts, analogies, summary_markdown').eq('course_id', courseId).order('chapter_number', { ascending: true }),
+      supabase.from('labs').select('id, course_id, lab_number, code, title, title_i18n, description, description_i18n, pdf_url, is_active, covered_micro_concepts, activities, demo_presets').eq('course_id', courseId).order('lab_number', { ascending: true }),
+      supabase.from('course_chapters').select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, markdown_content, key_analogies').eq('course_id', courseId).order('chapter_number', { ascending: true }),
       supabase.from('student_lab_sessions').select('*, profiles(display_name, is_guest, email)').eq('course_id', courseId),
     ]);
 

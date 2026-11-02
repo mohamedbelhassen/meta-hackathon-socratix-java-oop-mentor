@@ -43,17 +43,24 @@ export async function getCachedCourseBundle(
       .single(),
     supabase
       .from('course_chapters')
-      .select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, key_concepts, analogies, summary_markdown')
+      .select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, markdown_content, pages_json, key_analogies')
       .eq('course_id', courseId)
       .order('chapter_number', { ascending: true }),
     supabase
       .from('labs')
-      .select('id, course_id, lab_number, code, title, title_i18n, description, is_active, target_chapter_codes, covered_micro_concepts, activities, demo_presets')
+      .select('id, course_id, lab_number, code, title, title_i18n, description, description_i18n, pdf_url, is_active, covered_micro_concepts, activities, demo_presets')
       .eq('id', labId)
       .single(),
   ]);
 
   if (courseRes.error || !courseRes.data || labRes.error || !labRes.data) {
+    if (courseRes.error || labRes.error || chaptersRes.error) {
+      console.error('[getCachedCourseBundle] Database query error:', {
+        courseError: courseRes.error?.message,
+        chaptersError: chaptersRes.error?.message,
+        labError: labRes.error?.message,
+      });
+    }
     return null;
   }
 

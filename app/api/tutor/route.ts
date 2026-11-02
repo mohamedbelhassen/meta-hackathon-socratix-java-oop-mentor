@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     if (!bundle) {
+      console.error(`[Tutor API 404] Course or Lab bundle not found for courseId="${courseId}", labId="${labId}".`);
       return NextResponse.json(
         { error: 'Course or Lab not found in database.' },
         { status: 404 }
