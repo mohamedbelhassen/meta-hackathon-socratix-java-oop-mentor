@@ -23,6 +23,7 @@ import {
   Loader2,
   Eye,
   Zap,
+  Plus,
 } from 'lucide-react';
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
@@ -33,12 +34,14 @@ interface CourseStudioPanelProps {
   course: (Course & { course_chapters?: CourseChapter[]; labs?: Lab[] }) | null;
   onCourseUpdated: () => void | Promise<void>;
   onOpenAnalyticsTab?: () => void;
+  onCreateCourse?: () => void;
 }
 
 export default function CourseStudioPanel({
   course,
   onCourseUpdated,
   onOpenAnalyticsTab,
+  onCreateCourse,
 }: CourseStudioPanelProps) {
   // Batch processing state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -70,9 +73,26 @@ export default function CourseStudioPanel({
 
   if (!course) {
     return (
-      <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 space-y-3">
-        <BookOpen className="w-8 h-8 text-slate-600 mx-auto" />
-        <p className="text-sm">Please select or create a course to access the Course Studio.</p>
+      <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+          <BookOpen className="w-6 h-6" />
+        </div>
+        <div className="space-y-1">
+          <h3 className="text-base font-bold text-slate-200">No Course Selected</h3>
+          <p className="text-xs text-slate-400">
+            Please select an existing course from the header dropdown, or create a brand new curriculum.
+          </p>
+        </div>
+        {onCreateCourse && (
+          <Button
+            onClick={onCreateCourse}
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5 font-semibold px-4"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create New Course</span>
+          </Button>
+        )}
       </div>
     );
   }

@@ -14,10 +14,14 @@ import {
   Users,
   Radio,
   ExternalLink,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import TeacherLiveSessionsTab from './TeacherLiveSessionsTab';
 import TeacherAnalyticsCoverageTab from './TeacherAnalyticsCoverageTab';
 import CourseStudioPanel from './CourseStudioPanel';
+import CreateCourseModal from './CreateCourseModal';
+import DeleteCourseModal from './DeleteCourseModal';
 
 export default function TeacherHub() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -27,6 +31,10 @@ export default function TeacherHub() {
   const [sessions, setSessions] = useState<StudentLabSession[]>([]);
   const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'studio'>('live');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+
+  // Modals for Course Management (Point #3)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const courseId = selectedCourse?.id;
 
@@ -153,6 +161,20 @@ export default function TeacherHub() {
   const blockedCount = currentLabSessions.filter((s) => s.status === 'BLOCKED').length;
   const completedCount = currentLabSessions.filter((s) => s.status === 'COMPLETED').length;
 
+  const handleCourseCreated = (newCourse: Course) => {
+    setCourses((prev) => [newCourse, ...prev.filter((c) => c.id !== newCourse.id)]);
+    setSelectedCourse(newCourse);
+    setActiveTab('studio');
+  };
+
+  const handleCourseDeleted = (deletedCourseId: string) => {
+    setCourses((prev) => {
+      const remaining = prev.filter((c) => c.id !== deletedCourseId);
+      setSelectedCourse(remaining[0] || null);
+      return remaining;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -166,7 +188,7 @@ export default function TeacherHub() {
               Teacher Hub v2
             </Badge>
 
-            {/* Course Selector */}
+            {/* Course Selector & Actions */}
             <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-slate-800">
               <span className="text-xs text-slate-400 font-medium">Course:</span>
               <select
@@ -175,7 +197,7 @@ export default function TeacherHub() {
                   const target = courses.find((c) => c.id === e.target.value);
                   if (target) setSelectedCourse(target);
                 }}
-                className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold"
+                className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold max-w-[200px] truncate"
               >
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -183,6 +205,31 @@ export default function TeacherHub() {
                   </option>
                 ))}
               </select>
+
+              {/* Create New Course */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCreateModalOpen(true)}
+                className="h-8 text-xs border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 px-2.5 gap-1.5 font-medium"
+                title="Create a new course in Course Studio"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span className="hidden md:inline">New Course</span>
+              </Button>
+
+              {/* Delete Active Course */}
+              {selectedCourse && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDeleteModalOpen(true)}
+                  className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"
+                  title={`Delete course ${selectedCourse.code} (Protected by Jury PIN)`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -279,12 +326,22 @@ export default function TeacherHub() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {!selectedCourse ? (
-          <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl text-slate-400 space-y-3">
+          <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
             <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />
-            <p className="text-base font-medium text-slate-300">No Course Selected</p>
-            <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Please create a course or select one from the dropdown above to manage live sessions and analytics.
-            </p>
+            <div className="space-y-1">
+              <p className="text-base font-medium text-slate-300">No Course Selected</p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Please create a course or select one from the dropdown above to manage live sessions and analytics.
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsCreateModalOpen(true)}
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5 font-semibold px-4"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create New Course</span>
+            </Button>
           </div>
         ) : (
           <>
@@ -314,11 +371,25 @@ export default function TeacherHub() {
                 course={selectedCourse}
                 onCourseUpdated={refreshCourseData}
                 onOpenAnalyticsTab={() => setActiveTab('analytics')}
+                onCreateCourse={() => setIsCreateModalOpen(true)}
               />
             )}
           </>
         )}
       </main>
+
+      {/* Course Management Modals (Point #3) */}
+      <CreateCourseModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCourseCreated={handleCourseCreated}
+      />
+      <DeleteCourseModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        course={selectedCourse}
+        onCourseDeleted={handleCourseDeleted}
+      />
     </div>
   );
 }
