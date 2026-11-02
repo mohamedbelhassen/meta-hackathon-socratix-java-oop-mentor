@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -32,6 +33,9 @@ import {
   Layers,
   AlertTriangle,
   Info,
+  User,
+  LogIn,
+  GraduationCap,
 } from 'lucide-react';
 import MilestoneCelebrationModal, {
   CompetencyReport,
@@ -51,7 +55,15 @@ import {
   loadDirectoryHandle,
 } from '@/lib/workspace-persistence';
 
-const DEMO_PERSONAS = [
+export interface StudentPersona {
+  id: string;
+  name: string;
+  role: string;
+  email?: string;
+  isCustom?: boolean;
+}
+
+const DEMO_PERSONAS: StudentPersona[] = [
   { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', role: 'Student' },
   { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', role: 'Judge / Sandbox' },
   { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', role: 'Student' },
@@ -111,9 +123,11 @@ export default function StudentWorkspace() {
   const [activeLab, setActiveLab] = useState<Lab | null>(null);
   const [activeActivity, setActiveActivity] = useState<LabActivity | null>(null);
 
-  // Student Persona & Physical Workstation
-  const [activeStudent, setActiveStudent] = useState(DEMO_PERSONAS[0]);
+  // Student Persona & Physical Workstation (Point #6: Auth User Integration)
+  const [personas, setPersonas] = useState<StudentPersona[]>(DEMO_PERSONAS);
+  const [activeStudent, setActiveStudent] = useState<StudentPersona>(DEMO_PERSONAS[0]);
   const [seatLabel, setSeatLabel] = useState('PC 01');
+  const [authUser, setAuthUser] = useState<{ id: string; email?: string; name: string; role: 'student' | 'teacher' } | null>(null);
 
   // Files & Source Mode ('preset' | 'disk')
   const [sourceMode, setSourceMode] = useState<'preset' | 'disk'>('preset');
@@ -223,6 +237,87 @@ export default function StudentWorkspace() {
       }
     }
     initCourses();
+  }, []);
+
+  // 1b. Synchronize Authenticated User from Supabase Auth (Point #6)
+  useEffect(() => {
+    const supabase = getBrowserSupabase();
+
+    async function syncAuthStudent() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, role, email')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          const userRole = (profile?.role || (user.user_metadata?.role as string) || 'student') as 'student' | 'teacher';
+          const displayName = profile?.display_name
+            || (user.user_metadata?.display_name as string)
+            || user.email?.split('@')[0]
+            || 'My Account';
+
+          setAuthUser({ id: user.id, email: user.email, name: displayName, role: userRole });
+
+          if (userRole === 'student') {
+            // Only authentic students get added to the student roster!
+            const authPersona: StudentPersona = {
+              id: user.id,
+              name: displayName,
+              role: 'Student',
+              email: user.email,
+              isCustom: true,
+            };
+
+            setPersonas((prev) => {
+              const others = prev.filter((p) => p.id !== user.id && !p.isCustom);
+              return [authPersona, ...others];
+            });
+
+            // If no specific demo persona was chosen or if saved is this user, auto-select!
+            const savedCtx = loadActiveContext();
+            if (!savedCtx?.studentId || savedCtx.studentId === user.id) {
+              setActiveStudent(authPersona);
+              saveActiveContext({ studentId: authPersona.id });
+            }
+          } else {
+            // Role is 'teacher': A teacher viewing /student is in "Teacher Preview Mode"
+            // They should NOT be in the student personas dropdown
+            setPersonas(DEMO_PERSONAS);
+
+            // If previously active persona was the teacher's ID, reset to a default demo persona
+            const savedCtx = loadActiveContext();
+            if (savedCtx?.studentId === user.id) {
+              const defaultDemo = DEMO_PERSONAS.find((p) => p.name === 'Guest Explorer') || DEMO_PERSONAS[0];
+              setActiveStudent(defaultDemo);
+              saveActiveContext({ studentId: defaultDemo.id });
+            }
+          }
+        } else {
+          setAuthUser(null);
+          setPersonas(DEMO_PERSONAS);
+        }
+      } catch (err) {
+        console.error('[StudentWorkspace] Failed to sync auth student:', err);
+      }
+    }
+
+    syncAuthStudent();
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        syncAuthStudent();
+      } else {
+        setAuthUser(null);
+        setPersonas(DEMO_PERSONAS);
+      }
+    });
+
+    return () => {
+      authSub.subscription.unsubscribe();
+    };
   }, []);
 
   // 2. Fetch Labs for Active Course
@@ -834,6 +929,38 @@ export default function StudentWorkspace() {
               <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] px-1.5 py-0">
                 Workspace v2
               </Badge>
+              {authUser ? (
+                authUser.role === 'teacher' ? (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="border-amber-500/40 bg-amber-950/40 text-amber-300 text-[10px] px-2 py-0 flex items-center gap-1 font-mono">
+                      <GraduationCap className="w-2.5 h-2.5 text-amber-400" />
+                      <span className="max-w-[110px] truncate">{authUser.name}</span>
+                      <span className="text-[9px] text-amber-400/80 border-l border-amber-500/30 pl-1">Teacher Preview</span>
+                    </Badge>
+                    <Link
+                      href="/teacher"
+                      className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium transition"
+                      title="Return to Teacher Hub"
+                    >
+                      Hub &rarr;
+                    </Link>
+                  </div>
+                ) : (
+                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-950/40 text-emerald-400 text-[10px] px-1.5 py-0 flex items-center gap-1 font-mono">
+                    <User className="w-2.5 h-2.5" />
+                    <span className="max-w-[100px] truncate">{authUser.name}</span>
+                  </Badge>
+                )
+              ) : (
+                <Link
+                  href="/login"
+                  className="text-[10px] text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition ml-1"
+                  title="Sign in with an email account"
+                >
+                  <LogIn className="w-3 h-3" />
+                  <span>Sign In</span>
+                </Link>
+              )}
             </div>
             <Button
               variant="ghost"
@@ -901,11 +1028,25 @@ export default function StudentWorkspace() {
           {/* Persona & Seat Selector */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80">
             <div>
-              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Student</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] uppercase font-semibold text-slate-400">Student</label>
+                {authUser?.role === 'student' && (
+                  <span className="text-[9px] text-emerald-400 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Auth Student
+                  </span>
+                )}
+                {authUser?.role === 'teacher' && (
+                  <span className="text-[9px] text-amber-400/90 font-medium flex items-center gap-1" title="Teacher previewing student workspace">
+                    <GraduationCap className="w-2.5 h-2.5 text-amber-400" />
+                    Preview Mode
+                  </span>
+                )}
+              </div>
               <select
                 value={activeStudent.id}
                 onChange={(e) => {
-                  const p = DEMO_PERSONAS.find((x) => x.id === e.target.value);
+                  const p = personas.find((x) => x.id === e.target.value) || DEMO_PERSONAS.find((x) => x.id === e.target.value);
                   if (p) {
                     setActiveStudent(p);
                     setSessionState(null);
@@ -916,9 +1057,9 @@ export default function StudentWorkspace() {
                 }}
                 className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               >
-                {DEMO_PERSONAS.map((p) => (
+                {personas.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} ({p.role})
+                    {p.isCustom ? `✨ ${p.name} (${p.role})` : `${p.name} (${p.role})`}
                   </option>
                 ))}
               </select>
