@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
+import {
+  checkRateLimit,
+  getClientIp,
+  RATE_LIMIT_CONFIG,
+  buildRateLimitHeaders,
+} from '@/lib/rate-limiter';
 import { cleanPdfPages, buildAdaptivePageBatches, formatRawSlideTextToMarkdown, CleanedPage } from '@/lib/pdf-cleaner';
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
@@ -52,11 +58,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'META_API_KEY is not configured on the server.' }, { status: 503 });
     }
 
+    const clientIp = getClientIp(req);
+    const rateCheck = checkRateLimit(`studio_chapter_${clientIp}`, RATE_LIMIT_CONFIG.studioLimitPerMinute, 60);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes d'analyse de chapitre. Veuillez patienter ${rateCheck.resetSeconds}s.` },
+        { status: 429, headers: buildRateLimitHeaders(rateCheck) }
+      );
+    }
+
     const body = await req.json();
     const { courseId, chapterNumber, code, title, pdfUrl, pages } = body;
 
     if (!courseId || !chapterNumber || !code || !title || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Missing required parameters for chapter analysis.' }, { status: 400 });
+    }
+
+    if (pages.length > 100) {
+      return NextResponse.json({ error: 'Le fichier PDF est trop volumineux (maximum 100 pages par chapitre).' }, { status: 400 });
     }
 
     const supabase = getServiceSupabase();

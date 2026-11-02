@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
+  const [teacherPin, setTeacherPin] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
@@ -27,6 +28,15 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        if (role === 'teacher' && !teacherPin.trim()) {
+          setMessage({
+            type: 'error',
+            text: 'A Teacher Secret PIN is required to register as teacher. (Demo Jury: 2026)',
+          });
+          setLoading(false);
+          return;
+        }
+
         const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -35,6 +45,7 @@ export default function LoginPage() {
             data: {
               display_name: displayName || email.split('@')[0],
               role,
+              teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
             },
             emailRedirectTo: redirectUrl,
           },
@@ -51,6 +62,8 @@ export default function LoginPage() {
             },
             body: JSON.stringify({
               display_name: displayName || email.split('@')[0],
+              role,
+              teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
             }),
           }).catch(console.error);
         }
@@ -67,8 +80,21 @@ export default function LoginPage() {
         if (error) throw error;
 
         if (data?.user) {
-          const userRole = (data.user.user_metadata?.role as 'teacher' | 'student') || role;
-          const userDisplayName = (data.user.user_metadata?.display_name as string) || email.split('@')[0];
+          // Verify actual profile role from DB rather than unverified client state
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role, display_name')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          const effectiveRole =
+            (profile?.role as 'teacher' | 'student') ||
+            (data.user.user_metadata?.role as 'teacher' | 'student') ||
+            role;
+          const userDisplayName =
+            profile?.display_name ||
+            (data.user.user_metadata?.display_name as string) ||
+            email.split('@')[0];
 
           if (data.session?.access_token) {
             await fetch('/api/auth/sync-profile', {
@@ -83,7 +109,7 @@ export default function LoginPage() {
             }).catch(console.error);
           }
 
-          router.push(userRole === 'teacher' ? '/teacher' : '/student');
+          router.push(effectiveRole === 'teacher' ? '/teacher' : '/student');
         } else {
           router.push(role === 'teacher' ? '/teacher' : '/student');
         }
@@ -208,6 +234,33 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
+
+                {role === 'teacher' && (
+                  <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-medium text-amber-300">Teacher Secret PIN</label>
+                      <button
+                        type="button"
+                        onClick={() => setTeacherPin('2026')}
+                        className="text-[10px] font-mono text-amber-400 hover:text-amber-200 underline cursor-pointer"
+                        title="Auto-fill Demo Jury PIN"
+                      >
+                        Demo Jury: 2026 (Auto-fill)
+                      </button>
+                    </div>
+                    <Input
+                      type="password"
+                      required
+                      value={teacherPin}
+                      onChange={(e) => setTeacherPin(e.target.value)}
+                      placeholder="Enter PIN (Demo: 2026)"
+                      className="bg-slate-950 border-amber-500/40 text-slate-100 text-xs h-9 focus-visible:ring-amber-500"
+                    />
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      To prevent unauthorized self-elevation, teacher registration requires a PIN. For hackathon evaluators, use <strong className="text-amber-300">2026</strong>.
+                    </p>
+                  </div>
+                )}
               </>
             )}
 

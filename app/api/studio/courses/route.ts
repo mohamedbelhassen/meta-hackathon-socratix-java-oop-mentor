@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import { verifyDestructiveActionPermission } from '@/lib/auth-guard';
+import {
+  checkRateLimit,
+  getClientIp,
+  RATE_LIMIT_CONFIG,
+  buildRateLimitHeaders,
+} from '@/lib/rate-limiter';
 
 export async function GET() {
   try {
@@ -24,6 +30,15 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const clientIp = getClientIp(req);
+    const rateCheck = checkRateLimit(`studio_courses_write_${clientIp}`, RATE_LIMIT_CONFIG.studioLimitPerMinute, 60);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes Studio. Veuillez patienter ${rateCheck.resetSeconds}s.` },
+        { status: 429, headers: buildRateLimitHeaders(rateCheck) }
+      );
+    }
+
     const body = await req.json();
     const {
       id,
@@ -110,6 +125,15 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
+    const clientIp = getClientIp(req);
+    const rateCheck = checkRateLimit(`studio_courses_write_${clientIp}`, RATE_LIMIT_CONFIG.studioLimitPerMinute, 60);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes Studio. Veuillez patienter ${rateCheck.resetSeconds}s.` },
+        { status: 429, headers: buildRateLimitHeaders(rateCheck) }
+      );
+    }
+
     const body = await req.json();
     const {
       courseId,

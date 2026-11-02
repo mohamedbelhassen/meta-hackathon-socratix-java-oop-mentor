@@ -195,14 +195,18 @@ BEGIN
   VALUES (
     NEW.id,
     NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'student'),
+    LEFT(COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)), 80),
+    CASE
+      -- Require Teacher Secret PIN ('2026' for hackathon jury demo) to register as teacher
+      WHEN NEW.raw_user_meta_data->>'role' = 'teacher' 
+           AND NEW.raw_user_meta_data->>'teacher_pin' = '2026' THEN 'teacher'
+      ELSE 'student'
+    END,
     false
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
-    display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
-    role = COALESCE(EXCLUDED.role, public.profiles.role);
+    display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name);
   RETURN NEW;
 END;
 $$;

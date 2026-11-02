@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import {
+  checkRateLimit,
+  getClientIp,
+  RATE_LIMIT_CONFIG,
+  buildRateLimitHeaders,
+} from '@/lib/rate-limiter';
+import {
   GOLDEN_COMPETENCY_TAXONOMY_SHOT,
   GOLDEN_TUTOR_PROMPT_SHOT,
 } from '@/lib/meta-prompt-exemplars';
@@ -13,6 +19,15 @@ export async function POST(req: NextRequest) {
   try {
     if (!META_API_KEY) {
       return NextResponse.json({ error: 'META_API_KEY is not configured on the server.' }, { status: 503 });
+    }
+
+    const clientIp = getClientIp(req);
+    const rateCheck = checkRateLimit(`studio_compile_${clientIp}`, RATE_LIMIT_CONFIG.studioLimitPerMinute, 60);
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        { error: `Trop de requêtes de compilation. Veuillez patienter ${rateCheck.resetSeconds}s.` },
+        { status: 429, headers: buildRateLimitHeaders(rateCheck) }
+      );
     }
 
     const { courseId } = await req.json();

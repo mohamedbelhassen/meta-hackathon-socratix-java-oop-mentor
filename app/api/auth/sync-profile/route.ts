@@ -69,10 +69,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Protection 2: Never trust body.role.
-    // If the account already holds 'teacher' (from seed or official admin elevation), preserve it.
-    // Otherwise, default safely to 'student'.
-    const safeRole: 'student' | 'teacher' = existing?.role === 'teacher' ? 'teacher' : 'student';
+    // Protection 2: Never trust arbitrary client role promotion.
+    // - If the account already holds 'teacher' in profiles, preserve it.
+    // - If creating a brand new profile without an existing record, only grant 'teacher' if teacher_pin matches '2026'.
+    // - Otherwise, default strictly to 'student'.
+    const teacherPinEnv = process.env.TEACHER_SIGNUP_PIN || '2026';
+    const providedPin = body.teacher_pin || user.user_metadata?.teacher_pin;
+    const isTeacherAuthorized =
+      existing?.role === 'teacher' ||
+      (!existing &&
+        (user.user_metadata?.role === 'teacher' || body.role === 'teacher') &&
+        providedPin === teacherPinEnv);
+
+    const safeRole: 'student' | 'teacher' = isTeacherAuthorized ? 'teacher' : 'student';
 
     const { data, error } = await supabase
       .from('profiles')

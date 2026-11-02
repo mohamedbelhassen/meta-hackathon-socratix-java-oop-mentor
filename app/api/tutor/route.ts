@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import { verifyStudentSessionAccess } from '@/lib/auth-guard';
+import {
+  checkRateLimit,
+  getClientIp,
+  RATE_LIMIT_CONFIG,
+  buildRateLimitHeaders,
+} from '@/lib/rate-limiter';
 import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
 import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
@@ -83,14 +89,66 @@ export async function POST(req: NextRequest) {
       isHintRequest,
       requestMode,
       files,
-      history = [],
+      history: rawHistory = [],
     } = body;
+
+    // Bound conversation history to last 10 exchanges to protect prompt budget
+    const history = Array.isArray(rawHistory) && rawHistory.length > 10
+      ? rawHistory.slice(-10)
+      : rawHistory;
 
     if (!courseId || !labId || !studentId || !files || !Array.isArray(files)) {
       return NextResponse.json(
         { error: 'Missing required parameters (courseId, labId, studentId, files).' },
         { status: 400 }
       );
+    }
+
+    // 1. Rate Limiting Check (Anti Denial-of-Wallet)
+    const clientIp = getClientIp(req);
+    const rateLimitKey = `tutor_${clientIp}_${studentId}`;
+    const rateCheck = checkRateLimit(rateLimitKey, RATE_LIMIT_CONFIG.tutorLimitPerMinute, 60);
+
+    if (!rateCheck.success) {
+      return NextResponse.json(
+        {
+          error: `Trop de requêtes. Veuillez patienter ${rateCheck.resetSeconds}s avant de solliciter le tuteur à nouveau.`,
+        },
+        {
+          status: 429,
+          headers: buildRateLimitHeaders(rateCheck),
+        }
+      );
+    }
+
+    // 2. Strict Payload Bounds (Anti-DoS & Token Quota Protection)
+    if (question && typeof question === 'string' && question.length > RATE_LIMIT_CONFIG.tutorMaxQuestionLength) {
+      return NextResponse.json(
+        {
+          error: `La question dépasse la limite autorisée (${RATE_LIMIT_CONFIG.tutorMaxQuestionLength} caractères max).`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (files.length > RATE_LIMIT_CONFIG.tutorMaxFiles) {
+      return NextResponse.json(
+        {
+          error: `Nombre de fichiers excessif (maximum ${RATE_LIMIT_CONFIG.tutorMaxFiles} fichiers autorisés).`,
+        },
+        { status: 400 }
+      );
+    }
+
+    for (const file of files) {
+      if (typeof file?.content === 'string' && Buffer.byteLength(file.content, 'utf8') > RATE_LIMIT_CONFIG.tutorMaxFileBytes) {
+        return NextResponse.json(
+          {
+            error: `Le fichier "${file.name || 'sans nom'}" dépasse la taille autorisée (${Math.round(RATE_LIMIT_CONFIG.tutorMaxFileBytes / 1024)} Ko max).`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const access = await verifyStudentSessionAccess(req, studentId);
