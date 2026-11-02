@@ -247,27 +247,43 @@ ALTER TABLE public.labs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_lab_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- Allow read for everyone (Anon & Auth)
-CREATE POLICY "Public read profiles" ON public.profiles FOR SELECT USING (true);
-CREATE POLICY "Public read courses" ON public.courses FOR SELECT USING (true);
-CREATE POLICY "Public read course_chapters" ON public.course_chapters FOR SELECT USING (true);
-CREATE POLICY "Public read labs" ON public.labs FOR SELECT USING (true);
-CREATE POLICY "Public read student_lab_sessions" ON public.student_lab_sessions FOR SELECT USING (true);
-CREATE POLICY "Public read chat_messages" ON public.chat_messages FOR SELECT USING (true);
+-- Distinct, non-overlapping RLS policies per operation (prevents multiple_permissive_policies warnings)
+CREATE POLICY "Allow select profiles" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Allow insert profiles" ON public.profiles FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update profiles" ON public.profiles FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete profiles" ON public.profiles FOR DELETE USING (true);
 
--- Allow full mutations for authenticated users and anonymous testing / server API routes
-CREATE POLICY "Allow all mutations profiles" ON public.profiles FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all mutations courses" ON public.courses FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all mutations course_chapters" ON public.course_chapters FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all mutations labs" ON public.labs FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all mutations student_lab_sessions" ON public.student_lab_sessions FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all mutations chat_messages" ON public.chat_messages FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow select courses" ON public.courses FOR SELECT USING (true);
+CREATE POLICY "Allow insert courses" ON public.courses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update courses" ON public.courses FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete courses" ON public.courses FOR DELETE USING (true);
+
+CREATE POLICY "Allow select course_chapters" ON public.course_chapters FOR SELECT USING (true);
+CREATE POLICY "Allow insert course_chapters" ON public.course_chapters FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update course_chapters" ON public.course_chapters FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete course_chapters" ON public.course_chapters FOR DELETE USING (true);
+
+CREATE POLICY "Allow select labs" ON public.labs FOR SELECT USING (true);
+CREATE POLICY "Allow insert labs" ON public.labs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update labs" ON public.labs FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete labs" ON public.labs FOR DELETE USING (true);
+
+CREATE POLICY "Allow select student_lab_sessions" ON public.student_lab_sessions FOR SELECT USING (true);
+CREATE POLICY "Allow insert student_lab_sessions" ON public.student_lab_sessions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update student_lab_sessions" ON public.student_lab_sessions FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete student_lab_sessions" ON public.student_lab_sessions FOR DELETE USING (true);
+
+CREATE POLICY "Allow select chat_messages" ON public.chat_messages FOR SELECT USING (true);
+CREATE POLICY "Allow insert chat_messages" ON public.chat_messages FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update chat_messages" ON public.chat_messages FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow delete chat_messages" ON public.chat_messages FOR DELETE USING (true);
 
 -- ============================================================================
 -- 13. ENABLE SUPABASE REALTIME
 -- ============================================================================
-ALTER TABLE public.student_lab_sessions REPLICA IDENTITY FULL;
-ALTER TABLE public.chat_messages REPLICA IDENTITY FULL;
+-- Default replica identity is sufficient for primary-key lookups, avoiding WAL amplification
+ALTER TABLE public.student_lab_sessions REPLICA IDENTITY DEFAULT;
+ALTER TABLE public.chat_messages REPLICA IDENTITY DEFAULT;
 
 DO $$
 BEGIN
@@ -276,12 +292,5 @@ BEGIN
         WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'student_lab_sessions'
     ) THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.student_lab_sessions;
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'chat_messages'
-    ) THEN
-        ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
     END IF;
 END $$;

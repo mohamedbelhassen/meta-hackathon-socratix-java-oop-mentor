@@ -368,7 +368,7 @@ ${studentInputPrompt}
         role: 'assistant',
         content: parsed.socratic_reply?.message_markdown || '',
         course_reference: parsed.socratic_reply?.course_reference || null,
-        code_snapshot: files,
+        code_snapshot: [],
         latency_ms: latencyMs,
       };
 
@@ -428,7 +428,7 @@ ${studentInputPrompt}
         role: 'assistant',
         content: parsed.socratic_reply?.message_markdown || '',
         course_reference: parsed.socratic_reply?.course_reference || null,
-        code_snapshot: files,
+        code_snapshot: [],
         latency_ms: latencyMs,
       };
 
