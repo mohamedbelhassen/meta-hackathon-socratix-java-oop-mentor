@@ -151,6 +151,13 @@ export default function CourseStudioPanel({
   const hasTaxonomy = Array.isArray(course.competency_matrix) && course.competency_matrix.length > 0;
   const hasCompiledPrompt = Boolean(course.compiled_tutor_prompt && course.compiled_tutor_prompt.length > 20);
 
+  // Granular task progress flags to prevent cross-card loading pollution
+  const isDistillingChapters = isProcessing && currentProgress?.stage === 'Distilling Chapters';
+  const isSynthesizingKB = isProcessing && currentProgress?.stage === 'Synthesizing KB & Prompt';
+  const isUploadingChapters = isProcessing && currentProgress?.stage === 'Chapters / Slides';
+  const isUploadingLabs = isProcessing && currentProgress?.stage === 'Labs / TP';
+  const isReanalyzingLabs = isProcessing && currentProgress?.stage === 'Re-analyzing Labs';
+
   // --------------------------------------------------------------------------
   // BATCH UPLOAD: CHAPTERS
   // --------------------------------------------------------------------------
@@ -818,7 +825,7 @@ export default function CourseStudioPanel({
               />
               <Upload className="w-5 h-5 text-emerald-400 mx-auto mb-1.5" />
               <p className="text-xs font-semibold text-slate-200">
-                {isProcessing ? 'Processing...' : 'Upload Chapter PDFs (Batch Supported)'}
+                {isUploadingChapters ? 'Processing...' : 'Upload Chapter PDFs (Batch Supported)'}
               </p>
               <p className="text-[10px] text-slate-500 mt-0.5">Select ch1..ch6 all at once</p>
             </div>
@@ -884,12 +891,12 @@ export default function CourseStudioPanel({
                   disabled={isProcessing || chapters.length === 0}
                   className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
                 >
-                  {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                  {isDistillingChapters && currentProgress ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                       <span>Distilling Chapters ({currentProgress.current}/{currentProgress.total})...</span>
                     </>
-                  ) : isProcessing ? (
+                  ) : isSynthesizingKB ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                       <span>Synthesizing with Meta AI ({compilationElapsed}s)...</span>
@@ -908,12 +915,12 @@ export default function CourseStudioPanel({
                 disabled={isProcessing || chapters.length === 0}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
               >
-                {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                {isDistillingChapters && currentProgress ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                     Distilling Chapters ({currentProgress.current}/{currentProgress.total})...
                   </>
-                ) : isProcessing ? (
+                ) : isSynthesizingKB ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                     Synthesizing with Meta AI ({compilationElapsed}s)...
@@ -987,12 +994,12 @@ export default function CourseStudioPanel({
                   disabled={isProcessing || chapters.length === 0}
                   className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm mt-1 transition-all"
                 >
-                  {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                  {isDistillingChapters && currentProgress ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       <span>Distilling Chapters ({currentProgress.current}/{currentProgress.total})...</span>
                     </>
-                  ) : isProcessing ? (
+                  ) : isSynthesizingKB ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       <span>Synthesizing with Meta AI ({compilationElapsed}s)...</span>
@@ -1054,7 +1061,7 @@ export default function CourseStudioPanel({
                 <>
                   <Upload className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
                   <p className="text-xs font-semibold text-slate-200">
-                    {isProcessing ? 'Processing...' : 'Upload Lab PDFs (TP1..TP12)'}
+                    {isUploadingLabs ? 'Processing...' : 'Upload Lab PDFs (TP1..TP12)'}
                   </p>
                   <p className="text-[10px] text-slate-500 mt-0.5">Select all 12 TP files at once</p>
                 </>
@@ -1121,7 +1128,7 @@ export default function CourseStudioPanel({
                   disabled={isProcessing || !hasTaxonomy}
                   className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
                 >
-                  {isProcessing && currentProgress?.stage === 'Re-analyzing Labs' ? (
+                  {isReanalyzingLabs && currentProgress ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
                       <span>Re-analyzing Labs with Meta AI ({currentProgress.current}/{currentProgress.total})...</span>
