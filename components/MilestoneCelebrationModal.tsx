@@ -56,6 +56,11 @@ export function playCelebrationChime() {
       osc.start(startTime + index * 0.12);
       osc.stop(startTime + index * 0.12 + 0.6);
     });
+
+    // Safely close audio context to prevent browser context exhaustion
+    setTimeout(() => {
+      ctx.close().catch(() => {});
+    }, 1200);
   } catch (err) {
     console.warn('Web Audio chime error:', err);
   }

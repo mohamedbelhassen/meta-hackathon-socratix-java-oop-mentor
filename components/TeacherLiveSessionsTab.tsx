@@ -92,14 +92,16 @@ export default function TeacherLiveSessionsTab({
   // Classroom Bottleneck Detection
   // Check if >= 2 students (or >= 40% of active) are blocked on the same milestone
   const blockedSessions = labSessions.filter((s) => s.status === 'BLOCKED');
-  const bottleneckMap = new Map<string, StudentLabSession[]>();
+  const bottleneckMap = new Map<string, { activityId: string; milestoneId: string; students: StudentLabSession[] }>();
 
   for (const s of blockedSessions) {
     if (s.current_milestone_id) {
-      const key = `${s.current_activity_id || 'act_1'}_${s.current_milestone_id}`;
-      const list = bottleneckMap.get(key) || [];
-      list.push(s);
-      bottleneckMap.set(key, list);
+      const actId = s.current_activity_id || 'act_1';
+      const mId = s.current_milestone_id;
+      const key = `${actId}::${mId}`;
+      const entry = bottleneckMap.get(key) || { activityId: actId, milestoneId: mId, students: [] };
+      entry.students.push(s);
+      bottleneckMap.set(key, entry);
     }
   }
 
@@ -110,20 +112,19 @@ export default function TeacherLiveSessionsTab({
     students: StudentLabSession[];
   } | null = null;
 
-  for (const [key, stuckList] of Array.from(bottleneckMap.entries())) {
-    if (stuckList.length >= 2) {
-      const [, mId] = key.split('_');
-      let mTitle = mId;
+  for (const entry of Array.from(bottleneckMap.values())) {
+    if (entry.students.length >= 2) {
+      let mTitle = entry.milestoneId;
       selectedLab?.activities?.forEach((a) => {
-        const found = a.milestones?.find((m) => m.id === mId);
+        const found = a.milestones?.find((m) => m.id === entry.milestoneId);
         if (found) mTitle = found.title;
       });
 
       bottleneckAlert = {
-        activityId: stuckList[0].current_activity_id || 'act_1',
-        milestoneId: mId,
+        activityId: entry.activityId,
+        milestoneId: entry.milestoneId,
         milestoneTitle: mTitle,
-        students: stuckList,
+        students: entry.students,
       };
       break;
     }
@@ -168,12 +169,21 @@ export default function TeacherLiveSessionsTab({
       const channel = supabase.channel('workspace-sync');
 
       let receivedDump = false;
+      let channelRemoved = false;
+      const cleanupChannel = () => {
+        if (!channelRemoved) {
+          channelRemoved = true;
+          supabase.removeChannel(channel);
+        }
+      };
+
       channel
         .on('broadcast', { event: 'WORKSPACE_DUMP_RESPONSE' }, ({ payload }) => {
           if (payload?.studentId === session.student_id && payload.files) {
             receivedDump = true;
             setInspectedCodeFiles(payload.files);
             setIsLoadingInspection(false);
+            cleanupChannel();
           }
         })
         .subscribe(() => {
@@ -186,6 +196,7 @@ export default function TeacherLiveSessionsTab({
 
       // Fallback: if no client responded after 1200ms, use last chat message snapshot
       setTimeout(() => {
+        cleanupChannel();
         if (!receivedDump) {
           const lastMsgWithCode = [...(data.messages || [])]
             .reverse()

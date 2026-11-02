@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
     const { data: chapters, error: chaptersError } = await supabase
       .from('course_chapters')
-      .select('*')
+      .select('id, course_id, chapter_number, code, title, title_i18n, markdown_content, key_analogies')
       .eq('course_id', courseId)
       .order('chapter_number', { ascending: true });
 

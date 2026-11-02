@@ -125,15 +125,21 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
 
   const pages: ExtractedPage[] = [];
 
-  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-    const page = await pdfDoc.getPage(pageNum);
-    const textContent = await page.getTextContent();
-    const pageText = formatExtractedTextContent(textContent.items);
+  try {
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+      const page = await pdfDoc.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = formatExtractedTextContent(textContent.items);
 
-    pages.push({
-      page: pageNum,
-      text: pageText,
-    });
+      pages.push({
+        page: pageNum,
+        text: pageText,
+      });
+      page.cleanup();
+    }
+  } finally {
+    await pdfDoc.cleanup();
+    await loadingTask.destroy();
   }
 
   return pages;
@@ -161,15 +167,21 @@ export async function extractPdfPagesFromUrl(pdfUrl: string): Promise<ExtractedP
 
   const pages: ExtractedPage[] = [];
 
-  for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-    const page = await pdfDoc.getPage(pageNum);
-    const textContent = await page.getTextContent();
-    const pageText = formatExtractedTextContent(textContent.items);
+  try {
+    for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+      const page = await pdfDoc.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = formatExtractedTextContent(textContent.items);
 
-    pages.push({
-      page: pageNum,
-      text: pageText,
-    });
+      pages.push({
+        page: pageNum,
+        text: pageText,
+      });
+      page.cleanup();
+    }
+  } finally {
+    await pdfDoc.cleanup();
+    await loadingTask.destroy();
   }
 
   return pages;

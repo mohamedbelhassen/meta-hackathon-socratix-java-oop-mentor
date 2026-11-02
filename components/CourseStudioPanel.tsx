@@ -185,7 +185,7 @@ export default function CourseStudioPanel({
         const info = inferNumberAndTitle(file.name);
 
         setCurrentProgress({
-          stage: 'Chapters',
+          stage: 'Chapters / Slides',
           current: i + 1,
           total: files.length,
           filename: file.name,

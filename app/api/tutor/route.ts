@@ -344,13 +344,21 @@ ${studentInputPrompt}
 
     let savedSession: StudentLabSession | null = null;
 
+    const persistedUserMessage = requestMode === 'check'
+      ? '🧪 [Requested Code Check & Milestone Evaluation]'
+      : requestMode === 'concept'
+      ? '📖 [Asked for Theory & Slide Concept Explanation]'
+      : (isHintRequest || requestMode === 'hint')
+      ? '💡 [Asked for a Socratic Hint]'
+      : (question?.trim() || '[Code Submission]');
+
     if (existingSession?.id) {
       // Fast path: session already exists in DB -> run session upsert and chat messages insert concurrently!
       const userMessageRecord = {
         student_lab_session_id: existingSession.id,
         activity_id: activeActivity?.id || null,
         role: 'user',
-        content: isHintRequest ? '💡 [Asked for a Hint]' : question,
+        content: persistedUserMessage,
         code_snapshot: files,
       };
 
@@ -410,7 +418,7 @@ ${studentInputPrompt}
         student_lab_session_id: savedSession.id,
         activity_id: activeActivity?.id || null,
         role: 'user',
-        content: isHintRequest ? '💡 [Asked for a Hint]' : question,
+        content: persistedUserMessage,
         code_snapshot: files,
       };
 

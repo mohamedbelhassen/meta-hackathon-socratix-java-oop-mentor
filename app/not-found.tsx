@@ -12,7 +12,6 @@ import {
   ArrowRight,
   Sparkles,
   Terminal,
-  RotateCcw,
 } from 'lucide-react';
 
 export default function NotFound() {
@@ -197,7 +196,7 @@ export default function NotFound() {
             </span>
           </div>
           <div className="p-4 space-y-1 text-slate-300 leading-relaxed bg-slate-950/40">
-            <div className="text-slate-500">// Route out of bounds in pedagogical graph</div>
+            <div className="text-slate-500">{'// Route out of bounds in pedagogical graph'}</div>
             <div>
               <span className="text-rose-400 font-semibold">try</span> &#123;
             </div>

@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
     if (hasRefs) {
       const { data: chaptersData } = await supabase
         .from('course_chapters')
-        .select('code, pdf_url, pages_json')
+        .select('chapter_number, code, title, title_i18n, pdf_url, pages_json')
         .eq('course_id', session.course_id);
 
       const chapters = (chaptersData || []) as CourseChapter[];

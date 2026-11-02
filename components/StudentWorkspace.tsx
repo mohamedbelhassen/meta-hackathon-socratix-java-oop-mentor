@@ -64,13 +64,14 @@ export interface StudentPersona {
   isCustom?: boolean;
   isOnline?: boolean;
   isCurrentUser?: boolean;
+  is_guest?: boolean;
 }
 
 const DEMO_PERSONAS: StudentPersona[] = [
-  { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', role: 'Student' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', role: 'Judge / Sandbox' },
-  { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', role: 'Student' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'Ines', role: 'Student' },
+  { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', role: 'Student', is_guest: true },
+  { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', role: 'Judge / Sandbox', is_guest: true },
+  { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', role: 'Student', is_guest: true },
+  { id: '55555555-5555-5555-5555-555555555555', name: 'Ines', role: 'Student', is_guest: true },
 ];
 
 const SEAT_OPTIONS = Array.from({ length: 20 }, (_, i) => `PC ${String(i + 1).padStart(2, '0')}`);
@@ -90,6 +91,7 @@ const DEFAULT_JAVA_PRESETS: DemoPreset[] = [
     key: 'buggy_encapsulation',
     label: 'Buggy Encapsulation',
     description: 'Item price lacks private visibility modifier.',
+    preset_type: 'buggy',
     files: [
       {
         name: 'Item.java',
@@ -105,6 +107,7 @@ const DEFAULT_JAVA_PRESETS: DemoPreset[] = [
     key: 'fixed_encapsulation',
     label: 'Fixed Encapsulation',
     description: 'Item price is private with defensive setter.',
+    preset_type: 'solution',
     files: [
       {
         name: 'Item.java',
@@ -117,6 +120,21 @@ const DEFAULT_JAVA_PRESETS: DemoPreset[] = [
     ],
   },
 ];
+
+export function isSolutionPreset(preset: DemoPreset): boolean {
+  if (preset.preset_type === 'solution') return true;
+  if (preset.preset_type === 'buggy') return false;
+  const key = (preset.key || '').toLowerCase();
+  const label = (preset.label || '').toLowerCase();
+  return (
+    key.endsWith('_solution') ||
+    key.includes('fixed') ||
+    key.includes('solution') ||
+    label.includes('solution') ||
+    label.includes('fixed') ||
+    label.includes('corrigé')
+  );
+}
 
 export default function StudentWorkspace() {
   // Course & Lab Hierarchy
@@ -142,6 +160,21 @@ export default function StudentWorkspace() {
   // Disk Handle Ref
   const dirHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [needsDiskReconnect, setNeedsDiskReconnect] = useState(false);
+
+  // Ref to hold latest workspace state without re-triggering Realtime WebSocket subscriptions
+  const latestWorkspaceStateRef = useRef({
+    workspaceFiles,
+    sourceMode,
+    activeCourse,
+  });
+
+  useEffect(() => {
+    latestWorkspaceStateRef.current = {
+      workspaceFiles,
+      sourceMode,
+      activeCourse,
+    };
+  }, [workspaceFiles, sourceMode, activeCourse]);
 
   // Chat & Telemetry Session State
   const [messages, setMessages] = useState<ChatItem[]>([
@@ -300,6 +333,7 @@ export default function StudentWorkspace() {
             isCustom: true,
             isOnline,
             isCurrentUser,
+            is_guest: sp.is_guest ?? false,
           };
         });
 
@@ -313,6 +347,7 @@ export default function StudentWorkspace() {
             isCustom: true,
             isOnline: true,
             isCurrentUser: true,
+            is_guest: false,
           });
         }
 
@@ -411,7 +446,16 @@ export default function StudentWorkspace() {
       : DEFAULT_JAVA_PRESETS;
 
     const isFirstAct = !act || !activeLab.activities?.length || act.id === activeLab.activities[0]?.id;
-    const actPresets = labPresets.filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct));
+    const isEvaluationOrTeacher = Boolean(
+      authUser?.role === 'teacher' ||
+      activeStudent.is_guest === true ||
+      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+      activeStudent.role?.toLowerCase().includes('judge') ||
+      activeStudent.role?.toLowerCase().includes('sandbox')
+    );
+    const actPresets = labPresets
+      .filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct))
+      .filter((p) => isEvaluationOrTeacher || !isSolutionPreset(p));
 
     setSessionState(null);
     setCompletionReport(null);
@@ -481,7 +525,7 @@ export default function StudentWorkspace() {
       }
       setActiveFileIndex(0);
     }
-  }, [activeLab, activeCourse, activeStudent.id, readDirectoryRecursive]);
+  }, [activeLab, activeCourse, activeStudent.id, activeStudent.role, activeStudent.is_guest, authUser?.role, readDirectoryRecursive]);
 
   // 4. Restore Chat History & Session State from DB on Lab / Student Change
   useEffect(() => {
@@ -568,12 +612,13 @@ export default function StudentWorkspace() {
     syncChannel
       .on('broadcast', { event: 'REQUEST_WORKSPACE_DUMP' }, async ({ payload }) => {
         if (payload?.studentId === activeStudent.id) {
-          let currentFiles = workspaceFiles;
+          const currentState = latestWorkspaceStateRef.current;
+          let currentFiles = currentState.workspaceFiles;
           if (dirHandleRef.current) {
             try {
               currentFiles = await readDirectoryRecursive(
                 dirHandleRef.current,
-                activeCourse?.file_extensions || ['.java']
+                currentState.activeCourse?.file_extensions || ['.java']
               );
               setWorkspaceFiles(currentFiles);
             } catch (err) {
@@ -587,7 +632,7 @@ export default function StudentWorkspace() {
             payload: {
               studentId: activeStudent.id,
               files: currentFiles,
-              source: sourceMode,
+              source: currentState.sourceMode,
               timestamp: new Date().toISOString(),
             },
           });
@@ -598,7 +643,7 @@ export default function StudentWorkspace() {
     return () => {
       supabase.removeChannel(syncChannel);
     };
-  }, [activeStudent.id, workspaceFiles, sourceMode, activeCourse, readDirectoryRecursive]);
+  }, [activeStudent.id, readDirectoryRecursive]);
 
   // Panel Resizing Logic
   useEffect(() => {
@@ -679,6 +724,18 @@ export default function StudentWorkspace() {
 
   // Switch Preset
   const handleSelectPreset = (preset: DemoPreset) => {
+    const isSolution = isSolutionPreset(preset);
+    const isAllowed = Boolean(
+      authUser?.role === 'teacher' ||
+      activeStudent.is_guest === true ||
+      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+      activeStudent.role?.toLowerCase().includes('judge') ||
+      activeStudent.role?.toLowerCase().includes('sandbox')
+    );
+    if (isSolution && !isAllowed) {
+      return;
+    }
+
     dirHandleRef.current = null;
     setSourceMode('preset');
     setActivePresetKey(preset.key);
@@ -709,7 +766,16 @@ export default function StudentWorkspace() {
         ? activeLab.demo_presets
         : DEFAULT_JAVA_PRESETS;
       const isFirstAct = act.id === activeLab.activities?.[0]?.id;
-      const actPresets = allPresets.filter((p) => (p.activity_id ? p.activity_id === act.id : isFirstAct));
+      const isEvaluationOrTeacher = Boolean(
+        authUser?.role === 'teacher' ||
+        activeStudent.is_guest === true ||
+        activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+        activeStudent.role?.toLowerCase().includes('judge') ||
+        activeStudent.role?.toLowerCase().includes('sandbox')
+      );
+      const actPresets = allPresets
+        .filter((p) => (p.activity_id ? p.activity_id === act.id : isFirstAct))
+        .filter((p) => isEvaluationOrTeacher || !isSolutionPreset(p));
 
       if (actPresets.length > 0) {
         if (!actPresets.some((p) => p.key === activePresetKey)) {
@@ -952,12 +1018,21 @@ export default function StudentWorkspace() {
     ? activeLab.demo_presets
     : DEFAULT_JAVA_PRESETS;
 
-  // Filter presets strictly for the active activity.
+  const isEvaluationOrTeacherMode = Boolean(
+    authUser?.role === 'teacher' ||
+    activeStudent.is_guest === true ||
+    activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+    activeStudent.role?.toLowerCase().includes('judge') ||
+    activeStudent.role?.toLowerCase().includes('sandbox')
+  );
+
+  // Filter presets strictly for the active activity and hide solutions from regular students
   // Legacy backward-compatibility: if presets lack activity_id, attribute them strictly to Activity 1 (activities[0]).
   const isFirstActivity = !activeActivity || !activeLab?.activities?.length || activeActivity.id === activeLab.activities[0]?.id;
-  const activePresets = activeActivity
+  const activePresets = (activeActivity
     ? allLabPresets.filter((p) => (p.activity_id ? p.activity_id === activeActivity.id : isFirstActivity))
-    : allLabPresets;
+    : allLabPresets
+  ).filter((p) => isEvaluationOrTeacherMode || !isSolutionPreset(p));
 
   const currentFile = workspaceFiles[activeFileIndex] || { name: 'untitled', content: '' };
   const actProgress = activeActivity && sessionState?.activities_progress?.[activeActivity.id];
@@ -1379,19 +1454,32 @@ export default function StudentWorkspace() {
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             {activePresets.length > 0 ? (
               <>
-                {activePresets.map((preset) => (
-                  <button
-                    key={preset.key}
-                    onClick={() => handleSelectPreset(preset)}
-                    className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-                      sourceMode === 'preset' && activePresetKey === preset.key
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                        : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                {activePresets.map((preset) => {
+                  const isSolution = isSolutionPreset(preset);
+                  return (
+                    <button
+                      key={preset.key}
+                      onClick={() => handleSelectPreset(preset)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors inline-flex items-center gap-1 ${
+                        sourceMode === 'preset' && activePresetKey === preset.key
+                          ? isSolution
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-medium'
+                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium'
+                          : isSolution
+                          ? 'bg-slate-800 text-cyan-400/90 border-slate-700 hover:text-cyan-300'
+                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                      }`}
+                      title={isSolution ? 'Reference Solution (Jury / Teacher / Guest Persona)' : preset.description}
+                    >
+                      <span>{preset.label}</span>
+                      {isSolution && (
+                        <span className="text-[9px] px-1 py-0 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30 font-mono font-bold">
+                          JURY
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
                 {sourceMode === 'preset' && activePresetKey && (
                   <button
                     onClick={handleRestorePreset}

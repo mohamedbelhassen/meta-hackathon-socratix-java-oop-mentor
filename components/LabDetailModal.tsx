@@ -435,10 +435,7 @@ export default function LabDetailModal({
                         preset.label.toLowerCase().includes('error') ||
                         preset.label.toLowerCase().includes('erreur');
 
-                      const rawTitle = getLocalizedLabTitle(lab, lang);
-  const cleanTitle = rawTitle.replace(/^(?:TP\s*\d+\s*[-—:]*\s*)+/i, '').trim() || rawTitle;
-
-  return (
+                      return (
                         <button
                           key={preset.key || pIdx}
                           type="button"

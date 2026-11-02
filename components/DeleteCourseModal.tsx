@@ -59,6 +59,11 @@ function playErrorBuzzer() {
       osc.start(startTime + idx * 0.1);
       osc.stop(startTime + idx * 0.1 + 0.13);
     });
+
+    // Safely close audio context to prevent browser context exhaustion
+    setTimeout(() => {
+      ctx.close().catch(() => {});
+    }, 600);
   } catch (err) {
     console.warn('Web Audio buzzer error:', err);
   }
