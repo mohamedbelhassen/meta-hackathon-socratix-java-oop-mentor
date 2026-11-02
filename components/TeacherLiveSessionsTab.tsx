@@ -1,16 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Course, Lab, StudentLabSession, ChatMessage, DemoPresetFile } from '@/types/socratix';
+import { Course, Lab, StudentLabSession, ChatMessage, DemoPresetFile, StructuredCourseReference } from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getBrowserSupabase } from '@/lib/supabase';
+import SmartSlideViewerModal from './SmartSlideViewerModal';
 import {
   AlertTriangle,
+  BookOpen,
   CheckCircle2,
   Clock,
   Code2,
+  ExternalLink,
   MessageSquare,
   RotateCcw,
   Search,
@@ -64,6 +67,10 @@ export default function TeacherLiveSessionsTab({
   const [inspectedCodeFiles, setInspectedCodeFiles] = useState<DemoPresetFile[]>([]);
   const [inspectedChatHistory, setInspectedChatHistory] = useState<ChatMessage[]>([]);
   const [isLoadingInspection, setIsLoadingInspection] = useState(false);
+
+  // Smart Slide Viewer Modal State for Teacher Drawer
+  const [selectedSlideReference, setSelectedSlideReference] = useState<StructuredCourseReference | null>(null);
+  const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
 
   // Filter sessions for the active lab
   const labSessions = sessions.filter((s) => s.lab_id === selectedLab?.id);
@@ -648,8 +655,20 @@ export default function TeacherLiveSessionsTab({
                         </div>
                         <div className="whitespace-pre-wrap">{msg.content}</div>
                         {msg.course_reference && (
-                          <div className="text-[10px] font-mono text-emerald-400 pt-1">
-                            Ref: {msg.course_reference.label}
+                          <div className="pt-2 border-t border-slate-800/80">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedSlideReference(msg.course_reference as StructuredCourseReference);
+                                setIsSlideModalOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors text-[11px] font-medium text-left"
+                              title="Inspect referenced course slide in Smart Slide Viewer"
+                            >
+                              <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate max-w-[280px]">{msg.course_reference.label}</span>
+                              <ExternalLink className="w-3 h-3 shrink-0 ml-0.5 opacity-70" />
+                            </button>
                           </div>
                         )}
                       </div>
@@ -661,6 +680,14 @@ export default function TeacherLiveSessionsTab({
           </div>
         </div>
       )}
+
+      {/* Smart Slide Viewer Modal for Teacher Inspection */}
+      <SmartSlideViewerModal
+        isOpen={isSlideModalOpen}
+        onClose={() => setIsSlideModalOpen(false)}
+        reference={selectedSlideReference}
+        courseTitle={course?.title || 'Course Slides'}
+      />
     </div>
   );
 }

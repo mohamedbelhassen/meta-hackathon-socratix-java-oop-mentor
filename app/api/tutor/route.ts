@@ -154,6 +154,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${META_API_KEY}`,
+        'X-Enable-Cache': 'true',
       },
       body: JSON.stringify({
         model: 'muse-spark-1.3',

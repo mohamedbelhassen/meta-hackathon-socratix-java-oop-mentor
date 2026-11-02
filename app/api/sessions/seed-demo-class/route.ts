@@ -45,6 +45,26 @@ export async function POST(req: NextRequest) {
     const concept1 = coveredConcepts[0] || 'VISIBILITY_ENCAPSULATION';
     const concept2 = coveredConcepts[1] || 'DEFENSIVE_SETTERS';
 
+    // Fetch chapter 3 (or the closest chapter) to resolve real pdf_url for the sample course reference
+    const { data: ch3Chapter } = await supabase
+      .from('course_chapters')
+      .select('pdf_url, chapter_number, code')
+      .eq('course_id', courseId)
+      .eq('code', 'CH3_CLASSES')
+      .maybeSingle();
+
+    let resolvedPdfUrl = ch3Chapter?.pdf_url || null;
+    if (!resolvedPdfUrl) {
+      const { data: anyChapter } = await supabase
+        .from('course_chapters')
+        .select('pdf_url')
+        .eq('course_id', courseId)
+        .not('pdf_url', 'is', null)
+        .limit(1)
+        .maybeSingle();
+      resolvedPdfUrl = anyChapter?.pdf_url || null;
+    }
+
     const nowIso = new Date().toISOString();
 
     // Delete existing demo sessions for these 4 personas on this lab
@@ -344,8 +364,12 @@ export async function POST(req: NextRequest) {
             label: 'Chapter 3 (Slide 42): Encapsulation and Invariants',
             chapter_code: 'CH3_CLASSES',
             page_number: 42,
-            pdf_url: null,
+            pdf_url: resolvedPdfUrl,
             en_note: 'Allowing direct unchecked assignments breaks object invariants.',
+            slide_markdown: {
+              fr: '**Encapsulation et Invariants** (Slide 42) :\nUn objet doit préserver son état interne. Rendre les champs `private` et contrôler les modifications dans les mutateurs (setters).',
+              en: '**Encapsulation and Invariants** (Slide 42):\nAn object must safeguard its internal state. Make fields `private` and enforce validation checks inside setters.',
+            },
           },
           code_snapshot: [],
           latency_ms: 840,
