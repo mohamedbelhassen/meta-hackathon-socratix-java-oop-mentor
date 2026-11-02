@@ -61,6 +61,8 @@ export interface StudentPersona {
   role: string;
   email?: string;
   isCustom?: boolean;
+  isOnline?: boolean;
+  isCurrentUser?: boolean;
 }
 
 const DEMO_PERSONAS: StudentPersona[] = [
@@ -123,8 +125,8 @@ export default function StudentWorkspace() {
   const [activeLab, setActiveLab] = useState<Lab | null>(null);
   const [activeActivity, setActiveActivity] = useState<LabActivity | null>(null);
 
-  // Student Persona & Physical Workstation (Point #6: Auth User Integration)
-  const [personas, setPersonas] = useState<StudentPersona[]>(DEMO_PERSONAS);
+  // Student Persona & Physical Workstation (Point #6: Auth & Registered Students)
+  const [registeredStudents, setRegisteredStudents] = useState<StudentPersona[]>([]);
   const [activeStudent, setActiveStudent] = useState<StudentPersona>(DEMO_PERSONAS[0]);
   const [seatLabel, setSeatLabel] = useState('PC 01');
   const [authUser, setAuthUser] = useState<{ id: string; email?: string; name: string; role: 'student' | 'teacher' } | null>(null);
@@ -239,80 +241,130 @@ export default function StudentWorkspace() {
     initCourses();
   }, []);
 
-  // 1b. Synchronize Authenticated User from Supabase Auth (Point #6)
+  // 1b. Synchronize Authenticated User & Registered Students (Point #6: Dual-Track Roster)
   useEffect(() => {
     const supabase = getBrowserSupabase();
 
-    async function syncAuthStudent() {
+    async function syncAuthAndStudents() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
+        let userRole: 'student' | 'teacher' = 'student';
+        let currentUserId: string | null = null;
+        let displayName = 'My Account';
+
         if (user) {
+          currentUserId = user.id;
           const { data: profile } = await supabase
             .from('profiles')
             .select('display_name, role, email')
             .eq('id', user.id)
             .maybeSingle();
 
-          const userRole = (profile?.role || (user.user_metadata?.role as string) || 'student') as 'student' | 'teacher';
-          const displayName = profile?.display_name
+          userRole = (profile?.role || (user.user_metadata?.role as string) || 'student') as 'student' | 'teacher';
+          displayName = profile?.display_name
             || (user.user_metadata?.display_name as string)
             || user.email?.split('@')[0]
             || 'My Account';
 
           setAuthUser({ id: user.id, email: user.email, name: displayName, role: userRole });
-
-          if (userRole === 'student') {
-            // Only authentic students get added to the student roster!
-            const authPersona: StudentPersona = {
-              id: user.id,
-              name: displayName,
-              role: 'Student',
-              email: user.email,
-              isCustom: true,
-            };
-
-            setPersonas((prev) => {
-              const others = prev.filter((p) => p.id !== user.id && !p.isCustom);
-              return [authPersona, ...others];
-            });
-
-            // If no specific demo persona was chosen or if saved is this user, auto-select!
-            const savedCtx = loadActiveContext();
-            if (!savedCtx?.studentId || savedCtx.studentId === user.id) {
-              setActiveStudent(authPersona);
-              saveActiveContext({ studentId: authPersona.id });
-            }
-          } else {
-            // Role is 'teacher': A teacher viewing /student is in "Teacher Preview Mode"
-            // They should NOT be in the student personas dropdown
-            setPersonas(DEMO_PERSONAS);
-
-            // If previously active persona was the teacher's ID, reset to a default demo persona
-            const savedCtx = loadActiveContext();
-            if (savedCtx?.studentId === user.id) {
-              const defaultDemo = DEMO_PERSONAS.find((p) => p.name === 'Guest Explorer') || DEMO_PERSONAS[0];
-              setActiveStudent(defaultDemo);
-              saveActiveContext({ studentId: defaultDemo.id });
-            }
-          }
         } else {
           setAuthUser(null);
-          setPersonas(DEMO_PERSONAS);
         }
+
+        // Fetch real registered students (role === 'student' and is_guest === false)
+        const { data: studentProfiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, email, role, is_guest')
+          .eq('role', 'student')
+          .eq('is_guest', false)
+          .order('display_name', { ascending: true });
+
+        // Query active student sessions within the last 10 minutes to compute online presence
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { data: recentSessions } = await supabase
+          .from('student_lab_sessions')
+          .select('student_id, updated_at')
+          .gte('updated_at', tenMinutesAgo);
+
+        const activeStudentIds = new Set(recentSessions?.map((s) => s.student_id) || []);
+
+        const studentList: StudentPersona[] = (studentProfiles || []).map((sp) => {
+          const isCurrentUser = Boolean(currentUserId && userRole === 'student' && sp.id === currentUserId);
+          const isOnline = isCurrentUser || activeStudentIds.has(sp.id);
+          return {
+            id: sp.id,
+            name: sp.display_name || sp.email?.split('@')[0] || 'Student',
+            role: 'Student',
+            email: sp.email,
+            isCustom: true,
+            isOnline,
+            isCurrentUser,
+          };
+        });
+
+        // If the authenticated student is not yet in studentProfiles (e.g. freshly signed up), prepend them
+        if (currentUserId && userRole === 'student' && !studentList.some((s) => s.id === currentUserId)) {
+          studentList.unshift({
+            id: currentUserId,
+            name: displayName,
+            role: 'Student',
+            email: user?.email,
+            isCustom: true,
+            isOnline: true,
+            isCurrentUser: true,
+          });
+        }
+
+        // Sort: Current authenticated user first, then alphabetically by name
+        studentList.sort((a, b) => {
+          if (a.isCurrentUser) return -1;
+          if (b.isCurrentUser) return 1;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+
+        setRegisteredStudents(studentList);
+
+        // Active Student resolution
+        const savedCtx = loadActiveContext();
+        const allPersonas = [...DEMO_PERSONAS, ...studentList];
+
+        if (currentUserId && userRole === 'student') {
+          // If logged-in user is an authentic student, auto-select their own account!
+          const self = studentList.find((s) => s.id === currentUserId);
+          if (self && (!savedCtx?.studentId || savedCtx.studentId === currentUserId)) {
+            setActiveStudent(self);
+            saveActiveContext({ studentId: self.id });
+            return;
+          }
+        }
+
+        if (savedCtx?.studentId) {
+          // If saved was teacher's own ID, reset away to Guest Explorer
+          if (currentUserId && userRole === 'teacher' && savedCtx.studentId === currentUserId) {
+            const defaultDemo = DEMO_PERSONAS.find((p) => p.name === 'Guest Explorer') || DEMO_PERSONAS[0];
+            setActiveStudent(defaultDemo);
+            saveActiveContext({ studentId: defaultDemo.id });
+            return;
+          }
+
+          const matched = allPersonas.find((p) => p.id === savedCtx.studentId);
+          if (matched) {
+            setActiveStudent(matched);
+            return;
+          }
+        }
+
+        // Default fallback to Bob
+        setActiveStudent(DEMO_PERSONAS[0]);
       } catch (err) {
-        console.error('[StudentWorkspace] Failed to sync auth student:', err);
+        console.error('[StudentWorkspace] Failed to sync auth and registered students:', err);
       }
     }
 
-    syncAuthStudent();
+    syncAuthAndStudents();
 
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        syncAuthStudent();
-      } else {
-        setAuthUser(null);
-        setPersonas(DEMO_PERSONAS);
-      }
+    const { data: authSub } = supabase.auth.onAuthStateChange(() => {
+      syncAuthAndStudents();
     });
 
     return () => {
@@ -1030,10 +1082,16 @@ export default function StudentWorkspace() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-[10px] uppercase font-semibold text-slate-400">Student</label>
-                {authUser?.role === 'student' && (
+                {activeStudent.isCurrentUser && (
                   <span className="text-[9px] text-emerald-400 font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Auth Student
+                    You (Active)
+                  </span>
+                )}
+                {!activeStudent.isCurrentUser && activeStudent.isOnline && (
+                  <span className="text-[9px] text-emerald-400/90 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Online
                   </span>
                 )}
                 {authUser?.role === 'teacher' && (
@@ -1046,7 +1104,8 @@ export default function StudentWorkspace() {
               <select
                 value={activeStudent.id}
                 onChange={(e) => {
-                  const p = personas.find((x) => x.id === e.target.value) || DEMO_PERSONAS.find((x) => x.id === e.target.value);
+                  const all = [...DEMO_PERSONAS, ...registeredStudents];
+                  const p = all.find((x) => x.id === e.target.value);
                   if (p) {
                     setActiveStudent(p);
                     setSessionState(null);
@@ -1055,13 +1114,33 @@ export default function StudentWorkspace() {
                     saveActiveContext({ studentId: p.id });
                   }
                 }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-sans"
               >
-                {personas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.isCustom ? `✨ ${p.name} (${p.role})` : `${p.name} (${p.role})`}
-                  </option>
-                ))}
+                <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
+                  {DEMO_PERSONAS.map((p) => (
+                    <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
+                      {p.name} ({p.role})
+                    </option>
+                  ))}
+                </optgroup>
+
+                <optgroup label="👤 Registered Students (Class Roster)" className="bg-slate-950 text-slate-300 font-semibold">
+                  {registeredStudents.length > 0 ? (
+                    registeredStudents.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
+                        {p.isCurrentUser
+                          ? `✨ ${p.name} (You - Online)`
+                          : p.isOnline
+                          ? `🟢 ${p.name} (Online)`
+                          : `⚪ ${p.name}`}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled className="bg-slate-900 text-slate-500 italic">
+                      No registered students yet
+                    </option>
+                  )}
+                </optgroup>
               </select>
             </div>
 
