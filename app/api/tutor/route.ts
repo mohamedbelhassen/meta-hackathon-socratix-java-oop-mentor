@@ -89,7 +89,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const bundle = await getCourseBundle(courseId, labId);
+    const supabase = getServiceSupabase();
+
+    // Parallelize bundle fetch (with memory cache) and existing student session fetch
+    const [bundle, existingSessionRes] = await Promise.all([
+      getCourseBundle(courseId, labId),
+      supabase
+        .from('student_lab_sessions')
+        .select('*, profiles(display_name, is_guest)')
+        .eq('student_id', studentId)
+        .eq('lab_id', labId)
+        .maybeSingle(),
+    ]);
+
     if (!bundle) {
       return NextResponse.json(
         { error: 'Course or Lab not found in database.' },
@@ -98,25 +110,20 @@ export async function POST(req: NextRequest) {
     }
 
     const { course, chapters, lab } = bundle;
-    const supabase = getServiceSupabase();
+    const existingSessionData = existingSessionRes.data;
 
     // Identify active activity
     const activeActivity = lab.activities?.find((a) => a.id === activityId)
       || lab.activities?.[0]
       || null;
 
-    // Fetch existing student session
-    const { data: existingSessionData } = await supabase
-      .from('student_lab_sessions')
-      .select('*, profiles(display_name, is_guest)')
-      .eq('student_id', studentId)
-      .eq('lab_id', labId)
-      .maybeSingle();
-
     const existingSession = existingSessionData as StudentLabSession | null;
     const resolvedStudentName = (studentName && studentName.trim())
       || (existingSessionData as unknown as { profiles?: { display_name?: string } })?.profiles?.display_name
       || 'Student';
+
+    const tDbFetchDuration = Date.now() - startTime;
+    console.log(`⏱️ [Tutor API] [1/4] DB Parallel Fetch (Bundle & Session): ${tDbFetchDuration}ms`);
 
     // Assemble dynamic 3-layer system prompt & strict schema
     const systemPrompt = buildCourseSystemPrompt(course, chapters, lab, activeActivity);
@@ -149,6 +156,8 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
     }));
 
     // Call Meta muse-spark-1.3 API
+    console.log(`⏱️ [Tutor API] [2/4] Calling Meta AI (muse-spark-1.3) — prompt: ${systemPrompt.length} chars (~${Math.round(systemPrompt.length / 3.8)} tokens), schema: ${JSON.stringify(dynamicSchema).length} chars`);
+    const tMetaStart = Date.now();
     const metaRes = await fetch(`${META_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
@@ -168,12 +177,15 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
           json_schema: dynamicSchema,
         },
         temperature: 0.2,
+        reasoning_effort: 'low',
       }),
     });
 
+    const tMetaDuration = Date.now() - tMetaStart;
+
     if (!metaRes.ok) {
       const errText = await metaRes.text();
-      console.error('[Tutor API] Meta API call failed:', metaRes.status, errText);
+      console.error(`[Tutor API] Meta API call failed after ${tMetaDuration}ms:`, metaRes.status, errText);
       return NextResponse.json(
         { error: `Meta AI invocation error (${metaRes.status})` },
         { status: 502 }
@@ -181,6 +193,9 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
     }
 
     const metaData = await metaRes.json();
+    console.log(`⏱️ [Tutor API] [3/4] Meta AI responded in ${tMetaDuration}ms (Status: ${metaRes.status})`);
+    console.log(`📊 [Tutor API] Token Breakdown -> prompt: ${metaData.usage?.prompt_tokens}, cached: ${metaData.usage?.prompt_tokens_details?.cached_tokens ?? 0}, output: ${metaData.usage?.completion_tokens} (reasoning: ${metaData.usage?.completion_tokens_details?.reasoning_tokens ?? 0})`);
+
     const rawContent = metaData.choices?.[0]?.message?.content;
     if (!rawContent) {
       return NextResponse.json(
@@ -279,7 +294,8 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       }
     }
 
-    // Persist session state via Supabase UPSERT
+    // Persist session state and chat messages (parallelized when existingSession.id is known)
+    const tDbSaveStart = Date.now();
     const sessionUpsertPayload = {
       course_id: courseId,
       lab_id: labId,
@@ -301,46 +317,101 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       updated_at: new Date().toISOString(),
     };
 
-    const { data: savedSession, error: upsertError } = await supabase
-      .from('student_lab_sessions')
-      .upsert(sessionUpsertPayload, { onConflict: 'student_id,lab_id' })
-      .select('*, profiles(display_name, is_guest, email)')
-      .single();
+    let savedSession: StudentLabSession | null = null;
 
-    if (upsertError || !savedSession) {
-      console.error('[Tutor API] Error upserting session:', upsertError);
-      return NextResponse.json(
-        { error: 'Database persistence failed for student session.' },
-        { status: 500 }
-      );
+    if (existingSession?.id) {
+      // Fast path: session already exists in DB -> run session upsert and chat messages insert concurrently!
+      const userMessageRecord = {
+        student_lab_session_id: existingSession.id,
+        activity_id: activeActivity?.id || null,
+        role: 'user',
+        content: isHintRequest ? '💡 [Asked for a Hint]' : question,
+        code_snapshot: files,
+      };
+
+      const assistantMessageRecord = {
+        student_lab_session_id: existingSession.id,
+        activity_id: activeActivity?.id || null,
+        role: 'assistant',
+        content: parsed.socratic_reply?.message_markdown || '',
+        course_reference: parsed.socratic_reply?.course_reference || null,
+        code_snapshot: files,
+        latency_ms: latencyMs,
+      };
+
+      const [upsertRes, chatRes] = await Promise.all([
+        supabase
+          .from('student_lab_sessions')
+          .upsert(sessionUpsertPayload, { onConflict: 'student_id,lab_id' })
+          .select('*, profiles(display_name, is_guest, email)')
+          .single(),
+        supabase
+          .from('chat_messages')
+          .insert([userMessageRecord, assistantMessageRecord]),
+      ]);
+
+      if (upsertRes.error || !upsertRes.data) {
+        console.error('[Tutor API] Error upserting session:', upsertRes.error);
+        return NextResponse.json(
+          { error: 'Database persistence failed for student session.' },
+          { status: 500 }
+        );
+      }
+
+      savedSession = upsertRes.data as StudentLabSession;
+
+      if (chatRes.error) {
+        console.error('[Tutor API] Error inserting chat messages:', chatRes.error);
+      }
+    } else {
+      // First turn for brand-new student -> sequential save to guarantee foreign key integrity
+      const { data: newSession, error: upsertError } = await supabase
+        .from('student_lab_sessions')
+        .upsert(sessionUpsertPayload, { onConflict: 'student_id,lab_id' })
+        .select('*, profiles(display_name, is_guest, email)')
+        .single();
+
+      if (upsertError || !newSession) {
+        console.error('[Tutor API] Error upserting session:', upsertError);
+        return NextResponse.json(
+          { error: 'Database persistence failed for student session.' },
+          { status: 500 }
+        );
+      }
+
+      savedSession = newSession as StudentLabSession;
+
+      const userMessageRecord = {
+        student_lab_session_id: savedSession.id,
+        activity_id: activeActivity?.id || null,
+        role: 'user',
+        content: isHintRequest ? '💡 [Asked for a Hint]' : question,
+        code_snapshot: files,
+      };
+
+      const assistantMessageRecord = {
+        student_lab_session_id: savedSession.id,
+        activity_id: activeActivity?.id || null,
+        role: 'assistant',
+        content: parsed.socratic_reply?.message_markdown || '',
+        course_reference: parsed.socratic_reply?.course_reference || null,
+        code_snapshot: files,
+        latency_ms: latencyMs,
+      };
+
+      const { error: chatError } = await supabase
+        .from('chat_messages')
+        .insert([userMessageRecord, assistantMessageRecord]);
+
+      if (chatError) {
+        console.error('[Tutor API] Error inserting chat messages:', chatError);
+      }
     }
 
-    // Persist chat messages tagged with current activity_id
-    const userMessageRecord = {
-      student_lab_session_id: savedSession.id,
-      activity_id: activeActivity?.id || null,
-      role: 'user',
-      content: isHintRequest ? '💡 [Asked for a Hint]' : question,
-      code_snapshot: files,
-    };
-
-    const assistantMessageRecord = {
-      student_lab_session_id: savedSession.id,
-      activity_id: activeActivity?.id || null,
-      role: 'assistant',
-      content: parsed.socratic_reply?.message_markdown || '',
-      course_reference: parsed.socratic_reply?.course_reference || null,
-      code_snapshot: files,
-      latency_ms: latencyMs,
-    };
-
-    const { error: chatError } = await supabase
-      .from('chat_messages')
-      .insert([userMessageRecord, assistantMessageRecord]);
-
-    if (chatError) {
-      console.error('[Tutor API] Error inserting chat messages:', chatError);
-    }
+    const tDbSaveDuration = Date.now() - tDbSaveStart;
+    const totalDuration = Date.now() - startTime;
+    console.log(`⏱️ [Tutor API] [4/4] DB Save (Upsert session + Insert chat): ${tDbSaveDuration}ms`);
+    console.log(`🚀 [Tutor API] Total Latency: ${totalDuration}ms (Meta AI: ${tMetaDuration}ms, DB Fetch: ${tDbFetchDuration}ms, DB Save: ${tDbSaveDuration}ms)`);
 
     return NextResponse.json({
       socratic_reply: parsed.socratic_reply,
