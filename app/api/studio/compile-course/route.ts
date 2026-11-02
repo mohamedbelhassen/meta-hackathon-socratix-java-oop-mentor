@@ -5,6 +5,8 @@ import {
   GOLDEN_TUTOR_PROMPT_SHOT,
 } from '@/lib/meta-prompt-exemplars';
 
+export const dynamic = 'force-dynamic';
+
 const META_API_KEY = process.env.META_API_KEY;
 
 export async function POST(req: NextRequest) {
@@ -172,6 +174,7 @@ ${allChaptersSummary}`;
         'Content-Type': 'application/json',
         Authorization: `Bearer ${META_API_KEY}`,
       },
+      cache: 'no-store',
       body: JSON.stringify({
         model: 'muse-spark-1.3',
         messages: [
@@ -183,6 +186,8 @@ ${allChaptersSummary}`;
           json_schema: jsonSchema,
         },
         temperature: 0.1,
+        prompt_cache_key: `studio-compile-${courseId}`,
+        prompt_cache_retention: '24h',
       }),
     });
 

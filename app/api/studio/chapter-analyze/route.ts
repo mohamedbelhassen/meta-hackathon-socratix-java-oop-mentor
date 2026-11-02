@@ -3,6 +3,8 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { cleanPdfPages, buildAdaptivePageBatches, formatRawSlideTextToMarkdown, CleanedPage } from '@/lib/pdf-cleaner';
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
+export const dynamic = 'force-dynamic';
+
 const META_API_KEY = process.env.META_API_KEY;
 
 interface MetaChatChoice {
@@ -11,13 +13,14 @@ interface MetaChatChoice {
   };
 }
 
-async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown) {
+async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown, cacheKey?: string) {
   const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${META_API_KEY}`,
     },
+    cache: 'no-store',
     body: JSON.stringify({
       model: 'muse-spark-1.3',
       messages: [
@@ -29,6 +32,7 @@ async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: 
         json_schema: jsonSchema,
       },
       temperature: 0.1,
+      ...(cacheKey ? { prompt_cache_key: cacheKey, prompt_cache_retention: '24h' } : {}),
     }),
   });
 
@@ -181,7 +185,7 @@ ${pagesTextSample}`;
         },
       };
 
-      const parsed = await callMetaAI(systemPrompt, userPrompt, singlePassSchema);
+      const parsed = await callMetaAI(systemPrompt, userPrompt, singlePassSchema, `studio-chapter-analyze-${courseId}`);
       extractedTitle = parsed.extracted_title || extractedTitle;
       markdownContent = parsed.markdown_content || '';
       keyAnalogies = parsed.key_analogies || [];
@@ -266,7 +270,7 @@ ${batch0Sample}`;
         },
       };
 
-      const parsedGlobal = await callMetaAI(systemPromptGlobal, userPromptGlobal, globalSchema);
+      const parsedGlobal = await callMetaAI(systemPromptGlobal, userPromptGlobal, globalSchema, `studio-chapter-analyze-${courseId}`);
       extractedTitle = parsedGlobal.extracted_title || extractedTitle;
       markdownContent = parsedGlobal.markdown_content || '';
       keyAnalogies = parsedGlobal.key_analogies || [];
@@ -314,7 +318,7 @@ Do NOT summarize multiple slides together. Preserve exact class, variable, and m
           },
         };
 
-        const batchParsed = await callMetaAI(batchSystemPrompt, batchSample, batchSchema);
+        const batchParsed = await callMetaAI(batchSystemPrompt, batchSample, batchSchema, `studio-chapter-analyze-${courseId}`);
         if (Array.isArray(batchParsed?.pages_markdown)) {
           collectedSlideMarkdowns.push(...batchParsed.pages_markdown);
         }

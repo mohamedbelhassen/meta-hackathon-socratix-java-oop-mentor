@@ -3,6 +3,7 @@ import { getServiceSupabase } from '@/lib/supabase';
 import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
 import { formatRawSlideTextToMarkdown } from '@/lib/pdf-cleaner';
+import { extractMetaUsage, META_BASE_URL } from '@/lib/meta-ai';
 import {
   computeActivitiesAndLabProgress,
   computeSessionStatus,
@@ -10,8 +11,9 @@ import {
   RawConceptSignal,
 } from '@/lib/telemetry-merger';
 
+export const dynamic = 'force-dynamic';
+
 const META_API_KEY = process.env.META_API_KEY;
-const META_BASE_URL = process.env.META_BASE_URL || 'https://api.meta.ai/v1';
 
 // In-memory 60s TTL Cache for Course Bundles
 interface CachedCourseBundle {
@@ -155,7 +157,7 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       content: msg.content,
     }));
 
-    // Call Meta muse-spark-1.3 API
+    // Call Meta muse-spark-1.3 API with Prefix KV Caching
     console.log(`⏱️ [Tutor API] [2/4] Calling Meta AI (muse-spark-1.3) — prompt: ${systemPrompt.length} chars (~${Math.round(systemPrompt.length / 3.8)} tokens), schema: ${JSON.stringify(dynamicSchema).length} chars`);
     const tMetaStart = Date.now();
     const metaRes = await fetch(`${META_BASE_URL}/chat/completions`, {
@@ -163,8 +165,8 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${META_API_KEY}`,
-        'X-Enable-Cache': 'true',
       },
+      cache: 'no-store',
       body: JSON.stringify({
         model: 'muse-spark-1.3',
         messages: [
@@ -178,6 +180,8 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
         },
         temperature: 0.2,
         reasoning_effort: 'low',
+        prompt_cache_key: `course-${course.id}-lab-${lab.id}`,
+        prompt_cache_retention: '24h',
       }),
     });
 
@@ -193,8 +197,9 @@ ${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILE
     }
 
     const metaData = await metaRes.json();
+    const metrics = extractMetaUsage(metaData.usage);
     console.log(`⏱️ [Tutor API] [3/4] Meta AI responded in ${tMetaDuration}ms (Status: ${metaRes.status})`);
-    console.log(`📊 [Tutor API] Token Breakdown -> prompt: ${metaData.usage?.prompt_tokens}, cached: ${metaData.usage?.prompt_tokens_details?.cached_tokens ?? 0}, output: ${metaData.usage?.completion_tokens} (reasoning: ${metaData.usage?.completion_tokens_details?.reasoning_tokens ?? 0})`);
+    console.log(`📊 [Tutor API] Token Breakdown -> prompt: ${metrics.promptTokens}, cached: ${metrics.cachedTokens} (${metrics.cacheHitRatePercent}%), output: ${metrics.completionTokens} (reasoning: ${metrics.reasoningTokens})`);
 
     const rawContent = metaData.choices?.[0]?.message?.content;
     if (!rawContent) {
