@@ -27,6 +27,7 @@ import {
   Lock,
   AlertTriangle,
   Clock,
+  RotateCcw,
 } from 'lucide-react';
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
@@ -519,9 +520,22 @@ export default function CourseStudioPanel({
                 size="sm"
                 onClick={() => setShowCompilationModal(true)}
                 className="text-xs h-8 bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:text-white"
+                title="View Curriculum Taxonomy & AI Mentor Prompt"
               >
                 <Sparkles className="w-3.5 h-3.5 mr-1 text-emerald-400" />
                 Curriculum Synthesis 🧠
+              </Button>
+            )}
+            {labs.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLabsIngestionModal(true)}
+                className="text-xs h-8 bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:text-white"
+                title="View Decomposed Labs, Milestones, and Demo Presets"
+              >
+                <Layers className="w-3.5 h-3.5 mr-1 text-cyan-400" />
+                Labs Briefing 📋
               </Button>
             )}
             {hasCompiledPrompt && (
@@ -769,9 +783,23 @@ export default function CourseStudioPanel({
                 </div>
                 <h3 className="text-sm font-bold text-white">Course Chapters (PDF)</h3>
               </div>
-              <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
-                {chapters.length} Chapter(s)
-              </Badge>
+              <div className="flex items-center gap-2">
+                {hasTaxonomy && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowCompilationModal(true)}
+                    className="text-[11px] h-7 bg-emerald-950/40 border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 transition font-medium"
+                    title="View Curriculum Taxonomy & AI Mentor Prompt"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1 text-emerald-400" />
+                    View Synthesis 🧠
+                  </Button>
+                )}
+                <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
+                  {chapters.length} Chapter(s)
+                </Badge>
+              </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Drag & drop your official chapter slide decks (e.g. from <code className="text-slate-300 font-mono">_dev/java_course/course_chapters/</code>).
@@ -823,7 +851,7 @@ export default function CourseStudioPanel({
             )}
           </div>
 
-          {/* COMPILE BUTTON */}
+          {/* COMPILE / VIEW SYNTHESIS BUTTONS */}
           <div className="pt-3 border-t border-slate-800 space-y-2">
             <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
               <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200">
@@ -839,33 +867,70 @@ export default function CourseStudioPanel({
               <span className="text-[10px] text-emerald-400 font-mono">Auto-detects missing title_i18n</span>
             </div>
 
-            <Button
-              onClick={handleCompileCourse}
-              disabled={isProcessing || chapters.length === 0}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
-            >
-              {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Distilling Chapters ({currentProgress.current}/{currentProgress.total})...
-                </>
-              ) : isProcessing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Synthesizing with Meta AI ({compilationElapsed}s)...
-                </>
-              ) : chapters.length === 0 ? (
-                <>
-                  <BookOpen className="w-3.5 h-3.5 mr-1.5 opacity-60" />
-                  Upload Chapter PDFs First (Step 2)
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  {hasTaxonomy ? 'Recompile Knowledge Base & Mentor Prompt' : 'Compile Knowledge Base & Prompt'}
-                </>
-              )}
-            </Button>
+            {hasTaxonomy ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => setShowCompilationModal(true)}
+                  disabled={isProcessing}
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>View Curriculum Synthesis &amp; Mentor Briefing</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleCompileCourse}
+                  disabled={isProcessing || chapters.length === 0}
+                  className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
+                >
+                  {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                      <span>Distilling Chapters ({currentProgress.current}/{currentProgress.total})...</span>
+                    </>
+                  ) : isProcessing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                      <span>Synthesizing with Meta AI ({compilationElapsed}s)...</span>
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="w-3 h-3 text-slate-400" />
+                      <span>Recompile Knowledge Base &amp; Mentor Prompt</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleCompileCourse}
+                disabled={isProcessing || chapters.length === 0}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
+              >
+                {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Distilling Chapters ({currentProgress.current}/{currentProgress.total})...
+                  </>
+                ) : isProcessing ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    Synthesizing with Meta AI ({compilationElapsed}s)...
+                  </>
+                ) : chapters.length === 0 ? (
+                  <>
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5 opacity-60" />
+                    Upload Chapter PDFs First (Step 2)
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                    Compile Knowledge Base &amp; Prompt
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -885,10 +950,11 @@ export default function CourseStudioPanel({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowLabsIngestionModal(true)}
-                    className="text-[11px] h-7 bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:text-white"
+                    className="text-[11px] h-7 bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-cyan-900/40 transition font-medium"
+                    title="View decomposed activities, milestones, and 1-click Judge Presets"
                   >
-                    <Layers className="w-3 h-3 mr-1" />
-                    All TP Briefing
+                    <Layers className="w-3 h-3 mr-1 text-cyan-400" />
+                    View TP Briefing 📋
                   </Button>
                 )}
                 <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
@@ -1036,25 +1102,48 @@ export default function CourseStudioPanel({
             )}
           </div>
 
-          {/* RE-ANALYZE ALL LABS BUTTON (1-CLICK FOR JUDGES) */}
+          {/* RE-ANALYZE / VIEW LABS DECOMPOSITION BUTTONS */}
           <div className="pt-3 border-t border-slate-800 space-y-2">
-            <Button
-              onClick={handleReanalyzeAllLabs}
-              disabled={isProcessing || labs.length === 0 || !hasTaxonomy}
-              className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold h-9 shadow-md transition-all"
-            >
-              {isProcessing && currentProgress?.stage === 'Re-analyzing Labs' ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Re-analyzing Labs with Meta AI ({currentProgress.current}/{currentProgress.total})...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-3.5 h-3.5 mr-1.5 text-cyan-200" />
-                  ⚡ Re-analyze All Labs with Meta AI
-                </>
-              )}
-            </Button>
+            {labs.length > 0 ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => setShowLabsIngestionModal(true)}
+                  disabled={isProcessing}
+                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Layers className="w-3.5 h-3.5 text-cyan-200" />
+                  <span>View TP Decomposition &amp; Presets Briefing ({labs.length} TP)</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={handleReanalyzeAllLabs}
+                  disabled={isProcessing || !hasTaxonomy}
+                  className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
+                >
+                  {isProcessing && currentProgress?.stage === 'Re-analyzing Labs' ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      <span>Re-analyzing Labs with Meta AI ({currentProgress.current}/{currentProgress.total})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3 h-3 text-cyan-400" />
+                      <span>⚡ Re-analyze All Labs with Meta AI</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                disabled
+                className="w-full bg-slate-800/60 text-slate-500 text-xs font-semibold h-9 cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                <Layers className="w-3.5 h-3.5 opacity-60" />
+                <span>Upload Lab PDFs First (Step 4)</span>
+              </Button>
+            )}
+
             <div className="text-[10px] text-slate-400 flex items-center justify-between">
               <span>Automatic natural sorting: TP1, TP2, ...</span>
               <span className="text-cyan-400 font-mono">1-Click Remote PDF Re-analysis</span>
