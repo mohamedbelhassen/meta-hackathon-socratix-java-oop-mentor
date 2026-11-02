@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { formatLabOptionLabel } from '@/lib/utils';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
+import { formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import {
   AlertTriangle,
   BookOpen,
@@ -678,7 +679,9 @@ export default function TeacherLiveSessionsTab({
                               title="Inspect referenced course slide in Smart Slide Viewer"
                             >
                               <BookOpen className="w-3.5 h-3.5 shrink-0" />
-                              <span className="truncate max-w-[280px]">{msg.course_reference.label}</span>
+                              <span className="truncate max-w-[280px]">
+                                {formatSlideCitationLabel(msg.course_reference as StructuredCourseReference)}
+                              </span>
                               <ExternalLink className="w-3 h-3 shrink-0 ml-0.5 opacity-70" />
                             </button>
                           </div>

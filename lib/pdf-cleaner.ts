@@ -275,6 +275,69 @@ export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: st
 }
 
 /**
+ * Extracts the canonical slide title from a slide's markdown transcription or translation.
+ * Strips markdown header hashes (#), leading numbers, and bold/code markup.
+ */
+export function extractSlideTitle(markdown?: string | null): string | null {
+  if (!markdown) return null;
+  const lines = markdown.split('\n');
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    // Match # Title, ## Title, ### Title, #### Title
+    const headerMatch = line.match(/^#{1,4}\s+(.+)$/);
+    if (headerMatch) {
+      let title = headerMatch[1].trim();
+      // Remove markdown bold/italic and inline code backticks
+      title = title.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').trim();
+      if (title.length > 0) return title;
+    }
+  }
+  // Fallback to first meaningful line if no markdown header
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('```') || line.startsWith('-') || line.startsWith('*') || line.startsWith('>')) continue;
+    const title = line.replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').trim();
+    if (title.length > 0 && title.length <= 100) return title;
+    break;
+  }
+  return null;
+}
+
+/**
+ * Formats a clean, deterministic citation label for Socratic slide references.
+ * Resolves the canonical title from slide_markdown to prevent LLM hallucinations.
+ */
+export function formatSlideCitationLabel(
+  reference?: {
+    label?: string;
+    chapter_code?: string;
+    page_number?: number;
+    slide_markdown?: { en?: string; fr?: string };
+  } | null
+): string {
+  if (!reference) return '';
+
+  const canonicalTitle =
+    extractSlideTitle(reference.slide_markdown?.fr) ||
+    extractSlideTitle(reference.slide_markdown?.en);
+
+  if (canonicalTitle) {
+    // Check if label had a recognizable chapter prefix (e.g. "Chapter 5 (Slide 51): ...")
+    const prefixMatch = reference.label?.match(/^(Chapter\s+\w+(?:\s*\([^)]*\))?)\s*:/i);
+    const prefix = prefixMatch
+      ? prefixMatch[1]
+      : `Chapter ${reference.chapter_code || ''} (Slide ${reference.page_number || ''})`;
+    return `${prefix}: ${canonicalTitle}`;
+  }
+
+  return (
+    reference.label ||
+    `Chapter ${reference.chapter_code || ''} (Slide ${reference.page_number || ''})`
+  );
+}
+
+/**
  * Generates or retrieves clean markdown content for a slide reference.
  * Guarantees that the slide title is ALWAYS prominently displayed at the top of the markdown,
  * even if the original PDF slide used an image or vector shape for its title.
@@ -289,13 +352,19 @@ export function getSlideCleanMarkdown(
   },
   lang: 'en' | 'fr'
 ): string {
-  // Extract clean slide title from reference.label
-  // e.g. "Chapter 2 (Slide 23): Transtypage explicite / Cast" -> "Transtypage explicite / Cast"
-  let cleanTitle = reference.label || `Slide #${reference.page_number}`;
-  const colonIdx = cleanTitle.indexOf(':');
-  if (colonIdx !== -1) {
-    const extracted = cleanTitle.slice(colonIdx + 1).trim();
-    if (extracted.length > 0) cleanTitle = extracted;
+  // Extract clean slide title prioritizing canonical slide_markdown, then reference.label
+  const canonicalTitle =
+    extractSlideTitle(lang === 'en' ? reference.slide_markdown?.en : reference.slide_markdown?.fr) ||
+    extractSlideTitle(reference.slide_markdown?.fr) ||
+    extractSlideTitle(reference.slide_markdown?.en);
+
+  let cleanTitle = canonicalTitle || reference.label || `Slide #${reference.page_number}`;
+  if (!canonicalTitle) {
+    const colonIdx = cleanTitle.indexOf(':');
+    if (colonIdx !== -1) {
+      const extracted = cleanTitle.slice(colonIdx + 1).trim();
+      if (extracted.length > 0) cleanTitle = extracted;
+    }
   }
 
   const ensureHeader = (markdownText: string, title: string): string => {

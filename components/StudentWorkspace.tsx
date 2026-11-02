@@ -44,7 +44,7 @@ import MilestoneCelebrationModal, {
   replayCelebration,
 } from './MilestoneCelebrationModal';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
-import { cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
+import { cleanInstructionsMarkdown, formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import { formatLabOptionLabel } from '@/lib/utils';
 import {
   saveActiveContext,
@@ -1604,13 +1604,15 @@ export default function StudentWorkspace() {
                         setActiveSlideReference(msg.courseReference || null);
                         setIsSlideModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-[11px] font-medium"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-[11px] font-medium text-left"
                     >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>{msg.courseReference.label}</span>
-                      <span className="text-[10px] text-emerald-300 font-mono">
-                        (Slide #{msg.courseReference.page_number})
-                      </span>
+                      <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                      <span>{formatSlideCitationLabel(msg.courseReference)}</span>
+                      {!formatSlideCitationLabel(msg.courseReference).toLowerCase().includes('slide') && (
+                        <span className="text-[10px] text-emerald-300 font-mono shrink-0">
+                          (Slide #{msg.courseReference.page_number})
+                        </span>
+                      )}
                     </button>
                   </div>
                 )}

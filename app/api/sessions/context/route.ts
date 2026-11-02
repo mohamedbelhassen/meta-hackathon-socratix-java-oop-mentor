@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { StudentLabSession, ChatMessage, CourseChapter } from '@/types/socratix';
-import { formatRawSlideTextToMarkdown } from '@/lib/pdf-cleaner';
+import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
 
 export async function GET(req: NextRequest) {
   try {
@@ -75,10 +75,19 @@ export async function GET(req: NextRequest) {
           const frClean = currentSlideMd?.fr || slidePage?.fr_markdown?.trim() || (slidePage?.text ? formatRawSlideTextToMarkdown(slidePage.text) : undefined);
           const enClean = currentSlideMd?.en || slidePage?.en_markdown?.trim() || undefined;
 
+          // Deterministic title synchronization (Variante 1)
+          const canonicalSlideTitle = extractSlideTitle(frClean) || extractSlideTitle(enClean);
+          let canonicalLabel = msg.course_reference.label;
+          if (canonicalSlideTitle) {
+            const chNum = refChap.chapter_number != null ? refChap.chapter_number : refChap.code;
+            canonicalLabel = `Chapter ${chNum} (Slide ${slidePage?.page || msg.course_reference.page_number}): ${canonicalSlideTitle}`;
+          }
+
           return {
             ...msg,
             course_reference: {
               ...msg.course_reference,
+              label: canonicalLabel,
               pdf_url: pdfUrl,
               slide_markdown: {
                 en: enClean,

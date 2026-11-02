@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
-import { formatRawSlideTextToMarkdown } from '@/lib/pdf-cleaner';
+import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
 import { extractMetaUsage, META_BASE_URL } from '@/lib/meta-ai';
 import {
   computeActivitiesAndLabProgress,
@@ -242,6 +242,13 @@ ${studentInputPrompt}
           en: enClean,
           fr: frClean,
         };
+
+        // Ground course_reference.label canonically from slide markdown to eliminate LLM improvisation
+        const canonicalSlideTitle = extractSlideTitle(frClean) || extractSlideTitle(enClean);
+        if (canonicalSlideTitle) {
+          const chNum = refChapter.chapter_number != null ? refChapter.chapter_number : refChapter.code;
+          parsed.socratic_reply.course_reference.label = `Chapter ${chNum} (Slide ${slidePage.page}): ${canonicalSlideTitle}`;
+        }
       }
     }
 

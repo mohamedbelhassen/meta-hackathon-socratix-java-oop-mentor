@@ -6,7 +6,7 @@ import { StructuredCourseReference } from '@/types/socratix';
 import { ExternalLink, X, BookOpen, Sparkles, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { getSlideCleanMarkdown } from '@/lib/pdf-cleaner';
+import { getSlideCleanMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
 
 interface SmartSlideViewerModalProps {
   isOpen: boolean;
@@ -28,6 +28,23 @@ export default function SmartSlideViewerModal({
   const cleanEnText = getSlideCleanMarkdown(reference, 'en');
   const cleanFrText = getSlideCleanMarkdown(reference, 'fr');
 
+  // Synchronize modal header title with active slide tab (clean_en vs clean_fr)
+  const activeCleanText = slideViewMode === 'clean_en' ? cleanEnText : cleanFrText;
+  const activeCanonicalTitle =
+    extractSlideTitle(activeCleanText) ||
+    extractSlideTitle(cleanFrText) ||
+    extractSlideTitle(cleanEnText);
+
+  // Preserve or extract chapter prefix (e.g. "Chapter 5 (Slide 51)")
+  const prefixMatch = reference.label?.match(/^(Chapter\s+\w+(?:\s*\([^)]*\))?)\s*:/i);
+  const chapterPrefix = prefixMatch
+    ? prefixMatch[1]
+    : `Chapter ${reference.chapter_code} (Slide ${reference.page_number})`;
+
+  const synchronizedHeaderTitle = activeCanonicalTitle
+    ? `${chapterPrefix}: ${activeCanonicalTitle}`
+    : (reference.label || `Slide #${reference.page_number}`);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="relative w-full max-w-6xl h-[88vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
@@ -40,7 +57,7 @@ export default function SmartSlideViewerModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-slate-100 text-base">
-                  {reference.label || `Slide #${reference.page_number}`}
+                  {synchronizedHeaderTitle}
                 </h3>
                 <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-xs">
                   Slide {reference.page_number}

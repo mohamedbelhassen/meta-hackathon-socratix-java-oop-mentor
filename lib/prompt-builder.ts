@@ -244,7 +244,7 @@ export function buildDynamicSocratixSchema(
               properties: {
                 label: {
                   type: 'string',
-                  description: 'Display label, e.g. "Chapter 3 (Slide 42): Encapsulation and Visibility".',
+                  description: 'Display label, e.g. "Chapter 3 (Slide 42)". Automatically synchronized with the canonical slide title.',
                 },
                 chapter_code: {
                   type: 'string',
