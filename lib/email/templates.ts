@@ -9,11 +9,12 @@ export interface PasswordResetEmailParams {
   resetUrl: string;
 }
 
-export interface TeacherAlertEmailParams {
-  teacherName: string;
-  studentName: string;
-  labTitle: string;
-  issueDescription: string;
+export interface AdminNewUserEmailParams {
+  userEmail: string;
+  displayName: string;
+  role: 'teacher' | 'student';
+  registeredAt?: string;
+  ipAddress?: string;
   dashboardUrl?: string;
 }
 
@@ -284,53 +285,217 @@ Ce lien est valable 1 heure.
 }
 
 /**
- * Returns an HTML email template for alerting a teacher when a student is stuck.
+ * Returns an HTML email template for notifying the administrator of a new user registration.
  */
-export function getTeacherAlertTemplate(params: TeacherAlertEmailParams): {
+export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailParams): {
   subject: string;
   html: string;
   text: string;
 } {
-  const { teacherName, studentName, labTitle, issueDescription, dashboardUrl } = params;
-  const subject = `⚠️ Alerte Socratix : L'étudiant ${studentName} est bloqué sur « ${labTitle} »`;
+  const { userEmail, displayName, role, registeredAt, ipAddress, dashboardUrl } = params;
+  const roleLabel = role === 'teacher' ? 'Enseignant / Mentor' : 'Étudiant';
+  const timestamp = registeredAt || new Date().toISOString();
+  const subject = `🔔 Nouvelle Inscription Socratix : ${displayName} (${roleLabel})`;
 
   const html = `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${subject}</title>
-</head>
-<body style="font-family:sans-serif; background-color:#0b0f19; color:#f1f5f9; padding:24px;">
-  <div style="max-width:560px; margin:0 auto; background:#111827; border:1px solid #1f2937; border-radius:16px; padding:28px;">
-    <h2 style="color:#f59e0b; margin-top:0;">⚠️ Alerte Pédagogique Socratix</h2>
-    <p>Bonjour <strong>${teacherName}</strong>,</p>
-    <p>L&apos;étudiant <strong>${studentName}</strong> rencontre des difficultés répétées sur le TP <em>« ${labTitle} »</em> :</p>
-    <div style="background:#1f2937; padding:14px; border-radius:8px; margin:16px 0; font-size:14px; color:#cbd5e1;">
-      ${issueDescription}
-    </div>
-    ${
-      dashboardUrl
-        ? `<div style="text-align:center; margin:24px 0;">
-            <a href="${dashboardUrl}" style="background:#10b981; color:#042f2e; font-weight:bold; padding:12px 24px; border-radius:8px; text-decoration:none;">
-              Consulter la session en direct &rarr;
-            </a>
-          </div>`
-        : ''
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0b0f19;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #f1f5f9;
+      -webkit-font-smoothing: antialiased;
     }
-    <p style="font-size:12px; color:#64748b; margin-top:24px;">Notification automatique émise par Socratix AI Mentor.</p>
+    .wrapper {
+      width: 100%;
+      background-color: #0b0f19;
+      padding: 40px 16px;
+      box-sizing: border-box;
+    }
+    .card {
+      max-width: 580px;
+      margin: 0 auto;
+      background-color: #111827;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid #1f2937;
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+    }
+    .header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+      padding: 32px;
+      text-align: center;
+      color: #ffffff;
+    }
+    .brand-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 800;
+    }
+    .brand-subtitle {
+      margin: 6px 0 0 0;
+      font-size: 12px;
+      font-weight: 600;
+      color: #c7d2fe;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .content {
+      padding: 32px;
+    }
+    .title {
+      margin: 0 0 16px 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .table-info {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      background: #0b0f19;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1f2937;
+    }
+    .table-info td {
+      padding: 12px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #1f2937;
+    }
+    .table-info tr:last-child td {
+      border-bottom: none;
+    }
+    .label {
+      color: #94a3b8;
+      font-weight: 600;
+      width: 38%;
+    }
+    .value {
+      color: #f1f5f9;
+      font-weight: 500;
+    }
+    .badge-teacher {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+    .badge-student {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+    .btn-container {
+      text-align: center;
+      margin: 28px 0 12px 0;
+    }
+    .btn {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: #ffffff !important;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      padding: 14px 30px;
+      border-radius: 10px;
+      box-shadow: 0 10px 20px -5px rgba(79, 70, 229, 0.4);
+    }
+    .footer {
+      padding: 20px 32px;
+      background-color: #0b0f19;
+      border-top: 1px solid #1f2937;
+      text-align: center;
+      font-size: 11px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="card">
+      <div class="header">
+        <div style="font-size: 32px; margin-bottom: 6px;">🔔</div>
+        <h1 class="brand-title">Socratix AI</h1>
+        <p class="brand-subtitle">Notification Administrateur</p>
+      </div>
+      <div class="content">
+        <h2 class="title">Nouvel utilisateur enregistré sur la plateforme</h2>
+        <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 16px 0;">
+          Un nouveau compte vient d'être créé sur votre instance Socratix :
+        </p>
+
+        <table class="table-info">
+          <tr>
+            <td class="label">Nom affiché</td>
+            <td class="value"><strong>${displayName}</strong></td>
+          </tr>
+          <tr>
+            <td class="label">Adresse email</td>
+            <td class="value"><a href="mailto:${userEmail}" style="color: #818cf8; text-decoration: none;">${userEmail}</a></td>
+          </tr>
+          <tr>
+            <td class="label">Rôle attribué</td>
+            <td class="value">
+              <span class="${role === 'teacher' ? 'badge-teacher' : 'badge-student'}">${roleLabel}</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">Date d'inscription</td>
+            <td class="value" style="font-family: monospace; font-size: 12px;">${timestamp}</td>
+          </tr>
+          ${
+            ipAddress
+              ? `<tr>
+            <td class="label">Adresse IP</td>
+            <td class="value" style="font-family: monospace; font-size: 12px;">${ipAddress}</td>
+          </tr>`
+              : ''
+          }
+        </table>
+
+        ${
+          dashboardUrl
+            ? `<div class="btn-container">
+          <a href="${dashboardUrl}" class="btn" target="_blank">Accéder au Hub Enseignant &rarr;</a>
+        </div>`
+            : ''
+        }
+      </div>
+      <div class="footer">
+        <p style="margin: 0 0 4px 0;">Notification automatique émise à destination de l'administrateur système.</p>
+        <p style="margin: 0;">Socratix AI Mentor — Hackathon Meta AI 2026</p>
+      </div>
+    </div>
   </div>
 </body>
 </html>
   `.trim();
 
   const text = `
-Bonjour ${teacherName},
+Socratix AI — Nouvelle Inscription
 
-L'étudiant ${studentName} est bloqué sur le TP "${labTitle}" :
-${issueDescription}
-
-Consultez le Teacher Live Sessions Tab pour intervenir.
+Nom: ${displayName}
+Email: ${userEmail}
+Rôle: ${roleLabel}
+Date: ${timestamp}
+IP: ${ipAddress || 'N/A'}
   `.trim();
 
   return { subject, html, text };

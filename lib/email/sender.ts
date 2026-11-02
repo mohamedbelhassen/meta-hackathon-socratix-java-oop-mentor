@@ -1,4 +1,5 @@
 import 'server-only';
+import { getAdminNewUserNotificationTemplate } from './templates';
 
 export interface EmailRecipient {
   email: string;
@@ -124,4 +125,31 @@ export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendR
       error: errorMsg,
     };
   }
+}
+
+/**
+ * Dispatches a notification to the administrator (configured via ADMIN_NOTIFICATION_EMAIL)
+ * whenever a new user registers on the platform.
+ */
+export async function notifyAdminNewUser(params: {
+  userEmail: string;
+  displayName: string;
+  role: 'teacher' | 'student';
+  ipAddress?: string;
+  dashboardUrl?: string;
+}): Promise<EmailSendResult> {
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (!adminEmail) {
+    console.log('[Admin Notification] ADMIN_NOTIFICATION_EMAIL is not configured in env, skipping admin alert.');
+    return { success: false, error: 'ADMIN_NOTIFICATION_EMAIL not configured' };
+  }
+
+  const template = getAdminNewUserNotificationTemplate(params);
+  return sendSystemEmail({
+    to: adminEmail,
+    subject: template.subject,
+    htmlContent: template.html,
+    textContent: template.text,
+    tags: ['socratix', 'admin', 'new-registration', params.role],
+  });
 }

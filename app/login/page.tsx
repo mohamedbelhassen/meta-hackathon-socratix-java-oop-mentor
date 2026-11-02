@@ -68,6 +68,7 @@ export default function LoginPage() {
               display_name: displayName || email.split('@')[0],
               role,
               teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
+              is_new_signup: true,
             }),
           }).catch(console.error);
 
@@ -90,6 +91,7 @@ export default function LoginPage() {
               email,
               displayName: displayName || email.split('@')[0],
               role,
+              isNewRegistration: true,
             }),
           });
           const sendJson = await sendRes.json();
@@ -185,6 +187,7 @@ export default function LoginPage() {
           email,
           displayName: displayName || email.split('@')[0],
           role,
+          isNewRegistration: false,
         }),
       });
 

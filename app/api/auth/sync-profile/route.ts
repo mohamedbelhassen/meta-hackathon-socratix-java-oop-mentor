@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTypedServiceSupabase } from '@/lib/supabase-admin';
+import { notifyAdminNewUser } from '@/lib/email/sender';
+import { getAppBaseUrl } from '@/lib/url-utils';
 
 export async function POST(req: NextRequest) {
   try {
@@ -101,6 +103,20 @@ export async function POST(req: NextRequest) {
     if (error) {
       console.error('[Sync Profile] Supabase upsert error:', error);
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (body.is_new_signup) {
+      const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
+      const baseUrl = getAppBaseUrl();
+      notifyAdminNewUser({
+        userEmail: user.email,
+        displayName: cleanName,
+        role: safeRole,
+        ipAddress: clientIp,
+        dashboardUrl: `${baseUrl}/teacher`,
+      }).catch((adminErr) => {
+        console.warn('[Sync Profile] Admin notification warning:', adminErr);
+      });
     }
 
     return NextResponse.json({ success: true, profile: data });

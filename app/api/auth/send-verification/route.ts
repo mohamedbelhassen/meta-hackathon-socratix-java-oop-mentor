@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limiter';
-import { sendSystemEmail } from '@/lib/email/sender';
+import { sendSystemEmail, notifyAdminNewUser } from '@/lib/email/sender';
 import { getWelcomeVerificationTemplate } from '@/lib/email/templates';
 import { getAppBaseUrl } from '@/lib/url-utils';
 
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     const rawEmail = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
     const displayName = typeof body.displayName === 'string' && body.displayName.trim() ? body.displayName.trim() : rawEmail.split('@')[0] || 'User';
     const role: 'teacher' | 'student' = body.role === 'teacher' ? 'teacher' : 'student';
+    const isNewRegistration = body.isNewRegistration !== false;
 
     if (!rawEmail || !rawEmail.includes('@') || !rawEmail.includes('.')) {
       return NextResponse.json({ error: 'Adresse email invalide.' }, { status: 400 });
@@ -104,6 +105,19 @@ export async function POST(req: NextRequest) {
       textContent: template.text,
       tags: ['socratix', 'auth', 'verification', role],
     });
+
+    // 6. Notify administrator of new registration (if enabled and applicable)
+    if (isNewRegistration) {
+      notifyAdminNewUser({
+        userEmail: rawEmail,
+        displayName,
+        role,
+        ipAddress: clientIp,
+        dashboardUrl: `${baseUrl}/teacher`,
+      }).catch((adminErr) => {
+        console.warn('[Send Verification API] Admin notification warning:', adminErr);
+      });
+    }
 
     if (sendResult.success) {
       return NextResponse.json({
