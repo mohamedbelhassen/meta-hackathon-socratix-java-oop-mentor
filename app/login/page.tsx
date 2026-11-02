@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, GraduationCap, School } from 'lucide-react';
+import { Sparkles, GraduationCap, School, Mail, RefreshCw } from 'lucide-react';
+import { getAppBaseUrl } from '@/lib/url-utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [teacherPin, setTeacherPin] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,7 +39,9 @@ export default function LoginPage() {
           return;
         }
 
-        const redirectUrl = typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+        const baseUrl = getAppBaseUrl();
+        const redirectUrl = `${baseUrl}/auth/callback?next=${role === 'teacher' ? '/teacher' : '/student'}`;
+
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -52,13 +56,13 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Auto-sync profile if user and session token are returned immediately
+        // Auto-sync profile if user and session token are returned immediately (e.g. if Confirm Email is off)
         if (data?.user && data?.session?.access_token) {
           await fetch('/api/auth/sync-profile', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${data.session.access_token}`,
+              Authorization: `Bearer ${data.session.access_token}`,
             },
             body: JSON.stringify({
               display_name: displayName || email.split('@')[0],
@@ -66,12 +70,46 @@ export default function LoginPage() {
               teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
             }),
           }).catch(console.error);
+
+          setMessage({
+            type: 'success',
+            text: 'Account created! Redirecting to your dashboard...',
+          });
+          setTimeout(() => {
+            router.push(role === 'teacher' ? '/teacher' : '/student');
+          }, 1000);
+          return;
         }
 
-        setMessage({
-          type: 'success',
-          text: 'Account created! Please check your email to confirm your registration or log in.',
-        });
+        // If session is null (Supabase requires email confirmation), trigger Brevo gateway as reliable delivery
+        try {
+          const sendRes = await fetch('/api/auth/send-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              displayName: displayName || email.split('@')[0],
+              role,
+            }),
+          });
+          const sendJson = await sendRes.json();
+          if (sendRes.ok && sendJson.success) {
+            setMessage({
+              type: 'success',
+              text: 'Account created! A confirmation email has been dispatched via Brevo. Please check your inbox (and spam folder) to activate your account.',
+            });
+          } else {
+            setMessage({
+              type: 'success',
+              text: 'Account created! Please check your email to confirm your registration.',
+            });
+          }
+        } catch {
+          setMessage({
+            type: 'success',
+            text: 'Account created! Please check your email to confirm your registration.',
+          });
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -101,7 +139,7 @@ export default function LoginPage() {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${data.session.access_token}`,
+                Authorization: `Bearer ${data.session.access_token}`,
               },
               body: JSON.stringify({
                 display_name: userDisplayName,
@@ -109,31 +147,83 @@ export default function LoginPage() {
             }).catch(console.error);
           }
 
-          router.push(effectiveRole === 'teacher' ? '/teacher' : '/student');
-        } else {
-          router.push(role === 'teacher' ? '/teacher' : '/student');
+          if (effectiveRole === 'teacher') {
+            router.push('/teacher');
+          } else {
+            router.push('/student');
+          }
         }
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'An error occurred during authentication.';
-      setMessage({ type: 'error', text: msg });
+      console.error('[Auth Error]:', err);
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Authentication failed. Please verify credentials.',
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleResendVerification = async () => {
+    if (!email || !email.includes('@')) {
+      setMessage({
+        type: 'error',
+        text: 'Please enter your email address in the field below first.',
+      });
+      return;
+    }
+
+    setResending(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          displayName: displayName || email.split('@')[0],
+          role,
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setMessage({
+          type: 'success',
+          text: 'A new verification link has been sent to your email via Brevo! Please check your inbox.',
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: json.error || 'Failed to send verification email. Please check your Brevo configuration.',
+        });
+      }
+    } catch (err) {
+      console.error('[Resend Error]:', err);
+      setMessage({
+        type: 'error',
+        text: 'Network error occurred while trying to send verification email.',
+      });
+    } finally {
+      setResending(false);
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6 font-sans">
-      <div className="max-w-md w-full space-y-8">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
+      <div className="max-w-md w-full space-y-6">
+        {/* LOGO & HERO */}
         <div className="text-center space-y-2">
-          <Link href="/" className="inline-flex items-center gap-2 text-2xl font-black text-white hover:opacity-90">
-            Socratix <span className="text-emerald-400">🦉</span>
-          </Link>
-          <h1 className="text-xl font-bold text-slate-200">
-            {isSignUp ? 'Create an Account' : 'Sign in to Socratix'}
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-2">
+            <span className="text-2xl">🦉</span>
+          </div>
+          <h1 className="text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
+            Socratix <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">v2.0</span>
           </h1>
-          <p className="text-xs text-slate-400">
-            Dual-Track Access: use official Supabase Auth or jump directly into the Instant Jury Sandbox.
+          <p className="text-xs text-slate-400 max-w-sm mx-auto">
+            Autonomous Socratic AI Mentor &amp; Adaptive Teacher ERP for Computer Science Labs
           </p>
         </div>
 
@@ -183,7 +273,7 @@ export default function LoginPage() {
 
           {message && (
             <div
-              className={`text-xs p-3 rounded-lg border ${
+              className={`text-xs p-3 rounded-lg border leading-relaxed ${
                 message.type === 'error'
                   ? 'bg-rose-950/40 border-rose-500/30 text-rose-300'
                   : 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300'
@@ -296,6 +386,22 @@ export default function LoginPage() {
               {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
           </form>
+
+          {/* RESEND VERIFICATION EMAIL ACTION */}
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="flex items-center gap-1 text-slate-400">
+              <Mail className="w-3 h-3 text-slate-400" /> Need verification link?
+            </span>
+            <button
+              type="button"
+              disabled={resending}
+              onClick={handleResendVerification}
+              className="text-emerald-400 hover:text-emerald-300 hover:underline disabled:opacity-50 flex items-center gap-1 font-medium"
+            >
+              <RefreshCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
+              {resending ? 'Sending...' : 'Resend via Brevo'}
+            </button>
+          </div>
         </div>
 
         <div className="text-center">
