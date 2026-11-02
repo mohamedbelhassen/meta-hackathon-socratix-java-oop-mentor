@@ -80,6 +80,7 @@ export async function POST(req: NextRequest) {
       seatLabel,
       question,
       isHintRequest,
+      requestMode,
       files,
       history = [],
     } = body;
@@ -136,19 +137,31 @@ export async function POST(req: NextRequest) {
       .map((f) => `--- FILE: ${f.name} ---\n${f.content}`)
       .join('\n\n');
 
+    let studentInputPrompt = '';
+    if (requestMode === 'check') {
+      studentInputPrompt = '[STUDENT CLICKED "CHECK CODE" - EVALUATE ALL MILESTONES OF ACTIVE ACTIVITY AGAINST WORKSPACE FILES, VALIDATE SUCCESS IF CRITERIA MET, OR EXPLAIN REMAINING DEFICIENCIES]';
+    } else if (requestMode === 'concept') {
+      studentInputPrompt = '[STUDENT CLICKED "EXPLAIN CONCEPT" - EXPLAIN THE THEORETICAL LECTURE CONCEPTS AND RELEVANT SLIDES FOR THIS ACTIVITY WITHOUT GIVING AWAY CODE SOLUTIONS]';
+    } else if (isHintRequest || requestMode === 'hint') {
+      studentInputPrompt = '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILESTONE]';
+    } else {
+      studentInputPrompt = question?.trim() || 'Please inspect my code and guide me socratic-style on the next step.';
+    }
+
     const userMessageContent = `
 STUDENT METADATA:
 - Student Name: ${resolvedStudentName}
 - Seat: ${seatLabel || existingSession?.seat_label || 'PC 01'}
 - Active Activity: ${activeActivity ? `[${activeActivity.id}] ${activeActivity.title}` : 'General'}
-- Is Hint Request: ${Boolean(isHintRequest)}
+- Is Hint Request: ${Boolean(isHintRequest || requestMode === 'hint')}
+- Request Mode: ${requestMode || 'question'}
 - Addressing Guideline: When addressing or congratulating the student in 'socratic_reply' or 'competency_report.congratulations', warmly address them by their name (e.g. "Bravo ${resolvedStudentName} (${seatLabel || 'PC 01'})!" or "Bravo ${resolvedStudentName}!"). Never refer to the student as only a machine number like "PC 05".
 
 STUDENT CODE SNAPSHOT:
 ${filesContext}
 
 STUDENT INPUT:
-${isHintRequest ? '[STUDENT CLICKED "ASK FOR A HINT" - DIAGNOSE FIRST UNMET MILESTONE]' : (question?.trim() || 'Please inspect my code and guide me socratic-style on the next step.')}
+${studentInputPrompt}
 `.trim();
 
     // Format dialogue history (last 6 messages)

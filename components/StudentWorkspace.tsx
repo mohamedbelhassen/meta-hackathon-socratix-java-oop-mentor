@@ -149,7 +149,7 @@ export default function StudentWorkspace() {
       id: 'welcome',
       role: 'assistant',
       content:
-        'Hello! I am **Socratix**, your Socratic mentor. Ask a question or click **"💡 Stuck? Ask for a Hint"** to get guided through your milestones without giving away solutions.',
+        'Hello! I am **Socratix**, your Socratic mentor. Click **"🧪 Check"** to evaluate your code, **"💡 Hint"** for a Socratic clue, **"📖 Concept"** for theoretical slides, or ask any question freely.',
     },
   ]);
   const [input, setInput] = useState('');
@@ -530,7 +530,7 @@ export default function StudentWorkspace() {
             {
               id: 'welcome',
               role: 'assistant',
-              content: `Hello ${activeStudent.name}! I am **Socratix**. Ask me a question or click **"💡 Stuck? Ask for a Hint"** to get guided on ${activeLab!.title}.`,
+              content: `Hello ${activeStudent.name}! I am **Socratix**. Click **"🧪 Check"** to evaluate your code, **"💡 Hint"** for a clue, or **"📖 Concept"** to review the lecture slides for ${activeLab!.title}.`,
             },
           ]);
         }
@@ -814,15 +814,23 @@ export default function StudentWorkspace() {
     }
   };
 
-  // Core Socratic Invocation (used by both submit and 1-click hint)
-  const invokeTutor = async (userQuestion: string, isHint: boolean) => {
+  // Core Socratic Invocation (used by submit, check, hint, and concept)
+  const invokeTutor = async (
+    userQuestion: string,
+    mode: 'question' | 'check' | 'hint' | 'concept' = 'question'
+  ) => {
     if (!activeCourse || !activeLab || workspaceFiles.length === 0 || isAnalyzing) return;
 
     setIsAnalyzing(true);
 
-    const userMessageContent = isHint
-      ? '💡 [Asked for a Socratic Hint]'
-      : userQuestion;
+    let userMessageContent = userQuestion;
+    if (mode === 'check') {
+      userMessageContent = '🧪 [Requested Code Check & Milestone Evaluation]';
+    } else if (mode === 'hint') {
+      userMessageContent = '💡 [Asked for a Socratic Hint]';
+    } else if (mode === 'concept') {
+      userMessageContent = '📖 [Asked for Theory & Slide Concept Explanation]';
+    }
 
     setMessages((prev) => [
       ...prev,
@@ -857,8 +865,9 @@ export default function StudentWorkspace() {
           studentId: activeStudent.id,
           studentName: activeStudent?.name,
           seatLabel,
-          question: isHint ? '' : userQuestion,
-          isHintRequest: isHint,
+          question: mode === 'question' ? userQuestion : '',
+          isHintRequest: mode === 'hint',
+          requestMode: mode,
           files: currentFiles,
           history: conversationHistory,
         }),
@@ -923,12 +932,20 @@ export default function StudentWorkspace() {
     if (!input.trim()) return;
     const text = input.trim();
     setInput('');
-    invokeTutor(text, false);
+    invokeTutor(text, 'question');
   };
 
-  // 1-Click "Stuck? Ask for a Hint"
+  // 1-Click Handlers: Check Code, Socratic Hint, Theory & Concept
+  const handleCheckCode = () => {
+    invokeTutor('', 'check');
+  };
+
   const handleAskForHint = () => {
-    invokeTutor('', true);
+    invokeTutor('', 'hint');
+  };
+
+  const handleExplainConcept = () => {
+    invokeTutor('', 'concept');
   };
 
   const allLabPresets = activeLab?.demo_presets && activeLab.demo_presets.length > 0
@@ -1556,7 +1573,7 @@ export default function StudentWorkspace() {
                     Hello <strong>{activeStudent.name}</strong>! You are working on <strong>Activity {activeActivity?.order}: {activeActivity?.title}</strong>.
                   </p>
                   <p className="text-slate-400 text-[11px]">
-                    Ask me a question or click <strong>&quot;💡 Stuck? Ask for a Hint&quot;</strong> to get guided on this activity!
+                    Ask me a question or click <strong>&quot;🧪 Check&quot;</strong>, <strong>&quot;💡 Hint&quot;</strong>, or <strong>&quot;📖 Concept&quot;</strong> to get guided on this activity!
                   </p>
                 </div>
               </div>
@@ -1620,16 +1637,40 @@ export default function StudentWorkspace() {
         {/* Chat Input & Action Bar */}
         <div className="p-3 border-t border-slate-800 bg-slate-900/40">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-            {/* 1-Click Hint Button */}
+            {/* 1. Check Code Button */}
+            <Button
+              type="button"
+              onClick={handleCheckCode}
+              disabled={isAnalyzing}
+              className="h-10 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-emerald-950/20 shrink-0 transition-all"
+              title="Evaluate current workspace code against active milestones"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+              <span>Check</span>
+            </Button>
+
+            {/* 2. Socratic Hint Button */}
             <Button
               type="button"
               onClick={handleAskForHint}
               disabled={isAnalyzing}
-              className="h-10 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-3.5 rounded-xl gap-1.5 shadow-md shadow-amber-950/20 shrink-0"
+              className="h-10 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-amber-950/20 shrink-0 transition-all"
               title="Get an instant Socratic hint for your active milestone"
             >
-              <Lightbulb className="w-4 h-4 text-slate-950 fill-slate-950" />
-              <span>Stuck? Hint</span>
+              <Lightbulb className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
+              <span>Hint</span>
+            </Button>
+
+            {/* 3. Concept / Theory Button */}
+            <Button
+              type="button"
+              onClick={handleExplainConcept}
+              disabled={isAnalyzing}
+              className="h-10 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-indigo-950/20 shrink-0 transition-all"
+              title="Explain theoretical lecture concepts and relevant slides for this activity"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-white" />
+              <span>Concept</span>
             </Button>
 
             <Input

@@ -233,6 +233,7 @@ export interface TutorRequestBody {
   seatLabel?: string;
   question: string;
   isHintRequest?: boolean;
+  requestMode?: 'question' | 'check' | 'hint' | 'concept';
   files: DemoPresetFile[];
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
 }
