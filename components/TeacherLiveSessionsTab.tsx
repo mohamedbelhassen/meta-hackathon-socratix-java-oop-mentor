@@ -135,9 +135,16 @@ export default function TeacherLiveSessionsTab({
     if (!selectedLab) return;
     setIsSeedingDemo(true);
     try {
+      const supabase = getBrowserSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch('/api/sessions/seed-demo-class', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           courseId: course.id,
           labId: selectedLab.id,
@@ -159,13 +166,22 @@ export default function TeacherLiveSessionsTab({
     setIsLoadingInspection(true);
 
     try {
-      // 1. Fetch chat history
-      const res = await fetch(`/api/sessions/context?studentId=${session.student_id}&labId=${session.lab_id}`);
+      // 1. Fetch chat history with teacher authorization
+      const supabase = getBrowserSupabase();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = {};
+      if (authSession?.access_token) {
+        headers['Authorization'] = `Bearer ${authSession.access_token}`;
+      }
+
+      const res = await fetch(
+        `/api/sessions/context?studentId=${session.student_id}&labId=${session.lab_id}`,
+        { headers }
+      );
       const data = await res.json();
       setInspectedChatHistory(data.messages || []);
 
       // 2. Request live workspace dump via Realtime Broadcast
-      const supabase = getBrowserSupabase();
       const channel = supabase.channel('workspace-sync');
 
       let receivedDump = false;
@@ -219,11 +235,25 @@ export default function TeacherLiveSessionsTab({
   const handleResetSession = async (studentId: string, labId: string) => {
     if (!confirm('Are you sure you want to reset this student session?')) return;
     try {
-      await fetch('/api/sessions/reset', {
+      const supabase = getBrowserSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
+      const res = await fetch('/api/sessions/reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ studentId, labId }),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.error || 'Failed to reset student session.');
+        return;
+      }
+
       onRefresh();
     } catch (err) {
       console.error('Failed to reset session:', err);

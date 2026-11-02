@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { verifyStudentSessionAccess } from '@/lib/auth-guard';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +11,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'studentId and labId are required to reset a session.' },
         { status: 400 }
+      );
+    }
+
+    const access = await verifyStudentSessionAccess(req, studentId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { error: access.error || 'Forbidden' },
+        { status: access.actor === 'unauthorized' ? 401 : 403 }
       );
     }
 

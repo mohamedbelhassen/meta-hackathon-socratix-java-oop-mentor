@@ -305,41 +305,11 @@ export default function StudentWorkspace() {
           setAuthUser(null);
         }
 
-        // Fetch real registered students (role === 'student' and is_guest === false)
-        const { data: studentProfiles } = await supabase
-          .from('profiles')
-          .select('id, display_name, email, role, is_guest')
-          .eq('role', 'student')
-          .eq('is_guest', false)
-          .order('display_name', { ascending: true });
-
-        // Query active student sessions within the last 10 minutes to compute online presence
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-        const { data: recentSessions } = await supabase
-          .from('student_lab_sessions')
-          .select('student_id, updated_at')
-          .gte('updated_at', tenMinutesAgo);
-
-        const activeStudentIds = new Set(recentSessions?.map((s) => s.student_id) || []);
-
-        const studentList: StudentPersona[] = (studentProfiles || []).map((sp) => {
-          const isCurrentUser = Boolean(currentUserId && userRole === 'student' && sp.id === currentUserId);
-          const isOnline = isCurrentUser || activeStudentIds.has(sp.id);
-          return {
-            id: sp.id,
-            name: sp.display_name || sp.email?.split('@')[0] || 'Student',
-            role: 'Student',
-            email: sp.email,
-            isCustom: true,
-            isOnline,
-            isCurrentUser,
-            is_guest: sp.is_guest ?? false,
-          };
-        });
-
-        // If the authenticated student is not yet in studentProfiles (e.g. freshly signed up), prepend them
-        if (currentUserId && userRole === 'student' && !studentList.some((s) => s.id === currentUserId)) {
-          studentList.unshift({
+        // CASE 1: Authenticated Real Student (role === 'student')
+        // Strict privacy & IDOR protection: NEVER query other students' profiles or sessions.
+        // Lock workspace strictly to their own enrolled account.
+        if (currentUserId && userRole === 'student') {
+          const selfStudent: StudentPersona = {
             id: currentUserId,
             name: displayName,
             role: 'Student',
@@ -348,42 +318,68 @@ export default function StudentWorkspace() {
             isOnline: true,
             isCurrentUser: true,
             is_guest: false,
-          });
+          };
+          setRegisteredStudents([selfStudent]);
+          setActiveStudent(selfStudent);
+          saveActiveContext({ studentId: selfStudent.id });
+          return;
         }
 
-        // Sort: Current authenticated user first, then alphabetically by name
-        studentList.sort((a, b) => {
-          if (a.isCurrentUser) return -1;
-          if (b.isCurrentUser) return 1;
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        });
+        // CASE 2: Authenticated Teacher (role === 'teacher')
+        // Full pedagogical inspection: query class roster and recent sessions for teacher preview
+        if (currentUserId && userRole === 'teacher') {
+          const { data: studentProfiles } = await supabase
+            .from('profiles')
+            .select('id, display_name, email, role, is_guest')
+            .eq('role', 'student')
+            .eq('is_guest', false)
+            .order('display_name', { ascending: true });
 
-        setRegisteredStudents(studentList);
+          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+          const { data: recentSessions } = await supabase
+            .from('student_lab_sessions')
+            .select('student_id, updated_at')
+            .gte('updated_at', tenMinutesAgo);
 
-        // Active Student resolution
+          const activeStudentIds = new Set(recentSessions?.map((s) => s.student_id) || []);
+
+          const studentList: StudentPersona[] = (studentProfiles || []).map((sp) => ({
+            id: sp.id,
+            name: sp.display_name || sp.email?.split('@')[0] || 'Student',
+            role: 'Student',
+            email: sp.email,
+            isCustom: true,
+            isOnline: activeStudentIds.has(sp.id),
+            isCurrentUser: false,
+            is_guest: false,
+          }));
+
+          setRegisteredStudents(studentList);
+
+          const savedCtx = loadActiveContext();
+          const allPersonas = [...DEMO_PERSONAS, ...studentList];
+
+          if (savedCtx?.studentId && savedCtx.studentId !== currentUserId) {
+            const matched = allPersonas.find((p) => p.id === savedCtx.studentId);
+            if (matched) {
+              setActiveStudent(matched);
+              return;
+            }
+          }
+
+          // Default teacher preview to Guest Explorer or first persona
+          const defaultDemo = DEMO_PERSONAS.find((p) => p.name === 'Guest Explorer') || DEMO_PERSONAS[0];
+          setActiveStudent(defaultDemo);
+          saveActiveContext({ studentId: defaultDemo.id });
+          return;
+        }
+
+        // CASE 3: Guest / Jury Evaluator / Unauthenticated
+        // Strictly zero query for real students: privacy & confidentiality preserved
+        setRegisteredStudents([]);
         const savedCtx = loadActiveContext();
-        const allPersonas = [...DEMO_PERSONAS, ...studentList];
-
-        if (currentUserId && userRole === 'student') {
-          // If logged-in user is an authentic student, auto-select their own account!
-          const self = studentList.find((s) => s.id === currentUserId);
-          if (self && (!savedCtx?.studentId || savedCtx.studentId === currentUserId)) {
-            setActiveStudent(self);
-            saveActiveContext({ studentId: self.id });
-            return;
-          }
-        }
-
         if (savedCtx?.studentId) {
-          // If saved was teacher's own ID, reset away to Guest Explorer
-          if (currentUserId && userRole === 'teacher' && savedCtx.studentId === currentUserId) {
-            const defaultDemo = DEMO_PERSONAS.find((p) => p.name === 'Guest Explorer') || DEMO_PERSONAS[0];
-            setActiveStudent(defaultDemo);
-            saveActiveContext({ studentId: defaultDemo.id });
-            return;
-          }
-
-          const matched = allPersonas.find((p) => p.id === savedCtx.studentId);
+          const matched = DEMO_PERSONAS.find((p) => p.id === savedCtx.studentId);
           if (matched) {
             setActiveStudent(matched);
             return;
@@ -392,6 +388,7 @@ export default function StudentWorkspace() {
 
         // Default fallback to Bob
         setActiveStudent(DEMO_PERSONAS[0]);
+        saveActiveContext({ studentId: DEMO_PERSONAS[0].id });
       } catch (err) {
         console.error('[StudentWorkspace] Failed to sync auth and registered students:', err);
       }
@@ -533,7 +530,16 @@ export default function StudentWorkspace() {
 
     async function restoreSessionContext() {
       try {
-        const res = await fetch(`/api/sessions/context?studentId=${activeStudent.id}&labId=${activeLab!.id}`);
+        const supabase = getBrowserSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = {};
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        const res = await fetch(
+          `/api/sessions/context?studentId=${activeStudent.id}&labId=${activeLab!.id}`,
+          { headers }
+        );
         const data = await res.json();
         if (data.session) {
           setSessionState(data.session);
@@ -831,9 +837,15 @@ export default function StudentWorkspace() {
     setSeatLabel(newSeat);
     if (activeStudent && activeLab) {
       try {
+        const supabase = getBrowserSupabase();
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
         await fetch('/api/sessions/context', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             studentId: activeStudent.id,
             labId: activeLab.id,
@@ -852,14 +864,25 @@ export default function StudentWorkspace() {
     setIsResetting(true);
 
     try {
-      await fetch('/api/sessions/reset', {
+      const supabase = getBrowserSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      const res = await fetch('/api/sessions/reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           studentId: activeStudent.id,
           labId: activeLab.id,
         }),
       });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Failed to reset session');
+      }
 
       clearPresetEdits(activeLab.id, activePresetKey);
       setSessionState(null);
@@ -921,9 +944,16 @@ export default function StudentWorkspace() {
         .slice(-6)
         .map((m) => ({ role: m.role, content: m.content }));
 
+      const supabase = getBrowserSupabase();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+
       const res = await fetch('/api/tutor', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           courseId: activeCourse.id,
           labId: activeLab.id,
@@ -1174,67 +1204,85 @@ export default function StudentWorkspace() {
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] uppercase font-semibold text-slate-400">Student</label>
-                {activeStudent.isCurrentUser && (
+                <label className="text-[10px] uppercase font-semibold text-slate-400">
+                  {authUser?.role === 'student' ? 'Student Profile' : 'Student'}
+                </label>
+                {authUser?.role === 'student' ? (
                   <span className="text-[9px] text-emerald-400 font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    You (Active)
+                    You (Enrolled)
                   </span>
-                )}
-                {!activeStudent.isCurrentUser && activeStudent.isOnline && (
-                  <span className="text-[9px] text-emerald-400/90 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    Online
-                  </span>
-                )}
-                {authUser?.role === 'teacher' && (
+                ) : authUser?.role === 'teacher' ? (
                   <span className="text-[9px] text-amber-400/90 font-medium flex items-center gap-1" title="Teacher previewing student workspace">
                     <GraduationCap className="w-2.5 h-2.5 text-amber-400" />
                     Preview Mode
                   </span>
+                ) : (
+                  <span className="text-[9px] text-emerald-400/90 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    Jury Sandbox
+                  </span>
                 )}
               </div>
-              <select
-                value={activeStudent.id}
-                onChange={(e) => {
-                  const all = [...DEMO_PERSONAS, ...registeredStudents];
-                  const p = all.find((x) => x.id === e.target.value);
-                  if (p) {
-                    setActiveStudent(p);
-                    setSessionState(null);
-                    setCompletionReport(null);
-                    setCompletedMilestone(null);
-                    saveActiveContext({ studentId: p.id });
-                  }
-                }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-              >
-                <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
-                  {DEMO_PERSONAS.map((p) => (
-                    <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
-                      {p.name} ({p.role})
-                    </option>
-                  ))}
-                </optgroup>
 
-                <optgroup label="👤 Registered Students (Class Roster)" className="bg-slate-950 text-slate-300 font-semibold">
-                  {registeredStudents.length > 0 ? (
-                    registeredStudents.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
-                        {p.isCurrentUser
-                          ? `✨ ${p.name} (You - Online)`
-                          : p.isOnline
-                          ? `🟢 ${p.name} (Online)`
-                          : `⚪ ${p.name}`}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="" disabled className="bg-slate-900 text-slate-500 italic">
-                      No registered students yet
-                    </option>
+              {authUser?.role === 'student' ? (
+                <div
+                  className="w-full bg-slate-900 border border-emerald-500/40 rounded-md px-2.5 py-1 text-slate-200 text-xs flex items-center justify-between gap-1.5 shadow-sm"
+                  title={`Enrolled Student: ${activeStudent.name}`}
+                >
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300 text-[9px] font-bold shrink-0">
+                      {activeStudent.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-semibold text-slate-100 truncate text-xs">{activeStudent.name}</span>
+                  </div>
+                  {activeStudent.email && (
+                    <span className="text-[9px] text-slate-400 font-mono truncate max-w-[110px] shrink-0">
+                      {activeStudent.email}
+                    </span>
                   )}
-                </optgroup>
-              </select>
+                </div>
+              ) : (
+                <select
+                  value={activeStudent.id}
+                  onChange={(e) => {
+                    const all = [...DEMO_PERSONAS, ...registeredStudents];
+                    const p = all.find((x) => x.id === e.target.value);
+                    if (p) {
+                      setActiveStudent(p);
+                      setSessionState(null);
+                      setCompletionReport(null);
+                      setCompletedMilestone(null);
+                      saveActiveContext({ studentId: p.id });
+                    }
+                  }}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                >
+                  <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
+                    {DEMO_PERSONAS.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
+                        {p.name} ({p.role})
+                      </option>
+                    ))}
+                  </optgroup>
+
+                  {authUser?.role === 'teacher' && (
+                    <optgroup label="👤 Enrolled Students (Class Roster)" className="bg-slate-950 text-slate-300 font-semibold">
+                      {registeredStudents.length > 0 ? (
+                        registeredStudents.map((p) => (
+                          <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
+                            {p.isOnline ? `🟢 ${p.name} (Online)` : `⚪ ${p.name}`}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="" disabled className="bg-slate-900 text-slate-500 italic">
+                          No registered students yet
+                        </option>
+                      )}
+                    </optgroup>
+                  )}
+                </select>
+              )}
             </div>
 
             <div>

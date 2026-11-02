@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
+import { verifyStudentSessionAccess } from '@/lib/auth-guard';
 import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
 import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
@@ -89,6 +90,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Missing required parameters (courseId, labId, studentId, files).' },
         { status: 400 }
+      );
+    }
+
+    const access = await verifyStudentSessionAccess(req, studentId);
+    if (!access.authorized) {
+      return NextResponse.json(
+        { error: access.error || 'Forbidden' },
+        { status: access.actor === 'unauthorized' ? 401 : 403 }
       );
     }
 
