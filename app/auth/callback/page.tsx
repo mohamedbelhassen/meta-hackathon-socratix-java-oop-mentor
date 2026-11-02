@@ -27,15 +27,20 @@ export default function AuthCallbackPage() {
         if (!session) {
           // If session is not ready yet, listen for onAuthStateChange
           const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-            if (currentSession?.user) {
-              await syncUserAndFinish(currentSession.user);
+            if (currentSession?.user && currentSession?.access_token) {
+              await syncUserAndFinish(currentSession.user, currentSession.access_token);
               subscription.unsubscribe();
             }
           });
           return;
         }
 
-        await syncUserAndFinish(session.user);
+        if (session.access_token) {
+          await syncUserAndFinish(session.user, session.access_token);
+        } else {
+          setStatus('error');
+          setErrorMessage('Session access token is missing.');
+        }
       } catch (err: unknown) {
         console.error('[Auth Callback] Error:', err);
         setStatus('error');
@@ -43,7 +48,10 @@ export default function AuthCallbackPage() {
       }
     };
 
-    const syncUserAndFinish = async (user: { id: string; email?: string; user_metadata?: Record<string, unknown> }) => {
+    const syncUserAndFinish = async (
+      user: { id: string; email?: string; user_metadata?: Record<string, unknown> },
+      accessToken: string
+    ) => {
       const role = (user.user_metadata?.role === 'teacher' ? 'teacher' : 'student') as 'teacher' | 'student';
       const displayName = (user.user_metadata?.display_name as string) || user.email?.split('@')[0] || 'User';
 
@@ -53,12 +61,12 @@ export default function AuthCallbackPage() {
       // Auto-sync profile to public.profiles via server API
       await fetch('/api/auth/sync-profile', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
-          id: user.id,
-          email: user.email,
           display_name: displayName,
-          role,
         }),
       }).catch(console.error);
 

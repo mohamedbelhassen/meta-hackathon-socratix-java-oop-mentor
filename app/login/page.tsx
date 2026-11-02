@@ -41,16 +41,16 @@ export default function LoginPage() {
         });
         if (error) throw error;
 
-        // Auto-sync profile if user object is returned immediately
-        if (data?.user) {
+        // Auto-sync profile if user and session token are returned immediately
+        if (data?.user && data?.session?.access_token) {
           await fetch('/api/auth/sync-profile', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${data.session.access_token}`,
+            },
             body: JSON.stringify({
-              id: data.user.id,
-              email: data.user.email,
               display_name: displayName || email.split('@')[0],
-              role,
             }),
           }).catch(console.error);
         }
@@ -70,16 +70,18 @@ export default function LoginPage() {
           const userRole = (data.user.user_metadata?.role as 'teacher' | 'student') || role;
           const userDisplayName = (data.user.user_metadata?.display_name as string) || email.split('@')[0];
 
-          await fetch('/api/auth/sync-profile', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: data.user.id,
-              email: data.user.email,
-              display_name: userDisplayName,
-              role: userRole,
-            }),
-          }).catch(console.error);
+          if (data.session?.access_token) {
+            await fetch('/api/auth/sync-profile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.session.access_token}`,
+              },
+              body: JSON.stringify({
+                display_name: userDisplayName,
+              }),
+            }).catch(console.error);
+          }
 
           router.push(userRole === 'teacher' ? '/teacher' : '/student');
         } else {

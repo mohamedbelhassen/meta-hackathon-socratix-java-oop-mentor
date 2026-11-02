@@ -92,20 +92,25 @@ CREATE TRIGGER on_auth_user_created
 
 ---
 
-## 4. Couche 2 : Route Serveur de Synchronisation (`/api/auth/sync-profile`)
+## 4. Couche 2 : Route Serveur de Synchronisation Sécurisée (`/api/auth/sync-profile`)
 
 Située dans [`app/api/auth/sync-profile/route.ts`](file:///c:/dev/_current_apps/meta-hackaton-socratix-java-oop-mentor/app/api/auth/sync-profile/route.ts).
 
-### Rôle :
-* Appelé côté client dès qu'une session est initialisée (sur `/auth/callback`, sur `AuthHashListener`, ou sur `/login`).
-* Utilise `getServiceSupabase()` avec `SUPABASE_SERVICE_ROLE_KEY` qui contourne les politiques RLS restrictives et garantit que la ligne `public.profiles` est créée ou synchronisée même si le trigger base avait un délai de propagation.
-* Payload JSON :
-  ```json
+### Sécurité & Rôle :
+* Appelé côté client dès qu'une session authentifiée est initialisée (sur `/auth/callback`, sur `AuthHashListener`, ou sur `/login`).
+* **Authentification obligatoire (SEC-02) :** Exige impérativement un en-tête `Authorization: Bearer <access_token>`. Le jeton est certifié côté serveur via `supabase.auth.getUser(token)`. Tout appel non authentifié est rejeté avec un code HTTP 401.
+* **Intégrité des identités :** L'identifiant `user.id` et l'adresse `user.email` sont extraits exclusivement de la session vérifiée, rendant impossible l'usurpation de compte.
+* **Protection Sandbox & Rôles :**
+  - Interdit formellement toute modification des profils invités/personas démo (`is_guest = true`).
+  - Ignore tout paramètre `role` arbitraire injecté dans le payload : le rôle existant en base est conservé s'il s'agit d'un enseignant (`teacher`), sinon `'student'` est attribué par défaut.
+* En-têtes et Payload :
+  ```http
+  POST /api/auth/sync-profile HTTP/1.1
+  Authorization: Bearer <supabase_access_token>
+  Content-Type: application/json
+
   {
-    "id": "559cecbe-5c93-4c5f-8139-754d18be211b",
-    "email": "abou.aziz.belhassen@gmail.com",
-    "display_name": "Abou Aziz Belhassen",
-    "role": "teacher"
+    "display_name": "Abou Aziz Belhassen"
   }
   ```
 

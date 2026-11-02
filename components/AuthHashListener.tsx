@@ -30,7 +30,7 @@ export default function AuthHashListener() {
       try {
         // Supabase JS auto-parses the hash fragment when getSession() is called
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || !session) return;
+        if (error || !session || !session.access_token) return;
 
         const user = session.user;
         const role = (user.user_metadata?.role === 'teacher' ? 'teacher' : 'student') as 'teacher' | 'student';
@@ -39,12 +39,12 @@ export default function AuthHashListener() {
         // Securely ensure the profile row is present in public.profiles
         await fetch('/api/auth/sync-profile', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
-            id: user.id,
-            email: user.email,
             display_name: displayName,
-            role,
           }),
         }).catch(console.error);
 
