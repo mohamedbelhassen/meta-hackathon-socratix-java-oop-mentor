@@ -8,6 +8,7 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  AlertCircle,
   Lock,
   Eye,
   EyeOff,
@@ -21,6 +22,48 @@ interface DeleteCourseModalProps {
   onCourseDeleted: (courseId: string) => void;
 }
 
+/**
+ * Synthesizes a soft, native rejection buzzer using HTML5 Web Audio API.
+ * Plays two rapid, low-pass filtered low tones (180Hz -> 130Hz) without external assets.
+ */
+function playErrorBuzzer() {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const startTime = ctx.currentTime;
+
+    const tones = [180, 130];
+    tones.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, startTime + idx * 0.1);
+
+      gain.gain.setValueAtTime(0, startTime + idx * 0.1);
+      gain.gain.linearRampToValueAtTime(0.12, startTime + idx * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + idx * 0.1 + 0.12);
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(450, startTime);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime + idx * 0.1);
+      osc.stop(startTime + idx * 0.1 + 0.13);
+    });
+  } catch (err) {
+    console.warn('Web Audio buzzer error:', err);
+  }
+}
+
 export default function DeleteCourseModal({
   isOpen,
   onClose,
@@ -31,16 +74,24 @@ export default function DeleteCourseModal({
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen || !course) return null;
+
+  const triggerErrorFeedback = (msg: string) => {
+    setError(msg);
+    setIsShaking(true);
+    playErrorBuzzer();
+    setTimeout(() => setIsShaking(false), 500);
+  };
 
   const handleDelete = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (!pin.trim()) {
-      setError('Please enter the Jury PIN to authorize deletion.');
+      triggerErrorFeedback('Please enter the Jury PIN to authorize deletion.');
       return;
     }
 
@@ -62,7 +113,8 @@ export default function DeleteCourseModal({
       onCourseDeleted(course.id);
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Course deletion rejected');
+      const msg = err instanceof Error ? err.message : 'Course deletion rejected';
+      triggerErrorFeedback(msg);
     } finally {
       setIsDeleting(false);
     }
@@ -71,6 +123,7 @@ export default function DeleteCourseModal({
   const handleFillDemoPin = () => {
     setPin(defaultDemoPin);
     setError(null);
+    setIsShaking(false);
   };
 
   return (
@@ -104,13 +157,6 @@ export default function DeleteCourseModal({
 
         {/* Form Body */}
         <form onSubmit={handleDelete} className="p-6 space-y-4">
-          {error && (
-            <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{error}</span>
-            </div>
-          )}
-
           {/* Warning Banner */}
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-2">
             <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold">
@@ -144,13 +190,24 @@ export default function DeleteCourseModal({
               </button>
             </div>
 
-            <div className="relative">
+            <div
+              className={`relative transition-all duration-150 ${
+                isShaking ? 'animate-[shake_0.4s_ease-in-out]' : ''
+              }`}
+            >
               <input
                 type={showPin ? 'text' : 'password'}
                 placeholder={`Enter Jury PIN (e.g. ${defaultDemoPin})`}
                 value={pin}
-                onChange={(e) => setPin(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-mono tracking-widest focus:outline-none focus:border-rose-500 pr-10"
+                onChange={(e) => {
+                  setPin(e.target.value);
+                  if (error) setError(null);
+                }}
+                className={`w-full bg-slate-950 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-mono tracking-widest focus:outline-none pr-10 transition-colors ${
+                  error
+                    ? 'border-2 border-rose-500 bg-rose-950/20 text-rose-100 placeholder:text-rose-400/50 focus:border-rose-400'
+                    : 'border border-slate-700 focus:border-rose-500'
+                }`}
                 required
                 autoFocus
               />
@@ -162,8 +219,17 @@ export default function DeleteCourseModal({
                 {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* INLINE ERROR FEEDBACK DIRECTLY UNDER INPUT */}
+            {error && (
+              <div className="p-2.5 bg-rose-500/15 border border-rose-500/50 rounded-xl text-xs text-rose-300 flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span className="font-semibold">{error}</span>
+              </div>
+            )}
+
             <p className="text-[10px] text-slate-500">
-              Configured Hackathon Jury PIN is <code className="text-slate-300">{defaultDemoPin}</code>.
+              Configured Hackathon Jury PIN is <code className="text-slate-300 font-mono">{defaultDemoPin}</code>.
             </p>
           </div>
 
@@ -196,6 +262,15 @@ export default function DeleteCourseModal({
             </Button>
           </div>
         </form>
+
+        {/* Rejection shake keyframes */}
+        <style jsx global>{`
+          @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+          }
+        `}</style>
       </div>
     </div>
   );
