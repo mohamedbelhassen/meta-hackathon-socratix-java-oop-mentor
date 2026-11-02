@@ -1209,6 +1209,7 @@ export default function CourseStudioPanel({
           isOpen={showCompilationModal}
           onClose={() => setShowCompilationModal(false)}
           course={course}
+          initialLang={lang}
           onProceedToLabs={() => {
             setShowCompilationModal(false);
           }}
@@ -1222,6 +1223,7 @@ export default function CourseStudioPanel({
           onClose={() => setShowLabsIngestionModal(false)}
           labs={labs}
           course={course}
+          initialLang={lang}
           onInspectLab={(lb) => {
             setShowLabsIngestionModal(false);
             setSelectedLabForInspection(lb);

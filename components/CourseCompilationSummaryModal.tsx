@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Course, CourseChapter } from '@/types/socratix';
 import {
   Sparkles,
@@ -20,6 +20,7 @@ interface CourseCompilationSummaryModalProps {
   isOpen: boolean;
   onClose: () => void;
   course: Course & { course_chapters?: CourseChapter[] };
+  initialLang?: 'en' | 'fr';
   onProceedToLabs?: () => void;
 }
 
@@ -27,10 +28,19 @@ export default function CourseCompilationSummaryModal({
   isOpen,
   onClose,
   course,
+  initialLang = 'en',
   onProceedToLabs,
 }: CourseCompilationSummaryModalProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'prompt' | 'kb'>('overview');
   const [copied, setCopied] = useState(false);
+  const [lang, setLang] = useState<'en' | 'fr'>(initialLang);
+
+  // Synchronize with initialLang when modal opens or parent toggles
+  useEffect(() => {
+    if (initialLang) {
+      setLang(initialLang);
+    }
+  }, [initialLang, isOpen]);
 
   if (!isOpen || !course) return null;
 
@@ -53,6 +63,115 @@ export default function CourseCompilationSummaryModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const i18n = {
+    en: {
+      title: 'Curriculum Synthesized & AI Mentor Ready',
+      subtitle: (
+        <>
+          Meta AI <span className="font-mono text-emerald-400">muse-spark-1.3</span> distilled your lecture slides into a canonical taxonomy and custom Socratic mentor prompt.
+        </>
+      ),
+      closeTooltip: 'Close',
+      kpiChapters: 'Lecture Chapters',
+      kpiChaptersSub: 'PDFs processed',
+      kpiTaxonomy: 'Canonical Taxonomy',
+      kpiTaxonomySub: 'Deduplicated concepts',
+      kpiPrompt: 'Tutor System Prompt',
+      kpiPromptSub: (chars: number) => `${chars} characters`,
+      kpiKb: 'Curriculum KB',
+      kpiKbSub: 'Unified slide summaries',
+      tabOverview: 'AI Curriculum Overview',
+      tabPrompt: 'Generated Mentor System Prompt',
+      tabKb: 'Compiled Knowledge Base',
+      pillar1Title: 'Deduplicated Taxonomy',
+      pillar1Desc: (
+        <>
+          Scanned across all lecture chapters to eliminate overlapping definitions. Every concept has a unique canonical <code className="text-emerald-400 font-mono">SCREAMING_SNAKE_CASE</code> key linked to its primary slide.
+        </>
+      ),
+      pillar2Title: 'Pedagogical Slide Anchors',
+      pillar2Desc: (
+        <>
+          Extracted the professor&apos;s signature analogies (e.g. <em>Four Slide 42</em>, <em>Félin Slide 8</em>). The Socratic AI redirects students to these exact slide numbers instead of hallucinating foreign examples.
+        </>
+      ),
+      pillar3Title: 'Course-Specific Few-Shots',
+      pillar3Desc: (
+        <>
+          Generated 2 few-shot reasoning exemplars tailored to {course.title}, priming Meta AI to maintain an inquisitive Socratic posture without giving away code answers.
+        </>
+      ),
+      matrixTitle: 'Canonical Competency Matrix by Chapter',
+      matrixCategories: (count: number) => `${count} Categories`,
+      promptHint: (
+        <>
+          This custom prompt is injected by <code className="text-emerald-400">/api/tutor</code> and cached via Meta AI Ephemeral Prompt Caching.
+        </>
+      ),
+      copyPrompt: 'Copy Prompt',
+      promptCopied: 'Copied',
+      noPrompt: '// No tutor prompt compiled yet.',
+      kbHint: (count: number, tokens: number) =>
+        `Unified curriculum reference synthesized from all ${count} chapters (~${tokens} tokens).`,
+      noKb: '// No compiled knowledge base yet.',
+      closeOverview: 'Close Overview',
+      nextStep: 'Next Step: Ingest & Decompose Labs (TP)',
+    },
+    fr: {
+      title: 'Curriculum Synthétisé & Mentor IA Prêt',
+      subtitle: (
+        <>
+          Meta AI <span className="font-mono text-emerald-400">muse-spark-1.3</span> a distillé vos diapositives de cours en une taxonomie canonique et un prompt mentor socratique sur-mesure.
+        </>
+      ),
+      closeTooltip: 'Fermer',
+      kpiChapters: 'Chapitres de Cours',
+      kpiChaptersSub: 'PDFs traités',
+      kpiTaxonomy: 'Taxonomie Canonique',
+      kpiTaxonomySub: 'Concepts dédupliqués',
+      kpiPrompt: 'Prompt Système Tuteur',
+      kpiPromptSub: (chars: number) => `${chars} caractères`,
+      kpiKb: 'Base de Connaissances',
+      kpiKbSub: 'Résumés de slides unifiés',
+      tabOverview: 'Vue d\'Ensemble du Curriculum IA',
+      tabPrompt: 'Prompt Système Tuteur Généré',
+      tabKb: 'Base de Connaissances Compilée',
+      pillar1Title: 'Taxonomie Dédupliquée',
+      pillar1Desc: (
+        <>
+          Analyse de l&apos;ensemble des chapitres de cours pour éliminer les définitions redondantes. Chaque concept possède une clé canonique unique <code className="text-emerald-400 font-mono">SCREAMING_SNAKE_CASE</code> reliée à sa diapositive de référence.
+        </>
+      ),
+      pillar2Title: 'Ancrages Pédagogiques aux Slides',
+      pillar2Desc: (
+        <>
+          Extraction des analogies signatures de l&apos;enseignant (ex. <em>Four Slide 42</em>, <em>Félin Slide 8</em>). L&apos;IA socratique redirige précisément les étudiants vers ces numéros de diapositive au lieu d&apos;inventer des exemples extérieurs.
+        </>
+      ),
+      pillar3Title: 'Few-Shots Spécifiques au Cours',
+      pillar3Desc: (
+        <>
+          Génération de 2 exemples de raisonnement socratique calibrés sur {course.title}, entraînant Meta AI à conserver une posture maïeutique sans jamais donner la solution de code directement.
+        </>
+      ),
+      matrixTitle: 'Matrice Canonique des Compétences par Chapitre',
+      matrixCategories: (count: number) => `${count} Catégories`,
+      promptHint: (
+        <>
+          Ce prompt sur-mesure est injecté par <code className="text-emerald-400">/api/tutor</code> et mis en cache via le Prompt Caching éphémère de Meta AI.
+        </>
+      ),
+      copyPrompt: 'Copier le Prompt',
+      promptCopied: 'Copié !',
+      noPrompt: '// Aucun prompt tuteur compilé pour le moment.',
+      kbHint: (count: number, tokens: number) =>
+        `Référentiel pédagogique unifié synthétisé à partir des ${count} chapitres (~${tokens} tokens).`,
+      noKb: '// Aucune base de connaissances compilée pour le moment.',
+      closeOverview: 'Fermer la Synthèse',
+      nextStep: 'Étape Suivante : Ingérer & Décomposer les TP (Labs)',
+    },
+  }[lang];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
@@ -65,22 +184,43 @@ export default function CourseCompilationSummaryModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg font-bold text-white">
-                  Curriculum Synthesized & AI Mentor Ready
+                  {i18n.title}
                 </h2>
                 <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-mono">
                   {course.code}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-400">
-                Meta AI <span className="font-mono text-emerald-400">muse-spark-1.3</span> distilled your lecture slides into a canonical taxonomy and custom Socratic mentor prompt.
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="inline-flex items-center gap-0.5 bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-800 text-[10px] font-mono shrink-0">
+                  <button
+                    onClick={() => setLang('en')}
+                    className={`px-1.5 py-0.5 rounded transition ${
+                      lang === 'en' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    EN
+                  </button>
+                  <span className="text-slate-600">|</span>
+                  <button
+                    onClick={() => setLang('fr')}
+                    className={`px-1.5 py-0.5 rounded transition ${
+                      lang === 'fr' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                  >
+                    FR
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400">
+                  {i18n.subtitle}
+                </p>
+              </div>
             </div>
           </div>
 
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title="Fermer"
+            title={i18n.closeTooltip}
           >
             <X className="w-5 h-5" />
           </button>
@@ -89,27 +229,27 @@ export default function CourseCompilationSummaryModal({
         {/* 4-KPI SUMMARY BAR */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-950/40 border-b border-slate-800 text-xs">
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-slate-400">Lecture Chapters</span>
+            <span className="text-[10px] uppercase font-mono text-slate-400">{i18n.kpiChapters}</span>
             <div className="text-xl font-extrabold text-white mt-0.5">{chaptersCount}</div>
-            <span className="text-[10px] text-slate-500">PDFs processed</span>
+            <span className="text-[10px] text-slate-500">{i18n.kpiChaptersSub}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-emerald-400">Canonical Taxonomy</span>
+            <span className="text-[10px] uppercase font-mono text-emerald-400">{i18n.kpiTaxonomy}</span>
             <div className="text-xl font-extrabold text-emerald-400 mt-0.5">{totalMicroCompetencies}</div>
-            <span className="text-[10px] text-slate-500">Deduplicated concepts</span>
+            <span className="text-[10px] text-slate-500">{i18n.kpiTaxonomySub}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-cyan-400">Tutor System Prompt</span>
+            <span className="text-[10px] uppercase font-mono text-cyan-400">{i18n.kpiPrompt}</span>
             <div className="text-xl font-extrabold text-cyan-300 mt-0.5">~{promptTokensEstimate} tok</div>
-            <span className="text-[10px] text-slate-500">{course.compiled_tutor_prompt?.length || 0} characters</span>
+            <span className="text-[10px] text-slate-500">{i18n.kpiPromptSub(course.compiled_tutor_prompt?.length || 0)}</span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-amber-400">Curriculum KB</span>
+            <span className="text-[10px] uppercase font-mono text-amber-400">{i18n.kpiKb}</span>
             <div className="text-xl font-extrabold text-amber-300 mt-0.5">~{kbTokensEstimate} tok</div>
-            <span className="text-[10px] text-slate-500">Unified slide summaries</span>
+            <span className="text-[10px] text-slate-500">{i18n.kpiKbSub}</span>
           </div>
         </div>
 
@@ -124,7 +264,7 @@ export default function CourseCompilationSummaryModal({
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>AI Curriculum Overview</span>
+            <span>{i18n.tabOverview}</span>
           </button>
 
           <button
@@ -136,7 +276,7 @@ export default function CourseCompilationSummaryModal({
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
-            <span>Generated Mentor System Prompt</span>
+            <span>{i18n.tabPrompt}</span>
           </button>
 
           <button
@@ -148,7 +288,7 @@ export default function CourseCompilationSummaryModal({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Compiled Knowledge Base</span>
+            <span>{i18n.tabKb}</span>
           </button>
         </div>
 
@@ -162,9 +302,9 @@ export default function CourseCompilationSummaryModal({
                   <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
                     1
                   </div>
-                  <h3 className="font-bold text-white text-sm">Deduplicated Taxonomy</h3>
+                  <h3 className="font-bold text-white text-sm">{i18n.pillar1Title}</h3>
                   <p className="text-slate-400 leading-relaxed text-[11px]">
-                    Scanned across all lecture chapters to eliminate overlapping definitions. Every concept has a unique canonical <code className="text-emerald-400 font-mono">SCREAMING_SNAKE_CASE</code> key linked to its primary slide.
+                    {i18n.pillar1Desc}
                   </p>
                 </div>
 
@@ -172,9 +312,9 @@ export default function CourseCompilationSummaryModal({
                   <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
                     2
                   </div>
-                  <h3 className="font-bold text-white text-sm">Pedagogical Slide Anchors</h3>
+                  <h3 className="font-bold text-white text-sm">{i18n.pillar2Title}</h3>
                   <p className="text-slate-400 leading-relaxed text-[11px]">
-                    Extracted the professor&apos;s signature analogies (e.g. <em>Four Slide 42</em>, <em>Félin Slide 8</em>). The Socratic AI redirects students to these exact slide numbers instead of hallucinating foreign examples.
+                    {i18n.pillar2Desc}
                   </p>
                 </div>
 
@@ -182,9 +322,9 @@ export default function CourseCompilationSummaryModal({
                   <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
                     3
                   </div>
-                  <h3 className="font-bold text-white text-sm">Course-Specific Few-Shots</h3>
+                  <h3 className="font-bold text-white text-sm">{i18n.pillar3Title}</h3>
                   <p className="text-slate-400 leading-relaxed text-[11px]">
-                    Generated 2 few-shot reasoning exemplars tailored to {course.title}, priming Meta AI to maintain an inquisitive Socratic posture without giving away code answers.
+                    {i18n.pillar3Desc}
                   </p>
                 </div>
               </div>
@@ -194,10 +334,10 @@ export default function CourseCompilationSummaryModal({
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     <Layers className="w-4 h-4 text-emerald-400" />
-                    <span>Canonical Competency Matrix by Chapter</span>
+                    <span>{i18n.matrixTitle}</span>
                   </h3>
                   <Badge variant="outline" className="font-mono text-[10px] text-slate-400 border-slate-800">
-                    {course.competency_matrix?.length || 0} Categories
+                    {i18n.matrixCategories(course.competency_matrix?.length || 0)}
                   </Badge>
                 </div>
 
@@ -238,7 +378,7 @@ export default function CourseCompilationSummaryModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">
-                  This custom prompt is injected by <code className="text-emerald-400">/api/tutor</code> and cached via Meta AI Ephemeral Prompt Caching.
+                  {i18n.promptHint}
                 </span>
                 <Button
                   size="sm"
@@ -247,12 +387,12 @@ export default function CourseCompilationSummaryModal({
                   className="text-xs h-7 bg-slate-950 border-slate-800 text-slate-300 hover:text-white"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
-                  {copied ? 'Copied' : 'Copy Prompt'}
+                  {copied ? i18n.promptCopied : i18n.copyPrompt}
                 </Button>
               </div>
 
               <pre className="p-4 rounded-xl bg-slate-950 border border-slate-850 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
-                {course.compiled_tutor_prompt || '// No tutor prompt compiled yet.'}
+                {course.compiled_tutor_prompt || i18n.noPrompt}
               </pre>
             </div>
           )}
@@ -261,12 +401,12 @@ export default function CourseCompilationSummaryModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between text-slate-400">
                 <span>
-                  Unified curriculum reference synthesized from all {chaptersCount} chapters (~{kbTokensEstimate} tokens).
+                  {i18n.kbHint(chaptersCount, kbTokensEstimate)}
                 </span>
               </div>
 
               <pre className="p-4 rounded-xl bg-slate-950 border border-slate-850 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
-                {course.compiled_knowledge_base || '// No compiled knowledge base yet.'}
+                {course.compiled_knowledge_base || i18n.noKb}
               </pre>
             </div>
           )}
@@ -280,7 +420,7 @@ export default function CourseCompilationSummaryModal({
             onClick={onClose}
             className="text-xs bg-slate-900 border-slate-800 text-slate-300 hover:text-white"
           >
-            Close Overview
+            {i18n.closeOverview}
           </Button>
 
           {onProceedToLabs && (
@@ -291,7 +431,7 @@ export default function CourseCompilationSummaryModal({
               }}
               className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-lg shadow-emerald-950/50"
             >
-              <span>Next Step: Ingest & Decompose Labs (TP)</span>
+              <span>{i18n.nextStep}</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
             </Button>
           )}

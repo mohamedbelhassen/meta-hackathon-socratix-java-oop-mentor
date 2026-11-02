@@ -90,6 +90,9 @@ export default function LabDetailModal({
       noConcepts: 'No micro-competencies tagged for this lab.',
       presetsTitle: 'Meta AI 1-Click Judge Presets',
       presetsDesc: 'Pre-generated working code setups allowing judges to test Socratic mentoring on this lab without local files.',
+      presetsCount: (count: number) => `${count} Presets Available`,
+      presetBuggyBadge: 'Buggy Attempt',
+      presetSolutionBadge: 'Validated Solution',
       actShort: 'Act',
       copy: 'Copy',
       copied: 'Copied',
@@ -124,6 +127,9 @@ export default function LabDetailModal({
       noConcepts: 'Aucune micro-compétence associée à ce TP.',
       presetsTitle: 'Presets Démo 1-Clic Meta AI',
       presetsDesc: 'Configurations de code pré-générées permettant au jury de tester le mentorat socratique sans fichier local.',
+      presetsCount: (count: number) => `${count} Presets Disponibles`,
+      presetBuggyBadge: 'Erreur Intentionnelle',
+      presetSolutionBadge: 'Solution Validée',
       actShort: 'Act.',
       copy: 'Copier',
       copied: 'Copié !',
@@ -142,6 +148,9 @@ export default function LabDetailModal({
     },
   }[lang];
 
+  const rawTitle = getLocalizedLabTitle(lab, lang);
+  const cleanTitle = rawTitle.replace(/^(?:TP\s*\d+\s*[-—:]*\s*)+/i, '').trim() || rawTitle;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-5xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
@@ -152,11 +161,14 @@ export default function LabDetailModal({
               <Layers className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-cyan-400 font-bold text-sm">
-                  TP {lab.lab_number} • {lab.code}
-                </span>
-                <h2 className="text-base font-bold text-white">{getLocalizedLabTitle(lab, lang)}</h2>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <Badge
+                  variant="outline"
+                  className="font-mono text-xs font-bold text-cyan-300 border-cyan-500/40 bg-cyan-950/60 px-2.5 py-0.5 rounded-lg shrink-0"
+                >
+                  TP {lab.lab_number}
+                </Badge>
+                <h2 className="text-base font-bold text-white tracking-tight">{cleanTitle}</h2>
                 {lab.pdf_url && (
                   <a
                     href={lab.pdf_url}
@@ -386,68 +398,119 @@ export default function LabDetailModal({
           {/* TAB 3: DEMO PRESETS */}
           {activeTab === 'presets' && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-950 border border-slate-800">
-                <div>
-                  <h3 className="font-bold text-white text-sm flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-cyan-400" />
-                    <span>{i18n.presetsTitle}</span>
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {i18n.presetsDesc}
-                  </p>
+              <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4 shadow-lg">
+                {/* Header info */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <span>{i18n.presetsTitle}</span>
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                      {i18n.presetsDesc}
+                    </p>
+                  </div>
+
+                  {lab.demo_presets && lab.demo_presets.length > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="shrink-0 font-mono text-[11px] text-cyan-300 border-cyan-500/30 bg-cyan-950/30 px-2.5 py-1"
+                    >
+                      {i18n.presetsCount(lab.demo_presets.length)}
+                    </Badge>
+                  )}
                 </div>
 
+                {/* Presets Cards Grid */}
                 {lab.demo_presets && lab.demo_presets.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-3 border-t border-slate-800/80">
                     {lab.demo_presets.map((preset, pIdx) => {
+                      const isSelected = selectedPresetIdx === pIdx;
                       const act = lab.activities?.find((a) => a.id === preset.activity_id);
-                      const actLabel = act ? `${i18n.actShort} ${act.order}` : null;
-                      return (
-                        <Button
-                          key={preset.key}
-                          size="sm"
-                          variant={selectedPresetIdx === pIdx ? 'default' : 'outline'}
+                      const isBuggy =
+                        preset.preset_type === 'buggy' ||
+                        preset.label.toLowerCase().includes('buggy') ||
+                        preset.label.toLowerCase().includes('error') ||
+                        preset.label.toLowerCase().includes('erreur');
+
+                      const rawTitle = getLocalizedLabTitle(lab, lang);
+  const cleanTitle = rawTitle.replace(/^(?:TP\s*\d+\s*[-—:]*\s*)+/i, '').trim() || rawTitle;
+
+  return (
+                        <button
+                          key={preset.key || pIdx}
+                          type="button"
                           onClick={() => {
                             setSelectedPresetIdx(pIdx);
                             setSelectedFileIdx(0);
                           }}
-                          className={`text-xs h-8 gap-1.5 ${
-                            selectedPresetIdx === pIdx
-                              ? 'bg-cyan-600 text-white hover:bg-cyan-500'
-                              : 'bg-slate-900 border-slate-800 text-slate-300'
+                          className={`p-3 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between gap-2 ${
+                            isSelected
+                              ? 'bg-cyan-950/40 border-cyan-500/60 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-500/40'
+                              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
                           }`}
                         >
-                          {actLabel && (
-                            <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-slate-950/80 text-cyan-300 border border-cyan-500/30">
-                              {actLabel}
-                            </span>
-                          )}
-                          <span>{preset.label}</span>
-                        </Button>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {act && (
+                                <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-slate-950 text-cyan-400 border border-cyan-500/30">
+                                  {i18n.actShort} {act.order}
+                                </span>
+                              )}
+                              <span
+                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${
+                                  isBuggy
+                                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                                }`}
+                              >
+                                {isBuggy ? i18n.presetBuggyBadge : i18n.presetSolutionBadge}
+                              </span>
+                            </div>
+
+                            <span
+                              className={`w-2 h-2 rounded-full transition ${
+                                isSelected ? 'bg-cyan-400 shadow-sm shadow-cyan-400' : 'bg-slate-700'
+                              }`}
+                            />
+                          </div>
+
+                          <div
+                            className={`text-xs font-semibold ${
+                              isSelected ? 'text-white' : 'text-slate-300'
+                            }`}
+                          >
+                            {preset.label}
+                          </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
               </div>
 
+              {/* Code Viewer Panel */}
               {currentPreset ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-slate-950 px-4 py-2 rounded-xl border border-slate-850">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-300">
+                <div className="rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-xl space-y-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-3 bg-slate-900/70 border-b border-slate-800">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileCode2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                      <span className="text-xs text-slate-300 truncate">
                         {currentPreset.description || currentPreset.label}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       {currentPreset.files?.map((f, fIdx) => (
                         <button
                           key={f.name}
                           onClick={() => setSelectedFileIdx(fIdx)}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium transition ${
+                          className={`px-3 py-1 rounded-lg text-xs font-mono font-medium transition ${
                             selectedFileIdx === fIdx
-                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
-                              : 'text-slate-400 hover:text-white'
+                              ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                              : 'text-slate-400 hover:text-white bg-slate-950/60 border border-slate-800'
                           }`}
                         >
                           {f.name}
@@ -458,7 +521,7 @@ export default function LabDetailModal({
                         size="sm"
                         variant="outline"
                         onClick={handleCopyCode}
-                        className="text-xs h-7 ml-2 bg-slate-900 border-slate-800 text-slate-300 hover:text-white"
+                        className="text-xs h-7 ml-1 bg-slate-800 border-slate-700 text-slate-200 hover:text-white hover:bg-slate-700"
                       >
                         {copiedCode ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
                         {copiedCode ? i18n.copied : i18n.copy}
@@ -466,7 +529,7 @@ export default function LabDetailModal({
                     </div>
                   </div>
 
-                  <pre className="p-4 rounded-2xl bg-slate-950 border border-slate-850 font-mono text-xs text-slate-300 leading-relaxed max-h-[46vh] overflow-y-auto whitespace-pre">
+                  <pre className="p-4 bg-slate-950 font-mono text-xs text-slate-200 leading-relaxed max-h-[46vh] overflow-y-auto whitespace-pre selection:bg-cyan-500/30">
                     {currentFile?.content || i18n.emptyFile}
                   </pre>
                 </div>

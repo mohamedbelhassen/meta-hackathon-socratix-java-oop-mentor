@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lab, Course } from '@/types/socratix';
 import {
   X,
@@ -19,6 +19,7 @@ interface LabsBatchIngestionModalProps {
   onClose: () => void;
   labs: Lab[];
   course?: Course | null;
+  initialLang?: 'en' | 'fr';
   onInspectLab: (lab: Lab) => void;
   onOpenAnalytics?: () => void;
 }
@@ -28,11 +29,19 @@ export default function LabsBatchIngestionModal({
   onClose,
   labs,
   course,
+  initialLang = 'en',
   onInspectLab,
   onOpenAnalytics,
 }: LabsBatchIngestionModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [lang, setLang] = useState<'en' | 'fr'>('en'); // Default to EN for jury accessibility
+  const [lang, setLang] = useState<'en' | 'fr'>(initialLang);
+
+  // Synchronize with initialLang when modal opens or studio toggles
+  useEffect(() => {
+    if (initialLang) {
+      setLang(initialLang);
+    }
+  }, [initialLang, isOpen]);
 
   if (!isOpen) return null;
 
