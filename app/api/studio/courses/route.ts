@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import { verifyDestructiveActionPermission } from '@/lib/auth-guard';
+import { invalidateCourseCache } from '@/lib/course-cache';
 import {
   checkRateLimit,
   getClientIp,
@@ -14,7 +15,7 @@ export async function GET() {
     const { data: courses, error } = await supabase
       .from('courses')
       .select(`
-        *,
+        id, code, title, description, content_language, tutor_language, file_extensions, stuck_threshold_turns, is_published, teacher_id, created_at, updated_at,
         course_chapters (id, chapter_number, code, title, pdf_url),
         labs (id, lab_number, code, title, is_active, covered_micro_concepts)
       `)
@@ -81,6 +82,7 @@ export async function POST(req: NextRequest) {
         .single();
       if (error) throw error;
       result = data;
+      if (id) invalidateCourseCache(id);
     } else {
       // Insert
       const { data, error } = await supabase
@@ -115,6 +117,8 @@ export async function DELETE(req: NextRequest) {
     const supabase = getServiceSupabase();
     const { error } = await supabase.from('courses').delete().eq('id', id);
     if (error) throw error;
+
+    invalidateCourseCache(id);
 
     return NextResponse.json({ success: true, deletedCourseId: id });
   } catch (err: unknown) {
@@ -246,6 +250,8 @@ export async function PATCH(req: NextRequest) {
       .single();
 
     if (updateErr) throw updateErr;
+
+    invalidateCourseCache(courseId);
 
     return NextResponse.json({ course: updated });
   } catch (err: unknown) {

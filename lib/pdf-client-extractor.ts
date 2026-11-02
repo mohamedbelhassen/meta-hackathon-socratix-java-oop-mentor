@@ -114,9 +114,9 @@ export function formatExtractedTextContent(items: unknown[]): string {
 export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPage[]> {
   const pdfjsLib = await import('pdfjs-dist');
 
-  // Configure worker
+  // Configure local worker from public directory (PERF-12)
   if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   }
 
   const arrayBuffer = await file.arrayBuffer();
@@ -158,8 +158,9 @@ export async function extractPdfPagesFromUrl(pdfUrl: string): Promise<ExtractedP
   const arrayBuffer = await res.arrayBuffer();
   const pdfjsLib = await import('pdfjs-dist');
 
+  // Configure local worker from public directory (PERF-12)
   if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
   }
 
   const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });

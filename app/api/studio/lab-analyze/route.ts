@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
+import { invalidateCourseCache } from '@/lib/course-cache';
 import {
   checkRateLimit,
   getClientIp,
@@ -10,6 +11,7 @@ import { cleanPdfPages, cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import { GOLDEN_LAB_DECOMPOSITION_SHOT } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -291,6 +293,7 @@ ${pagesTextSample}`;
         prompt_cache_key: `studio-lab-analyze-${courseId}`,
         prompt_cache_retention: '24h',
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!metaRes.ok) {
@@ -440,6 +443,9 @@ ${pagesTextSample}`;
       .single();
 
     if (saveError) throw saveError;
+
+    // Invalidate course bundle cache (PERF-07)
+    invalidateCourseCache(courseId, savedLab?.id);
 
     return NextResponse.json({
       success: true,

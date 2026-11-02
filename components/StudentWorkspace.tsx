@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 import { getBrowserSupabase } from '@/lib/supabase';
 import {
   Course,
@@ -37,13 +37,15 @@ import {
   LogIn,
   GraduationCap,
 } from 'lucide-react';
-import MilestoneCelebrationModal, {
+import {
   CompetencyReport,
   playCelebrationChime,
   triggerCelebrationConfetti,
   replayCelebration,
 } from './MilestoneCelebrationModal';
-import SmartSlideViewerModal from './SmartSlideViewerModal';
+
+const MilestoneCelebrationModal = dynamic(() => import('./MilestoneCelebrationModal'), { ssr: false });
+const SmartSlideViewerModal = dynamic(() => import('./SmartSlideViewerModal'), { ssr: false });
 import { cleanInstructionsMarkdown, formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import { formatLabOptionLabel } from '@/lib/utils';
 import {
@@ -136,6 +138,12 @@ export function isSolutionPreset(preset: DemoPreset): boolean {
   );
 }
 
+const IGNORED_DIRECTORIES = new Set([
+  'node_modules', '.git', '.svn', 'target', 'build', 'dist', 'out', '.next', 'vendor', '.idea', '.vscode', '__pycache__',
+]);
+const MAX_WORKSPACE_FILES = 30;
+const MAX_FILE_BYTES = 64 * 1024; // 64 KB max per file
+
 export default function StudentWorkspace() {
   // Course & Lab Hierarchy
   const [courses, setCourses] = useState<Course[]>([]);
@@ -221,29 +229,40 @@ export default function StudentWorkspace() {
     return 'text';
   };
 
-  // Helper: Read directory files filtered by course extensions
+  // Helper: Read directory files filtered by course extensions (hardened with bounds for PERF-10)
   const readDirectoryRecursive = useCallback(async (
     handle: FileSystemDirectoryHandle,
     extensions: string[],
-    pathPrefix = ''
+    pathPrefix = '',
+    depth = 0,
+    collected: DemoPresetFile[] = []
   ): Promise<DemoPresetFile[]> => {
-    const collected: DemoPresetFile[] = [];
+    if (depth > 5 || collected.length >= MAX_WORKSPACE_FILES) return collected;
+
     for await (const entry of handle.values()) {
+      if (collected.length >= MAX_WORKSPACE_FILES) break;
       const relPath = pathPrefix ? `${pathPrefix}/${entry.name}` : entry.name;
-      if (entry.kind === 'file') {
-        const matchesExt = extensions.some((ext) => entry.name.toLowerCase().endsWith(ext.toLowerCase()));
-        if (matchesExt) {
-          const file = await (entry as FileSystemFileHandle).getFile();
-          const content = await file.text();
-          collected.push({ name: relPath, content });
-        }
-      } else if (entry.kind === 'directory') {
-        const subFiles = await readDirectoryRecursive(
+
+      if (entry.kind === 'directory') {
+        if (IGNORED_DIRECTORIES.has(entry.name) || entry.name.startsWith('.')) continue;
+        await readDirectoryRecursive(
           entry as FileSystemDirectoryHandle,
           extensions,
-          relPath
+          relPath,
+          depth + 1,
+          collected
         );
-        collected.push(...subFiles);
+      } else if (entry.kind === 'file') {
+        const matchesExt = extensions.some((ext) => entry.name.toLowerCase().endsWith(ext.toLowerCase()));
+        if (!matchesExt) continue;
+        try {
+          const file = await (entry as FileSystemFileHandle).getFile();
+          if (file.size > MAX_FILE_BYTES) continue;
+          const content = await file.text();
+          collected.push({ name: relPath, content });
+        } catch (err) {
+          console.warn(`[StudentWorkspace] Skipping unreadable file ${relPath}:`, err);
+        }
       }
     }
     return collected;
@@ -1582,19 +1601,13 @@ export default function StudentWorkspace() {
         <div className="flex-1 min-h-0 bg-slate-950 relative overflow-hidden">
           {sourceMode === 'disk' ? (
             <div className="h-full overflow-y-auto p-4">
-              <SyntaxHighlighter
+              <CodeBlockHighlighter
                 language={getSyntaxLanguage(currentFile.name)}
-                style={vscDarkPlus}
-                customStyle={{
-                  background: 'transparent',
-                  margin: 0,
-                  fontSize: '12px',
-                  lineHeight: '1.5',
-                }}
+                code={currentFile.content || '// Empty file'}
+                fontSize="12px"
                 showLineNumbers
-              >
-                {currentFile.content || '// Empty file'}
-              </SyntaxHighlighter>
+                customStyle={{ background: 'transparent', margin: 0, padding: 0 }}
+              />
             </div>
           ) : (
             <textarea

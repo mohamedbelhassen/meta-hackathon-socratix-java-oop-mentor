@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Course, CourseChapter, Lab, StudentLabSession } from '@/types/socratix';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
@@ -17,11 +17,14 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import TeacherLiveSessionsTab from './TeacherLiveSessionsTab';
-import TeacherAnalyticsCoverageTab from './TeacherAnalyticsCoverageTab';
-import CourseStudioPanel from './CourseStudioPanel';
-import CreateCourseModal from './CreateCourseModal';
-import DeleteCourseModal from './DeleteCourseModal';
+
+// Dynamic imports for secondary tabs and modals to reduce initial JS bundle (PERF-08)
+const TeacherAnalyticsCoverageTab = dynamic(() => import('./TeacherAnalyticsCoverageTab'), { ssr: false });
+const CourseStudioPanel = dynamic(() => import('./CourseStudioPanel'), { ssr: false });
+const CreateCourseModal = dynamic(() => import('./CreateCourseModal'), { ssr: false });
+const DeleteCourseModal = dynamic(() => import('./DeleteCourseModal'), { ssr: false });
 
 export default function TeacherHub() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -31,6 +34,9 @@ export default function TeacherHub() {
   const [sessions, setSessions] = useState<StudentLabSession[]>([]);
   const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'studio'>('live');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+
+  // In-memory cache for student profiles to eliminate N+1 queries on Realtime updates (PERF-03)
+  const profilesCacheRef = useRef<Map<string, { display_name: string; is_guest: boolean; email?: string | null }>>(new Map());
 
   // Modals for Course Management (Point #3)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -62,16 +68,16 @@ export default function TeacherHub() {
 
     const supabase = getBrowserSupabase();
 
-    // Fetch updated course row, labs, chapters, and sessions
+    // Fetch updated course row, labs, chapters, and sessions (excluding raw pages_json for PERF-01/PERF-03)
     const [courseRes, labsRes, chaptersRes, sessionsRes] = await Promise.all([
-      supabase.from('courses').select('*').eq('id', courseId).single(),
-      supabase.from('labs').select('*').eq('course_id', courseId).order('lab_number', { ascending: true }),
-      supabase.from('course_chapters').select('*').eq('course_id', courseId).order('chapter_number', { ascending: true }),
+      supabase.from('courses').select('id, code, title, description, content_language, tutor_language, file_extensions, competency_matrix, compiled_knowledge_base, compiled_tutor_prompt, is_published, teacher_id').eq('id', courseId).single(),
+      supabase.from('labs').select('id, course_id, lab_number, code, title, title_i18n, description, is_active, target_chapter_codes, covered_micro_concepts, activities, demo_presets').eq('course_id', courseId).order('lab_number', { ascending: true }),
+      supabase.from('course_chapters').select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, key_concepts, analogies, summary_markdown').eq('course_id', courseId).order('chapter_number', { ascending: true }),
       supabase.from('student_lab_sessions').select('*, profiles(display_name, is_guest, email)').eq('course_id', courseId),
     ]);
 
     if (!labsRes.error && labsRes.data) {
-      const fetchedLabs = labsRes.data as Lab[];
+      const fetchedLabs = labsRes.data as unknown as Lab[];
       setLabs(fetchedLabs);
       setSelectedLab((prev) => {
         if (!prev || !fetchedLabs.some((l) => l.id === prev.id)) {
@@ -81,9 +87,9 @@ export default function TeacherHub() {
       });
     }
 
-    const fetchedCourse = (!courseRes.error && courseRes.data) ? (courseRes.data as Course) : null;
-    const fetchedChapters = (!chaptersRes.error && chaptersRes.data) ? (chaptersRes.data as CourseChapter[]) : [];
-    const fetchedLabsList = (!labsRes.error && labsRes.data) ? (labsRes.data as Lab[]) : [];
+    const fetchedCourse = (!courseRes.error && courseRes.data) ? (courseRes.data as unknown as Course) : null;
+    const fetchedChapters = (!chaptersRes.error && chaptersRes.data) ? (chaptersRes.data as unknown as CourseChapter[]) : [];
+    const fetchedLabsList = (!labsRes.error && labsRes.data) ? (labsRes.data as unknown as Lab[]) : [];
 
     setSelectedCourse((prev) => {
       const base = fetchedCourse || prev;
@@ -101,7 +107,13 @@ export default function TeacherHub() {
     });
 
     if (!sessionsRes.error && sessionsRes.data) {
-      setSessions(sessionsRes.data as StudentLabSession[]);
+      const fetchedSessions = sessionsRes.data as StudentLabSession[];
+      fetchedSessions.forEach((s) => {
+        if (s.student_id && s.profiles) {
+          profilesCacheRef.current.set(s.student_id, s.profiles);
+        }
+      });
+      setSessions(fetchedSessions);
     }
   }, [courseId]);
 
@@ -111,7 +123,7 @@ export default function TeacherHub() {
     }
   }, [courseId, refreshCourseData]);
 
-  // 3. Supabase Realtime Subscription for Live Sessions
+  // 3. Supabase Realtime Subscription for Live Sessions (O(1) profiles cache without N+1 queries)
   useEffect(() => {
     if (!courseId) return;
 
@@ -128,23 +140,41 @@ export default function TeacherHub() {
         },
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const { data: updatedRow } = await supabase
-              .from('student_lab_sessions')
-              .select('*, profiles(display_name, is_guest, email)')
-              .eq('id', (payload.new as { id: string }).id)
-              .single();
+            const updatedRow = payload.new as StudentLabSession;
+            let profile = profilesCacheRef.current.get(updatedRow.student_id);
 
-            if (updatedRow) {
-              setSessions((prev) => {
-                const idx = prev.findIndex((s) => s.id === updatedRow.id);
-                if (idx >= 0) {
-                  const copy = [...prev];
-                  copy[idx] = updatedRow as StudentLabSession;
-                  return copy;
-                }
-                return [updatedRow as StudentLabSession, ...prev];
-              });
+            // Fetch profile only if student has never been cached before
+            if (!profile) {
+              const { data: profData } = await supabase
+                .from('profiles')
+                .select('display_name, is_guest, email')
+                .eq('id', updatedRow.student_id)
+                .maybeSingle();
+
+              if (profData) {
+                profile = profData;
+                profilesCacheRef.current.set(updatedRow.student_id, profData);
+              }
             }
+
+            const enriched: StudentLabSession = {
+              ...updatedRow,
+              profiles: profile || undefined,
+            };
+
+            setSessions((prev) => {
+              const idx = prev.findIndex((s) => s.id === enriched.id);
+              if (idx >= 0) {
+                // If enriched payload lacks profile but prev had one, preserve it
+                if (!enriched.profiles && prev[idx].profiles) {
+                  enriched.profiles = prev[idx].profiles;
+                }
+                const copy = [...prev];
+                copy[idx] = enriched;
+                return copy;
+              }
+              return [enriched, ...prev];
+            });
           } else if (payload.eventType === 'DELETE') {
             const deletedId = (payload.old as { id: string }).id;
             setSessions((prev) => prev.filter((s) => s.id !== deletedId));

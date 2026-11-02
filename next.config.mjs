@@ -2,7 +2,7 @@
 const nextConfig = {
   poweredByHeader: false,
   experimental: {
-    optimizePackageImports: ['lucide-react'],
+    optimizePackageImports: ['lucide-react', 'react-syntax-highlighter'],
   },
   webpack: (config) => {
     config.resolve.alias.canvas = false;

@@ -7,7 +7,7 @@ import {
   RATE_LIMIT_CONFIG,
   buildRateLimitHeaders,
 } from '@/lib/rate-limiter';
-import { Course, CourseChapter, Lab, StudentLabSession, TutorRequestBody } from '@/types/socratix';
+import { StudentLabSession, TutorRequestBody } from '@/types/socratix';
 import { buildCourseSystemPrompt, buildDynamicSocratixSchema } from '@/lib/prompt-builder';
 import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
 import { extractMetaUsage, META_BASE_URL } from '@/lib/meta-ai';
@@ -17,54 +17,11 @@ import {
   mergeMicroCompetenciesState,
   RawConceptSignal,
 } from '@/lib/telemetry-merger';
+import { getCachedCourseBundle } from '@/lib/course-cache';
 
 export const dynamic = 'force-dynamic';
 
 const META_API_KEY = process.env.META_API_KEY;
-
-// In-memory 60s TTL Cache for Course Bundles
-interface CachedCourseBundle {
-  course: Course;
-  chapters: CourseChapter[];
-  lab: Lab;
-  cachedAt: number;
-}
-const COURSE_CACHE = new Map<string, CachedCourseBundle>();
-
-async function getCourseBundle(
-  courseId: string,
-  labId: string
-): Promise<{ course: Course; chapters: CourseChapter[]; lab: Lab } | null> {
-  const cacheKey = `${courseId}_${labId}`;
-  const now = Date.now();
-  const cached = COURSE_CACHE.get(cacheKey);
-
-  if (cached && now - cached.cachedAt < 60000) {
-    return cached;
-  }
-
-  const supabase = getServiceSupabase();
-
-  const [courseRes, chaptersRes, labRes] = await Promise.all([
-    supabase.from('courses').select('*').eq('id', courseId).single(),
-    supabase.from('course_chapters').select('*').eq('course_id', courseId).order('chapter_number', { ascending: true }),
-    supabase.from('labs').select('*').eq('id', labId).single(),
-  ]);
-
-  if (courseRes.error || !courseRes.data || labRes.error || !labRes.data) {
-    return null;
-  }
-
-  const bundle: CachedCourseBundle = {
-    course: courseRes.data as Course,
-    chapters: (chaptersRes.data || []) as CourseChapter[],
-    lab: labRes.data as Lab,
-    cachedAt: now,
-  };
-
-  COURSE_CACHE.set(cacheKey, bundle);
-  return bundle;
-}
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -163,7 +120,7 @@ export async function POST(req: NextRequest) {
 
     // Parallelize bundle fetch (with memory cache) and existing student session fetch
     const [bundle, existingSessionRes] = await Promise.all([
-      getCourseBundle(courseId, labId),
+      getCachedCourseBundle(courseId, labId),
       supabase
         .from('student_lab_sessions')
         .select('*, profiles(display_name, is_guest)')
@@ -276,6 +233,7 @@ ${studentInputPrompt}
         prompt_cache_key: `course-${course.id}-lab-${lab.id}`,
         prompt_cache_retention: '24h',
       }),
+      signal: AbortSignal.timeout(35_000),
     });
 
     const tMetaDuration = Date.now() - tMetaStart;

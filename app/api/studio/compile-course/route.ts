@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
+import { invalidateCourseCache } from '@/lib/course-cache';
 import {
   checkRateLimit,
   getClientIp,
@@ -12,6 +13,7 @@ import {
 } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -204,6 +206,7 @@ ${allChaptersSummary}`;
         prompt_cache_key: `studio-compile-${courseId}`,
         prompt_cache_retention: '24h',
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!metaRes.ok) {
@@ -273,6 +276,9 @@ ${parsed.competency_matrix
       .single();
 
     if (updateError) throw updateError;
+
+    // Invalidate course bundle cache (PERF-07)
+    invalidateCourseCache(courseId);
 
     return NextResponse.json({
       success: true,

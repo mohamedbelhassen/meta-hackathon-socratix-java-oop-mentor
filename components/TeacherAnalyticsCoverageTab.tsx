@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Course, Lab, StudentLabSession } from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -57,7 +57,10 @@ export default function TeacherAnalyticsCoverageTab({
   sessions,
   onCourseUpdated,
 }: TeacherAnalyticsCoverageTabProps) {
-  const labSessions = sessions.filter((s) => s.lab_id === selectedLab?.id);
+  const labSessions = useMemo(
+    () => sessions.filter((s) => s.lab_id === selectedLab?.id),
+    [sessions, selectedLab?.id]
+  );
   const totalStudents = labSessions.length;
 
   // Dialog state for unanchored lab competency actions
@@ -80,53 +83,56 @@ export default function TeacherAnalyticsCoverageTab({
 
   const normalizeCode = (c: string) => (c || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
 
-  const chaptersTaxonomy = course.competency_matrix || [];
+  const chaptersTaxonomy = useMemo(() => course.competency_matrix || [], [course.competency_matrix]);
 
-  // Inverted index for canonical concept resolution: code or alias -> canonical code
-  const codeToCanonicalMap = new Map<string, string>();
-  const allCanonicalCodes = new Set<string>();
+  // Memoized canonical concept resolution and coverage matrix (PERF-11)
+  const { conceptToLabsMap, unanchoredConceptsMap } = useMemo(() => {
+    const codeMap = new Map<string, string>();
 
-  for (const chapter of chaptersTaxonomy) {
-    for (const mc of chapter.micro_competencies || []) {
-      allCanonicalCodes.add(mc.code);
-      codeToCanonicalMap.set(mc.code, mc.code);
-      codeToCanonicalMap.set(normalizeCode(mc.code), mc.code);
-      if (Array.isArray(mc.aliases)) {
-        for (const alias of mc.aliases) {
-          codeToCanonicalMap.set(alias, mc.code);
-          codeToCanonicalMap.set(normalizeCode(alias), mc.code);
+    for (const chapter of chaptersTaxonomy) {
+      for (const mc of chapter.micro_competencies || []) {
+        codeMap.set(mc.code, mc.code);
+        codeMap.set(normalizeCode(mc.code), mc.code);
+        if (Array.isArray(mc.aliases)) {
+          for (const alias of mc.aliases) {
+            codeMap.set(alias, mc.code);
+            codeMap.set(normalizeCode(alias), mc.code);
+          }
         }
       }
     }
-  }
 
-  // 3. Compute Global Curriculum Coverage Matrix: Course Competency Matrix vs Labs
-  // Map micro-competencies across all labs
-  const conceptToLabsMap = new Map<string, string[]>();
-  const unanchoredConceptsMap = new Map<string, { labs: UnanchoredLabRef[] }>();
+    const cToLabs = new Map<string, string[]>();
+    const uConcepts = new Map<string, { labs: UnanchoredLabRef[] }>();
 
-  for (const lab of labs) {
-    for (const rawConcept of lab.covered_micro_concepts || []) {
-      const canonicalCode = codeToCanonicalMap.get(rawConcept) || codeToCanonicalMap.get(normalizeCode(rawConcept));
-      if (canonicalCode) {
-        const list = conceptToLabsMap.get(canonicalCode) || [];
-        if (!list.includes(lab.code)) {
-          list.push(lab.code);
+    for (const lab of labs) {
+      for (const rawConcept of lab.covered_micro_concepts || []) {
+        const canonicalCode = codeMap.get(rawConcept) || codeMap.get(normalizeCode(rawConcept));
+        if (canonicalCode) {
+          const list = cToLabs.get(canonicalCode) || [];
+          if (!list.includes(lab.code)) {
+            list.push(lab.code);
+          }
+          cToLabs.set(canonicalCode, list);
+        } else {
+          const entry = uConcepts.get(rawConcept) || { labs: [] };
+          if (!entry.labs.some((l) => l.code === lab.code)) {
+            entry.labs.push({
+              code: lab.code,
+              fullTitle: lab.title,
+              cleanTitle: cleanLabTitle(lab.title, lab.code),
+            });
+          }
+          uConcepts.set(rawConcept, entry);
         }
-        conceptToLabsMap.set(canonicalCode, list);
-      } else {
-        const entry = unanchoredConceptsMap.get(rawConcept) || { labs: [] };
-        if (!entry.labs.some((l) => l.code === lab.code)) {
-          entry.labs.push({
-            code: lab.code,
-            fullTitle: lab.title,
-            cleanTitle: cleanLabTitle(lab.title, lab.code),
-          });
-        }
-        unanchoredConceptsMap.set(rawConcept, entry);
       }
     }
-  }
+
+    return {
+      conceptToLabsMap: cToLabs,
+      unanchoredConceptsMap: uConcepts,
+    };
+  }, [chaptersTaxonomy, labs]);
 
   const handleExecuteAction = async () => {
     if (!activeUnanchoredAction || !course.id) return;
@@ -188,76 +194,86 @@ export default function TeacherAnalyticsCoverageTab({
     }
   };
 
-  // 1. Calculate Milestone Completion Rates for Active Lab
-  const milestoneStats: Array<{
-    activityOrder: number;
-    activityTitle: string;
-    milestoneId: string;
-    milestoneTitle: string;
-    completedCount: number;
-    completionRate: number;
-    blockedCount: number;
-  }> = [];
+  // 1. Calculate Milestone Completion Rates for Active Lab (Memoized for PERF-11)
+  const milestoneStats = useMemo(() => {
+    const stats: Array<{
+      activityOrder: number;
+      activityTitle: string;
+      milestoneId: string;
+      milestoneTitle: string;
+      completedCount: number;
+      completionRate: number;
+      blockedCount: number;
+    }> = [];
 
-  if (selectedLab?.activities) {
-    for (const act of selectedLab.activities) {
-      for (const m of act.milestones || []) {
-        const completedCount = labSessions.filter((s) =>
-          s.completed_milestone_ids?.includes(m.id)
-        ).length;
+    if (selectedLab?.activities) {
+      for (const act of selectedLab.activities) {
+        for (const m of act.milestones || []) {
+          const completedCount = labSessions.filter((s) =>
+            s.completed_milestone_ids?.includes(m.id)
+          ).length;
 
-        const blockedCount = labSessions.filter(
-          (s) => s.status === 'BLOCKED' && s.current_milestone_id === m.id
-        ).length;
+          const blockedCount = labSessions.filter(
+            (s) => s.status === 'BLOCKED' && s.current_milestone_id === m.id
+          ).length;
 
-        const rate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+          const rate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
 
-        milestoneStats.push({
-          activityOrder: act.order,
-          activityTitle: act.title,
-          milestoneId: m.id,
-          milestoneTitle: m.title,
-          completedCount,
-          completionRate: rate,
-          blockedCount,
-        });
+          stats.push({
+            activityOrder: act.order,
+            activityTitle: act.title,
+            milestoneId: m.id,
+            milestoneTitle: m.title,
+            completedCount,
+            completionRate: rate,
+            blockedCount,
+          });
+        }
       }
     }
-  }
+    return stats;
+  }, [selectedLab?.activities, labSessions, totalStudents]);
 
-  // 2. Calculate Average Micro-Competency Scores for Active Lab
-  const conceptScores: Array<{
-    conceptKey: string;
-    avgScore: number;
-    masteredCount: number;
-    strugglingCount: number;
-  }> = [];
+  // 2. Calculate Average Micro-Competency Scores for Active Lab (Memoized for PERF-11)
+  const coveredConcepts = useMemo(
+    () => selectedLab?.covered_micro_concepts || [],
+    [selectedLab?.covered_micro_concepts]
+  );
 
-  const coveredConcepts = selectedLab?.covered_micro_concepts || [];
-  for (const concept of coveredConcepts) {
-    let scoreSum = 0;
-    let scoredStudents = 0;
-    let masteredCount = 0;
-    let strugglingCount = 0;
+  const conceptScores = useMemo(() => {
+    const scores: Array<{
+      conceptKey: string;
+      avgScore: number;
+      masteredCount: number;
+      strugglingCount: number;
+    }> = [];
 
-    for (const s of labSessions) {
-      const entry = s.micro_competencies_state?.[concept];
-      if (entry && entry.signal_count > 0) {
-        scoreSum += entry.score;
-        scoredStudents += 1;
-        if (entry.status === 'MASTERED') masteredCount += 1;
-        if (entry.status === 'STRUGGLING') strugglingCount += 1;
+    for (const concept of coveredConcepts) {
+      let scoreSum = 0;
+      let scoredStudents = 0;
+      let masteredCount = 0;
+      let strugglingCount = 0;
+
+      for (const s of labSessions) {
+        const entry = s.micro_competencies_state?.[concept];
+        if (entry && entry.signal_count > 0) {
+          scoreSum += entry.score;
+          scoredStudents += 1;
+          if (entry.status === 'MASTERED') masteredCount += 1;
+          if (entry.status === 'STRUGGLING') strugglingCount += 1;
+        }
       }
-    }
 
-    const avg = scoredStudents > 0 ? Math.round(scoreSum / scoredStudents) : 0;
-    conceptScores.push({
-      conceptKey: concept,
-      avgScore: avg,
-      masteredCount,
-      strugglingCount,
-    });
-  }
+      const avg = scoredStudents > 0 ? Math.round(scoreSum / scoredStudents) : 0;
+      scores.push({
+        conceptKey: concept,
+        avgScore: avg,
+        masteredCount,
+        strugglingCount,
+      });
+    }
+    return scores;
+  }, [coveredConcepts, labSessions]);
 
 
   return (

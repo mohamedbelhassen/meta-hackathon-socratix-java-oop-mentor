@@ -25,8 +25,7 @@ import {
   Layers,
   Monitor,
 } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 
 interface TeacherLiveSessionsTabProps {
   course: Course;
@@ -671,14 +670,13 @@ export default function TeacherLiveSessionsTab({
                     inspectedCodeFiles.map((file, idx) => (
                       <div key={idx} className="mb-4">
                         <div className="text-[11px] font-mono text-emerald-400 mb-1 px-1">{file.name}</div>
-                        <SyntaxHighlighter
+                        <CodeBlockHighlighter
                           language="java"
-                          style={vscDarkPlus}
-                          customStyle={{ background: '#090d16', fontSize: '11px', margin: 0, borderRadius: '8px' }}
+                          code={file.content || '// Empty'}
+                          fontSize="11px"
                           showLineNumbers
-                        >
-                          {file.content || '// Empty'}
-                        </SyntaxHighlighter>
+                          customStyle={{ background: '#090d16', margin: 0, borderRadius: '8px' }}
+                        />
                       </div>
                     ))
                   )}

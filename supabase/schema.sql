@@ -132,13 +132,12 @@ CREATE TABLE public.chat_messages (
 -- 8. PERFORMANCE INDEXES
 -- ============================================================================
 CREATE INDEX idx_courses_teacher ON public.courses(teacher_id);
-CREATE INDEX idx_courses_code ON public.courses(code);
 CREATE INDEX idx_course_chapters_course ON public.course_chapters(course_id, chapter_number);
 CREATE INDEX idx_labs_course ON public.labs(course_id, lab_number);
 CREATE INDEX idx_student_lab_sessions_lookup ON public.student_lab_sessions(course_id, lab_id);
-CREATE INDEX idx_student_lab_sessions_student ON public.student_lab_sessions(student_id);
+CREATE INDEX idx_student_lab_sessions_lab_id ON public.student_lab_sessions(lab_id);
 CREATE INDEX idx_student_lab_sessions_status ON public.student_lab_sessions(status);
-CREATE INDEX idx_chat_messages_session ON public.chat_messages(student_lab_session_id);
+CREATE INDEX idx_chat_messages_session_created ON public.chat_messages(student_lab_session_id, created_at ASC);
 CREATE INDEX idx_chat_messages_activity ON public.chat_messages(student_lab_session_id, activity_id);
 CREATE INDEX idx_chat_messages_created ON public.chat_messages(created_at);
 

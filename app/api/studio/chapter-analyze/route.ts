@@ -10,6 +10,7 @@ import { cleanPdfPages, buildAdaptivePageBatches, formatRawSlideTextToMarkdown, 
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -19,7 +20,24 @@ interface MetaChatChoice {
   };
 }
 
-async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown, cacheKey?: string) {
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, idx: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let cursor = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (cursor < items.length) {
+      const index = cursor++;
+      results[index] = await fn(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown, cacheKey?: string, timeoutMs = 45_000) {
   const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -40,6 +58,7 @@ async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: 
       temperature: 0.1,
       ...(cacheKey ? { prompt_cache_key: cacheKey, prompt_cache_retention: '24h' } : {}),
     }),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!metaRes.ok) {
@@ -204,7 +223,7 @@ ${pagesTextSample}`;
         },
       };
 
-      const parsed = await callMetaAI(systemPrompt, userPrompt, singlePassSchema, `studio-chapter-analyze-${courseId}`);
+      const parsed = await callMetaAI(systemPrompt, userPrompt, singlePassSchema, `studio-chapter-single-${courseId}`);
       extractedTitle = parsed.extracted_title || extractedTitle;
       markdownContent = parsed.markdown_content || '';
       keyAnalogies = parsed.key_analogies || [];
@@ -214,7 +233,7 @@ ${pagesTextSample}`;
     } else {
       // ------------------------------------------------------------------------
       // ADAPTIVE BATCHING: Document is dense/large. Batch 0 does global synthesis
-      // + its own pages; subsequent batches do targeted translation.
+      // + its own pages; subsequent batches do targeted translation with bounded concurrency.
       // ------------------------------------------------------------------------
       const batch0 = batches[0];
       const batch0Sample = batch0.pages
@@ -289,7 +308,7 @@ ${batch0Sample}`;
         },
       };
 
-      const parsedGlobal = await callMetaAI(systemPromptGlobal, userPromptGlobal, globalSchema, `studio-chapter-analyze-${courseId}`);
+      const parsedGlobal = await callMetaAI(systemPromptGlobal, userPromptGlobal, globalSchema, `studio-chapter-meta-${courseId}`);
       extractedTitle = parsedGlobal.extracted_title || extractedTitle;
       markdownContent = parsedGlobal.markdown_content || '';
       keyAnalogies = parsedGlobal.key_analogies || [];
@@ -297,9 +316,9 @@ ${batch0Sample}`;
         collectedSlideMarkdowns.push(...parsedGlobal.pages_markdown);
       }
 
-      // Process remaining batches
-      for (let bIdx = 1; bIdx < batches.length; bIdx++) {
-        const batch = batches[bIdx];
+      // Process remaining batches with bounded concurrency (concurrency = 2) for PERF-06
+      const remainingBatches = batches.slice(1);
+      const batchOutputs = await mapWithConcurrency(remainingBatches, 2, async (batch) => {
         const batchSample = batch.pages
           .map((p: CleanedPage) => `[Page/Slide ${p.page}]\n${p.text}`)
           .join('\n\n---\n\n');
@@ -337,7 +356,10 @@ Do NOT summarize multiple slides together. Preserve exact class, variable, and m
           },
         };
 
-        const batchParsed = await callMetaAI(batchSystemPrompt, batchSample, batchSchema, `studio-chapter-analyze-${courseId}`);
+        return callMetaAI(batchSystemPrompt, batchSample, batchSchema, `studio-slide-batch-${courseId}`);
+      });
+
+      for (const batchParsed of batchOutputs) {
         if (Array.isArray(batchParsed?.pages_markdown)) {
           collectedSlideMarkdowns.push(...batchParsed.pages_markdown);
         }
