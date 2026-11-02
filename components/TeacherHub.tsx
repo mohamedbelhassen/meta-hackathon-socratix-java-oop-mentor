@@ -28,46 +28,49 @@ export default function TeacherHub() {
   const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'studio'>('live');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
-  // 1. Fetch courses
+  const courseId = selectedCourse?.id;
+
+  // 1. Fetch courses once on mount
   const fetchCourses = useCallback(async () => {
     try {
       const res = await fetch('/api/studio/courses');
       const data = await res.json();
-      if (data.courses && Array.isArray(data.courses)) {
+      if (data.courses && Array.isArray(data.courses) && data.courses.length > 0) {
         setCourses(data.courses);
-        if (!selectedCourse && data.courses.length > 0) {
-          setSelectedCourse(data.courses[0]);
-        }
+        setSelectedCourse((prev) => prev || data.courses[0]);
       }
     } catch (err) {
       console.error('[TeacherHub] Error fetching courses:', err);
     }
-  }, [selectedCourse]);
+  }, []);
 
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
 
-  // 2. Fetch course chapters, labs, and student sessions when selected course changes
+  // 2. Fetch course chapters, labs, and student sessions when active course id changes
   const refreshCourseData = useCallback(async () => {
-    if (!selectedCourse) return;
+    if (!courseId) return;
 
     const supabase = getBrowserSupabase();
 
     // Fetch updated course row, labs, chapters, and sessions
     const [courseRes, labsRes, chaptersRes, sessionsRes] = await Promise.all([
-      supabase.from('courses').select('*').eq('id', selectedCourse.id).single(),
-      supabase.from('labs').select('*').eq('course_id', selectedCourse.id).order('lab_number', { ascending: true }),
-      supabase.from('course_chapters').select('*').eq('course_id', selectedCourse.id).order('chapter_number', { ascending: true }),
-      supabase.from('student_lab_sessions').select('*, profiles(display_name, is_guest, email)').eq('course_id', selectedCourse.id),
+      supabase.from('courses').select('*').eq('id', courseId).single(),
+      supabase.from('labs').select('*').eq('course_id', courseId).order('lab_number', { ascending: true }),
+      supabase.from('course_chapters').select('*').eq('course_id', courseId).order('chapter_number', { ascending: true }),
+      supabase.from('student_lab_sessions').select('*, profiles(display_name, is_guest, email)').eq('course_id', courseId),
     ]);
 
     if (!labsRes.error && labsRes.data) {
       const fetchedLabs = labsRes.data as Lab[];
       setLabs(fetchedLabs);
-      if (!selectedLab || !fetchedLabs.some((l) => l.id === selectedLab.id)) {
-        setSelectedLab(fetchedLabs[0] || null);
-      }
+      setSelectedLab((prev) => {
+        if (!prev || !fetchedLabs.some((l) => l.id === prev.id)) {
+          return fetchedLabs[0] || null;
+        }
+        return prev;
+      });
     }
 
     const fetchedCourse = (!courseRes.error && courseRes.data) ? (courseRes.data as Course) : null;
@@ -87,26 +90,28 @@ export default function TeacherHub() {
     if (!sessionsRes.error && sessionsRes.data) {
       setSessions(sessionsRes.data as StudentLabSession[]);
     }
-  }, [selectedCourse, selectedLab]);
+  }, [courseId]);
 
   useEffect(() => {
-    refreshCourseData();
-  }, [selectedCourse?.id, refreshCourseData]);
+    if (courseId) {
+      refreshCourseData();
+    }
+  }, [courseId, refreshCourseData]);
 
   // 3. Supabase Realtime Subscription for Live Sessions
   useEffect(() => {
-    if (!selectedCourse) return;
+    if (!courseId) return;
 
     const supabase = getBrowserSupabase();
     const channel = supabase
-      .channel(`teacher-sessions-${selectedCourse.id}`)
+      .channel(`teacher-sessions-${courseId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'student_lab_sessions',
-          filter: `course_id=eq.${selectedCourse.id}`,
+          filter: `course_id=eq.${courseId}`,
         },
         async (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -140,7 +145,7 @@ export default function TeacherHub() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedCourse]);
+  }, [courseId]);
 
   // Macro KPIs
   const currentLabSessions = sessions.filter((s) => s.lab_id === selectedLab?.id);
