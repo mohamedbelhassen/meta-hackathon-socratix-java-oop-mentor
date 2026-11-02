@@ -21,16 +21,16 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE,
+    role TEXT NOT NULL CHECK (role IN ('student', 'teacher', 'guest_student')),
     display_name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'teacher')),
-    is_guest BOOLEAN NOT NULL DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    is_guest BOOLEAN NOT NULL DEFAULT false
 );
 
 -- 3. COURSES (Generic multi-course definition)
 CREATE TABLE public.courses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    teacher_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    teacher_id UUID,
     code TEXT UNIQUE NOT NULL, -- e.g., 'JAVA_OOP', 'PARSE_PLATFORM'
     title TEXT NOT NULL, -- e.g., 'Programmation Orientée Objet (Java)'
     description TEXT,
@@ -53,12 +53,12 @@ CREATE TABLE public.course_chapters (
     chapter_number INTEGER NOT NULL,
     code TEXT NOT NULL, -- e.g., 'CH1_INTRO', 'CH3_CLASSES'
     title TEXT NOT NULL,
-    title_i18n JSONB, -- { en: string, fr: string }
     pdf_url TEXT,
     markdown_content TEXT NOT NULL DEFAULT '',
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     key_analogies JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_chapter UNIQUE(course_id, code)
 );
 
@@ -69,15 +69,15 @@ CREATE TABLE public.labs (
     lab_number INTEGER NOT NULL,
     code TEXT NOT NULL, -- e.g., 'TP1', 'TP5', 'TP12'
     title TEXT NOT NULL,
-    title_i18n JSONB, -- { en: string, fr: string }
     description TEXT,
     pdf_url TEXT,
-    pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     activities JSONB NOT NULL DEFAULT '[]'::jsonb,
     covered_micro_concepts TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     demo_presets JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_lab UNIQUE(course_id, code)
 );
 
@@ -116,13 +116,13 @@ CREATE TABLE public.student_lab_sessions (
 CREATE TABLE public.chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     student_lab_session_id UUID REFERENCES public.student_lab_sessions(id) ON DELETE CASCADE NOT NULL,
-    activity_id TEXT,
     role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'teacher_hint')),
     content TEXT NOT NULL,
     course_reference JSONB,
     code_snapshot JSONB NOT NULL DEFAULT '[]'::jsonb,
     latency_ms INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    activity_id TEXT
 );
 
 -- ============================================================================
@@ -169,19 +169,18 @@ CREATE TRIGGER update_student_lab_sessions_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.profiles (id, email, display_name, role, is_guest)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
-        COALESCE(NEW.raw_user_meta_data->>'role', 'student'),
-        false
-    )
-    ON CONFLICT (id) DO UPDATE SET
-        email = EXCLUDED.email,
-        display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
-        role = COALESCE(EXCLUDED.role, public.profiles.role);
-    RETURN NEW;
+  INSERT INTO public.profiles (id, email, display_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
+    COALESCE(NEW.raw_user_meta_data->>'role', 'student')
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    display_name = COALESCE(EXCLUDED.display_name, public.profiles.display_name),
+    role = COALESCE(EXCLUDED.role, public.profiles.role);
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

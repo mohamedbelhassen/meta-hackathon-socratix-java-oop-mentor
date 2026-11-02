@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Course } from '@/types/socratix';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +76,45 @@ export default function DeleteCourseModal({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pinInputRef = useRef<HTMLInputElement>(null);
+
+  const resetForm = useCallback(() => {
+    setPin('');
+    setShowPin(false);
+    setIsDeleting(false);
+    setIsShaking(false);
+    setError(null);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetForm();
+    onClose();
+  }, [resetForm, onClose]);
+
+  // Zero-retention policy: reset input whenever modal opens, closes, or course changes
+  useEffect(() => {
+    if (isOpen) {
+      resetForm();
+      const timer = setTimeout(() => {
+        pinInputRef.current?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    } else {
+      resetForm();
+    }
+  }, [isOpen, course?.id, resetForm]);
+
+  // Support ESC key to safely dismiss and clear the modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isDeleting) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isDeleting, handleClose]);
 
   if (!isOpen || !course) return null;
 
@@ -111,7 +150,7 @@ export default function DeleteCourseModal({
       }
 
       onCourseDeleted(course.id);
-      onClose();
+      handleClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Course deletion rejected';
       triggerErrorFeedback(msg);
@@ -127,7 +166,14 @@ export default function DeleteCourseModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isDeleting) {
+          handleClose();
+        }
+      }}
+    >
       <div className="relative w-full max-w-lg bg-slate-900 border border-rose-900/40 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-rose-950/60 flex items-center justify-between bg-rose-950/20">
@@ -148,7 +194,7 @@ export default function DeleteCourseModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
@@ -196,6 +242,7 @@ export default function DeleteCourseModal({
               }`}
             >
               <input
+                ref={pinInputRef}
                 type={showPin ? 'text' : 'password'}
                 placeholder={`Enter Jury PIN (e.g. ${defaultDemoPin})`}
                 value={pin}
@@ -239,7 +286,7 @@ export default function DeleteCourseModal({
               type="button"
               variant="outline"
               size="sm"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isDeleting}
               className="text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
             >

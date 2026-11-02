@@ -1236,6 +1236,7 @@ export default function CourseStudioPanel({
           isOpen={Boolean(selectedLabForInspection)}
           onClose={() => setSelectedLabForInspection(null)}
           lab={selectedLabForInspection}
+          initialLang={lang}
         />
       )}
     </div>
