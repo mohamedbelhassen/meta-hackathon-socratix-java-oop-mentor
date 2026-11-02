@@ -144,8 +144,9 @@ export default function CourseStudioPanel({
     );
   }
 
-  const chapters = course.course_chapters || [];
-  const labs = course.labs || [];
+  // Strictly scope chapters and labs to the active course to avoid any cross-course leakage
+  const chapters = (course.course_chapters || []).filter((c) => !c.course_id || c.course_id === course.id);
+  const labs = (course.labs || []).filter((l) => !l.course_id || l.course_id === course.id);
   const hasTaxonomy = Array.isArray(course.competency_matrix) && course.competency_matrix.length > 0;
   const hasCompiledPrompt = Boolean(course.compiled_tutor_prompt && course.compiled_tutor_prompt.length > 20);
 
@@ -918,14 +919,29 @@ export default function CourseStudioPanel({
                   size="sm"
                   onClick={handleCompileCourse}
                   disabled={isProcessing || chapters.length === 0}
-                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm mt-1"
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm mt-1 transition-all"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>
-                    {chapters.length === 0
-                      ? 'Upload Chapter PDFs First (Step 2)'
-                      : '⚡ Compile Knowledge Base & Mentor Prompt Now'}
-                  </span>
+                  {isProcessing && currentProgress?.stage === 'Distilling Chapters' ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      <span>Distilling Chapters ({currentProgress.current}/{currentProgress.total})...</span>
+                    </>
+                  ) : isProcessing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      <span>Synthesizing with Meta AI ({compilationElapsed}s)...</span>
+                    </>
+                  ) : chapters.length === 0 ? (
+                    <>
+                      <BookOpen className="w-3.5 h-3.5 mr-1.5 opacity-60" />
+                      <span>Upload Chapter PDFs First (Step 2)</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                      <span>⚡ Compile Knowledge Base & Mentor Prompt Now</span>
+                    </>
+                  )}
                 </Button>
               </div>
             ) : (
@@ -1040,7 +1056,7 @@ export default function CourseStudioPanel({
               )}
             </Button>
             <div className="text-[10px] text-slate-400 flex items-center justify-between">
-              <span>Automatic natural sorting: TP1, TP2, ..., TP12</span>
+              <span>Automatic natural sorting: TP1, TP2, ...</span>
               <span className="text-cyan-400 font-mono">1-Click Remote PDF Re-analysis</span>
             </div>
           </div>
@@ -1065,6 +1081,7 @@ export default function CourseStudioPanel({
           isOpen={showLabsIngestionModal}
           onClose={() => setShowLabsIngestionModal(false)}
           labs={labs}
+          course={course}
           onInspectLab={(lb) => {
             setShowLabsIngestionModal(false);
             setSelectedLabForInspection(lb);

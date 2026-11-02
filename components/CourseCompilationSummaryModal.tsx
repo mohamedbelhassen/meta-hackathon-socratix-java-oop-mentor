@@ -41,7 +41,8 @@ export default function CourseCompilationSummaryModal({
       )
     : 0;
 
-  const chaptersCount = course.course_chapters?.length || (Array.isArray(course.competency_matrix) ? course.competency_matrix.length : 0);
+  const validChapters = (course.course_chapters || []).filter((ch) => !ch.course_id || ch.course_id === course.id);
+  const chaptersCount = validChapters.length > 0 ? validChapters.length : (Array.isArray(course.competency_matrix) ? course.competency_matrix.length : 0);
   const promptTokensEstimate = Math.round((course.compiled_tutor_prompt?.length || 0) / 4);
   const kbTokensEstimate = Math.round((course.compiled_knowledge_base?.length || 0) / 4);
 

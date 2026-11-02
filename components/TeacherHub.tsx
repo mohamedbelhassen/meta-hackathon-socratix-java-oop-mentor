@@ -88,10 +88,15 @@ export default function TeacherHub() {
     setSelectedCourse((prev) => {
       const base = fetchedCourse || prev;
       if (!base) return null;
+      const isSameCourse = prev?.id === base.id;
       return {
         ...base,
-        course_chapters: fetchedChapters.length > 0 ? fetchedChapters : prev?.course_chapters || [],
-        labs: fetchedLabsList.length > 0 ? fetchedLabsList : prev?.labs || [],
+        course_chapters: !chaptersRes.error
+          ? fetchedChapters
+          : (isSameCourse ? prev?.course_chapters || [] : []),
+        labs: !labsRes.error
+          ? fetchedLabsList
+          : (isSameCourse ? prev?.labs || [] : []),
       };
     });
 
@@ -195,7 +200,15 @@ export default function TeacherHub() {
                 value={selectedCourse?.id || ''}
                 onChange={(e) => {
                   const target = courses.find((c) => c.id === e.target.value);
-                  if (target) setSelectedCourse(target);
+                  if (target) {
+                    setSelectedLab(null);
+                    setLabs([]);
+                    setSelectedCourse({
+                      ...target,
+                      course_chapters: [],
+                      labs: [],
+                    });
+                  }
                 }}
                 className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold min-w-[220px] max-w-[360px] xl:max-w-[440px] truncate transition-all shadow-sm"
                 title={selectedCourse ? `${selectedCourse.title} (${selectedCourse.code})` : 'Select course'}

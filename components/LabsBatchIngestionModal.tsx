@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lab } from '@/types/socratix';
+import { Lab, Course } from '@/types/socratix';
 import {
   X,
   Layers,
@@ -18,6 +18,7 @@ interface LabsBatchIngestionModalProps {
   isOpen: boolean;
   onClose: () => void;
   labs: Lab[];
+  course?: Course | null;
   onInspectLab: (lab: Lab) => void;
   onOpenAnalytics?: () => void;
 }
@@ -26,6 +27,7 @@ export default function LabsBatchIngestionModal({
   isOpen,
   onClose,
   labs,
+  course,
   onInspectLab,
   onOpenAnalytics,
 }: LabsBatchIngestionModalProps) {
@@ -34,16 +36,19 @@ export default function LabsBatchIngestionModal({
 
   if (!isOpen) return null;
 
-  const totalActivities = labs.reduce((acc, lb) => acc + (lb.activities?.length || 0), 0);
-  const totalMilestones = labs.reduce(
+  // Guarantee strict course scoping: filter labs to this course if course is provided
+  const activeLabs = course ? labs.filter((lb) => !lb.course_id || lb.course_id === course.id) : labs;
+
+  const totalActivities = activeLabs.reduce((acc, lb) => acc + (lb.activities?.length || 0), 0);
+  const totalMilestones = activeLabs.reduce(
     (acc, lb) =>
       acc +
       (lb.activities?.reduce((mAcc, act) => mAcc + (act.milestones?.length || 0), 0) || 0),
     0
   );
-  const totalPresets = labs.reduce((acc, lb) => acc + (lb.demo_presets?.length || 0), 0);
+  const totalPresets = activeLabs.reduce((acc, lb) => acc + (lb.demo_presets?.length || 0), 0);
 
-  const filteredLabs = labs.filter((lb) => {
+  const filteredLabs = activeLabs.filter((lb) => {
     const q = searchQuery.toLowerCase();
     const titleEn = lb.title_i18n?.en?.toLowerCase() || '';
     const titleFr = lb.title_i18n?.fr?.toLowerCase() || '';
@@ -70,12 +75,17 @@ export default function LabsBatchIngestionModal({
                 <h2 className="text-lg font-bold text-white">
                   Labs Decomposed & Ready for Telemetry
                 </h2>
+                {course && (
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-mono">
+                    {course.code}
+                  </Badge>
+                )}
                 <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[11px] font-mono">
-                  {labs.length} TP Ingested
+                  {activeLabs.length} TP Ingested
                 </Badge>
               </div>
               <p className="text-xs text-slate-400">
-                Meta AI <span className="font-mono text-cyan-400">muse-spark-1.3</span> derived hierarchical activities, sequential milestones, and 1-click presets for all lab assignments.
+                Meta AI <span className="font-mono text-cyan-400">muse-spark-1.3</span> derived hierarchical activities, sequential milestones, and 1-click presets for {course ? `"${course.title}"` : 'all lab assignments'}.
               </p>
             </div>
           </div>
@@ -93,8 +103,14 @@ export default function LabsBatchIngestionModal({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-950/40 border-b border-slate-800 text-xs">
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] uppercase font-mono text-slate-400">Total Labs</span>
-            <div className="text-xl font-extrabold text-white mt-0.5">{labs.length}</div>
-            <span className="text-[10px] text-slate-500">TP1 .. TP12 Ingested</span>
+            <div className="text-xl font-extrabold text-white mt-0.5">{activeLabs.length}</div>
+            <span className="text-[10px] text-slate-500 font-mono">
+              {activeLabs.length === 0
+                ? 'No TP Ingested'
+                : activeLabs.length === 1
+                ? `${activeLabs[0].code || 'TP1'} Ingested`
+                : `${activeLabs[0]?.code || 'TP1'} .. ${activeLabs[activeLabs.length - 1]?.code || `TP${activeLabs.length}`} Ingested`}
+            </span>
           </div>
 
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -112,7 +128,7 @@ export default function LabsBatchIngestionModal({
           <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
             <span className="text-[10px] uppercase font-mono text-amber-400">Demo Presets</span>
             <div className="text-xl font-extrabold text-amber-300 mt-0.5">{totalPresets}</div>
-            <span className="text-[10px] text-slate-500">1-click code setups</span>
+            <span className="text-[10px] text-slate-500">2 presets / act. (1-click code)</span>
           </div>
         </div>
 
@@ -156,7 +172,7 @@ export default function LabsBatchIngestionModal({
             </div>
 
             <span className="text-xs text-slate-400 font-mono">
-              Showing {filteredLabs.length} of {labs.length} labs
+              Showing {filteredLabs.length} of {activeLabs.length} labs
             </span>
           </div>
         </div>
@@ -167,6 +183,9 @@ export default function LabsBatchIngestionModal({
             filteredLabs.map((lb) => {
               const bDesc = parseBilingualDescription(lb.description);
               const displayDesc = bDesc[lang] || bDesc.en || bDesc.fr;
+              const fullTitle = getLocalizedLabTitle(lb, lang);
+              // Clean redundant prefixes like "TP 1 — ", "TP1 - ", "TP 1 : " since the badge already shows TP {lb.lab_number}
+              const cleanTitle = fullTitle.replace(/^(?:TP\s*\d+\s*[-—:]*\s*)+/i, '').trim() || fullTitle;
 
               return (
                 <div
@@ -178,7 +197,9 @@ export default function LabsBatchIngestionModal({
                       <span className="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
                         TP {lb.lab_number}
                       </span>
-                      <h3 className="text-sm font-bold text-white truncate">{getLocalizedLabTitle(lb, lang)}</h3>
+                      <h3 className="text-sm font-bold text-white truncate" title={cleanTitle}>
+                        {cleanTitle}
+                      </h3>
                       <span className="text-xs text-slate-500 font-mono">({lb.code})</span>
                     </div>
 
