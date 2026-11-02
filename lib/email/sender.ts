@@ -24,6 +24,14 @@ export interface EmailSendResult {
 }
 
 /**
+ * Strips accidental wrapping quotes (single or double) and extra whitespace.
+ */
+function sanitizeEnv(val?: string): string {
+  if (!val) return '';
+  return val.trim().replace(/^["']|["']$/g, '').trim();
+}
+
+/**
  * Normalizes recipients into Brevo API format: [{ email: string, name?: string }]
  */
 function normalizeRecipients(to: EmailOptions['to']): EmailRecipient[] {
@@ -49,25 +57,34 @@ function normalizeRecipients(to: EmailOptions['to']): EmailRecipient[] {
  * Server-only module protected from client bundle inclusion.
  */
 export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendResult> {
-  const apiKey = process.env.BREVO_API_KEY;
-  const defaultSenderEmail = process.env.BREVO_SENDER_EMAIL;
-  const defaultSenderName = process.env.BREVO_SENDER_NAME || 'Socratix AI Mentor';
+  const apiKey = sanitizeEnv(process.env.BREVO_API_KEY);
+  const defaultSenderEmail = sanitizeEnv(process.env.BREVO_SENDER_EMAIL);
+  const defaultSenderName = sanitizeEnv(process.env.BREVO_SENDER_NAME) || 'Socratix AI Mentor';
 
   if (!apiKey || !defaultSenderEmail) {
     const errorMsg =
-      'Brevo email configuration missing: please set BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.';
+      'Configuration Brevo manquante : veuillez renseigner BREVO_API_KEY et BREVO_SENDER_EMAIL dans vos variables d’environnement.';
     console.warn(`[Brevo Email Gateway] ${errorMsg}`);
+    return { success: false, error: errorMsg };
+  }
+
+  // Guard against unreplaced placeholder keys
+  if (apiKey.includes('votre-cle') || apiKey.includes('your-brevo') || apiKey.startsWith('xsmtpsib-')) {
+    const errorMsg = apiKey.startsWith('xsmtpsib-')
+      ? 'La clé BREVO_API_KEY commence par "xsmtpsib-" (clé SMTP). Pour l’API REST v3, utilisez votre clé API Brevo "xkeysib-...".'
+      : "La variable BREVO_API_KEY contient encore une valeur d’exemple. Veuillez la renseigner avec votre vraie clé Brevo API v3 (xkeysib-...).";
+    console.error(`[Brevo Email Gateway] Configuration Error: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 
   const recipients = normalizeRecipients(options.to);
   if (recipients.length === 0) {
-    return { success: false, error: 'No valid recipient email provided.' };
+    return { success: false, error: 'Aucun destinataire valide spécifié.' };
   }
 
   const sender = {
-    email: options.senderEmail || defaultSenderEmail,
-    name: options.senderName || defaultSenderName,
+    email: sanitizeEnv(options.senderEmail) || defaultSenderEmail,
+    name: sanitizeEnv(options.senderName) || defaultSenderName,
   };
 
   const payload: Record<string, unknown> = {
@@ -110,7 +127,14 @@ export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendR
         messageId: result.messageId,
       };
     } else {
-      const errorDetail = result.message || JSON.stringify(result);
+      let errorDetail = result.message || JSON.stringify(result);
+
+      // Translate Brevo's standard unauthorized message into actionable guidance
+      if (result.message === 'Key not found' || result.code === 'unauthorized') {
+        errorDetail =
+          'Clé Brevo introuvable (Key not found). Vérifiez que la variable BREVO_API_KEY sur Vercel est bien votre clé API v3 (xkeysib-...) sans guillemets, et non une clé SMTP.';
+      }
+
       console.error(`[Brevo Email Gateway] API error (${response.status}): ${errorDetail}`);
       return {
         success: false,
@@ -138,7 +162,7 @@ export async function notifyAdminNewUser(params: {
   ipAddress?: string;
   dashboardUrl?: string;
 }): Promise<EmailSendResult> {
-  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  const adminEmail = sanitizeEnv(process.env.ADMIN_NOTIFICATION_EMAIL);
   if (!adminEmail) {
     console.log('[Admin Notification] ADMIN_NOTIFICATION_EMAIL is not configured in env, skipping admin alert.');
     return { success: false, error: 'ADMIN_NOTIFICATION_EMAIL not configured' };
