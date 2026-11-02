@@ -45,6 +45,7 @@ import MilestoneCelebrationModal, {
 } from './MilestoneCelebrationModal';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
 import { cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
+import { formatLabOptionLabel } from '@/lib/utils';
 import {
   saveActiveContext,
   loadActiveContext,
@@ -1070,7 +1071,7 @@ export default function StudentWorkspace() {
               >
                 {labs.map((l) => (
                   <option key={l.id} value={l.id}>
-                    {l.code} - {l.title}
+                    {formatLabOptionLabel(l.code, l.title)}
                   </option>
                 ))}
               </select>

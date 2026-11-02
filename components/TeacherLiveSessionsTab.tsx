@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { getBrowserSupabase } from '@/lib/supabase';
+import { formatLabOptionLabel } from '@/lib/utils';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
 import {
   AlertTriangle,
@@ -236,7 +237,7 @@ export default function TeacherLiveSessionsTab({
           >
             {labs.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.code} - {l.title}
+                {formatLabOptionLabel(l.code, l.title)}
               </option>
             ))}
           </select>
@@ -265,13 +266,24 @@ export default function TeacherLiveSessionsTab({
         {/* Search Input & Demo Seeder Button */}
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search student or PC..."
-              className="h-8 pl-8 text-xs bg-slate-950 border-slate-700 w-44 rounded-lg focus-visible:ring-emerald-500"
+              className="h-8 pl-8 pr-7 text-xs bg-slate-950 border-slate-700 w-44 rounded-lg focus-visible:ring-emerald-500"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-100 p-0.5 rounded-full hover:bg-slate-800 transition"
+                title="Clear search"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <Button
