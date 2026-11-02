@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase-admin';
 import { cleanPdfPages, buildAdaptivePageBatches, formatRawSlideTextToMarkdown, CleanedPage } from '@/lib/pdf-cleaner';
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
@@ -386,7 +386,6 @@ Do NOT summarize multiple slides together. Preserve exact class, variable, and m
     });
   } catch (err: unknown) {
     console.error('[Chapter Analyze Error]:', err);
-    const msg = err instanceof Error ? err.message : 'Chapter analysis failed';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: 'Chapter analysis failed. Please verify your PDF format or try again.' }, { status: 500 });
   }
 }

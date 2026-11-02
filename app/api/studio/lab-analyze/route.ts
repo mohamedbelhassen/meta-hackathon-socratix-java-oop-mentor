@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase-admin';
 import { cleanPdfPages, cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import { GOLDEN_LAB_DECOMPOSITION_SHOT } from '@/lib/meta-prompt-exemplars';
 
@@ -427,7 +427,7 @@ ${pagesTextSample}`;
       lab: savedLab,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Lab analysis failed';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Lab Analyze Error]:', err);
+    return NextResponse.json({ error: 'Lab analysis failed. Please verify your PDF format or try again.' }, { status: 500 });
   }
 }

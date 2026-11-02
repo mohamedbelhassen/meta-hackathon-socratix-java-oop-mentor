@@ -146,12 +146,17 @@ CREATE INDEX idx_chat_messages_created ON public.chat_messages(created_at);
 -- 9. AUTOMATIC UPDATED_AT TRIGGER
 -- ============================================================================
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
     NEW.updated_at = TIMEZONE('utc'::text, NOW());
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM PUBLIC, anon, authenticated;
 
 CREATE TRIGGER update_courses_updated_at
     BEFORE UPDATE ON public.courses
@@ -180,7 +185,11 @@ CREATE TRIGGER update_student_lab_sessions_updated_at
 -- in Supabase Auth (auth.users). Dual-layer resilience is ensured with the Next.js
 -- server endpoint /api/auth/sync-profile.
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, display_name, role, is_guest)
   VALUES (
@@ -196,7 +205,9 @@ BEGIN
     role = COALESCE(EXCLUDED.role, public.profiles.role);
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_new_auth_user() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created

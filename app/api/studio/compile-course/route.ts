@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase-admin';
 import {
   GOLDEN_COMPETENCY_TAXONOMY_SHOT,
   GOLDEN_TUTOR_PROMPT_SHOT,
@@ -264,7 +264,7 @@ ${parsed.competency_matrix
       course: updatedCourse,
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Course compilation failed';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Compile Course Error]:', err);
+    return NextResponse.json({ error: 'Course compilation failed. Please verify AI connectivity or try again.' }, { status: 500 });
   }
 }

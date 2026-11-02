@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase-admin';
 import { verifyStudentSessionAccess } from '@/lib/auth-guard';
 
 export async function POST(req: NextRequest) {

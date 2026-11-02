@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase-admin';
 import { verifyDestructiveActionPermission } from '@/lib/auth-guard';
 
 export async function GET() {
@@ -17,8 +17,8 @@ export async function GET() {
     if (error) throw error;
     return NextResponse.json({ courses });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to fetch courses';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Courses API GET] Error:', err);
+    return NextResponse.json({ error: 'Failed to fetch courses' }, { status: 500 });
   }
 }
 
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ course: result });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to save course';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Courses API POST] Error:', err);
+    return NextResponse.json({ error: 'Failed to save course' }, { status: 500 });
   }
 }
 
@@ -103,8 +103,8 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true, deletedCourseId: id });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to delete course';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Courses API DELETE] Error:', err);
+    return NextResponse.json({ error: 'Failed to delete course' }, { status: 500 });
   }
 }
 
@@ -225,7 +225,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ course: updated });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Failed to update competency matrix';
-    return NextResponse.json({ error: msg }, { status: 500 });
+    console.error('[Courses API PATCH] Error:', err);
+    return NextResponse.json({ error: 'Failed to update competency matrix' }, { status: 500 });
   }
 }

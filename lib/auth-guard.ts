@@ -1,7 +1,16 @@
 import { NextRequest } from 'next/server';
-import { getServiceSupabase } from './supabase';
+import crypto from 'node:crypto';
+import { getServiceSupabase } from './supabase-admin';
 
 const JURY_DEFAULT_PIN = process.env.JURY_PIN || process.env.NEXT_PUBLIC_JURY_PIN || '2026';
+
+function verifyPinConstantTime(submitted: string, expected: string): boolean {
+  if (!submitted || !expected) return false;
+  const a = Buffer.from(submitted.trim());
+  const b = Buffer.from(expected.trim());
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 export interface AuthGuardResult {
   authorized: boolean;
@@ -19,17 +28,23 @@ export interface SessionGuardResult {
 }
 
 /**
- * Validates permission for destructive actions (e.g. deleting or overwriting master courses/labs).
+ * Validates permission for destructive actions (e.g. deleting master courses/labs).
  * Allows execution if:
- * 1. The request provides an 'x-jury-pin' header matching JURY_PIN (default: '2026')
- * 2. OR the request provides an authorization bearer token from an authenticated teacher
+ * 1. ALLOW_COURSE_DELETION is not explicitly set to 'false'
+ * 2. An authenticated teacher is executing the request (role === 'teacher')
+ * 3. OR the request provides an 'x-jury-pin' matching JURY_PIN via constant-time comparison
  */
 export async function verifyDestructiveActionPermission(req: NextRequest): Promise<AuthGuardResult> {
-  const pinHeader = req.headers.get('x-jury-pin');
-  if (pinHeader && pinHeader.trim() === JURY_DEFAULT_PIN) {
-    return { authorized: true, actor: 'jury_pin' };
+  const isDeletionDisabled = process.env.ALLOW_COURSE_DELETION === 'false';
+  if (isDeletionDisabled) {
+    return {
+      authorized: false,
+      actor: 'unauthorized',
+      error: 'Course deletion is currently disabled by administrator (ALLOW_COURSE_DELETION=false).',
+    };
   }
 
+  // 1. Authenticated Teacher check (first-class permission)
   const authHeader = req.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.replace('Bearer ', '').trim();
@@ -48,10 +63,16 @@ export async function verifyDestructiveActionPermission(req: NextRequest): Promi
     }
   }
 
+  // 2. Hackathon Jury PIN check (constant-time comparison)
+  const pinHeader = req.headers.get('x-jury-pin');
+  if (pinHeader && verifyPinConstantTime(pinHeader, JURY_DEFAULT_PIN)) {
+    return { authorized: true, actor: 'jury_pin' };
+  }
+
   return {
     authorized: false,
     actor: 'unauthorized',
-    error: 'Destructive mutation requires a valid Jury PIN (e.g. 2026) or Teacher authentication.',
+    error: 'Destructive action requires an authenticated Teacher account or a valid Jury PIN.',
   };
 }
 

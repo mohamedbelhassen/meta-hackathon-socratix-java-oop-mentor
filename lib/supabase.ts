@@ -6,10 +6,8 @@ export type TypedSupabaseClient = SupabaseClient<Database>;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 let browserClient: SupabaseClient | null = null;
-let serviceClient: SupabaseClient | null = null;
 
 /**
  * Returns a singleton browser-side Supabase client using anon key.
@@ -27,39 +25,4 @@ export function getBrowserSupabase(): SupabaseClient {
     },
   });
   return browserClient;
-}
-
-/**
- * Returns a server-side Supabase client using the Service Role Key.
- * MUST ONLY be called in Next.js Server Components, Route Handlers, or Server Actions.
- */
-export function getServiceSupabase(): SupabaseClient {
-  if (serviceClient) return serviceClient;
-  const key = supabaseServiceRoleKey || supabaseAnonKey;
-  if (!supabaseUrl || !key) {
-    throw new Error('Supabase URL or Service Role Key is missing for server operations.');
-  }
-  serviceClient = createClient(supabaseUrl, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-  return serviceClient;
-}
-
-/**
- * Helper to obtain a strictly typed Supabase Client with the Database schema.
- */
-export function getTypedServiceSupabase(): SupabaseClient<Database> {
-  const key = supabaseServiceRoleKey || supabaseAnonKey;
-  if (!supabaseUrl || !key) {
-    throw new Error('Supabase URL or Service Role Key is missing for server operations.');
-  }
-  return createClient<Database>(supabaseUrl, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
 }
