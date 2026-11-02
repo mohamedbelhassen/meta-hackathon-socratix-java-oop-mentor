@@ -27,6 +27,7 @@ export default function DeleteCourseModal({
   course,
   onCourseDeleted,
 }: DeleteCourseModalProps) {
+  const defaultDemoPin = process.env.NEXT_PUBLIC_JURY_PIN || '2026';
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -68,7 +69,7 @@ export default function DeleteCourseModal({
   };
 
   const handleFillDemoPin = () => {
-    setPin('2026');
+    setPin(defaultDemoPin);
     setError(null);
   };
 
@@ -136,17 +137,17 @@ export default function DeleteCourseModal({
                 type="button"
                 onClick={handleFillDemoPin}
                 className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline underline-offset-2"
-                title="Fill default PIN 2026"
+                title={`Fill default PIN ${defaultDemoPin}`}
               >
                 <Sparkles className="w-3 h-3" />
-                <span>Fill Jury PIN (2026)</span>
+                <span>Fill Jury PIN ({defaultDemoPin})</span>
               </button>
             </div>
 
             <div className="relative">
               <input
                 type={showPin ? 'text' : 'password'}
-                placeholder="Enter 4-digit Jury PIN"
+                placeholder={`Enter Jury PIN (e.g. ${defaultDemoPin})`}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-100 font-mono tracking-widest focus:outline-none focus:border-rose-500 pr-10"
@@ -162,7 +163,7 @@ export default function DeleteCourseModal({
               </button>
             </div>
             <p className="text-[10px] text-slate-500">
-              Default Hackathon Jury PIN is <code className="text-slate-300">2026</code>.
+              Configured Hackathon Jury PIN is <code className="text-slate-300">{defaultDemoPin}</code>.
             </p>
           </div>
 

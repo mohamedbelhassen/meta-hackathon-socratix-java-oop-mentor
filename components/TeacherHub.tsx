@@ -386,6 +386,7 @@ export default function TeacherHub() {
                 onCourseUpdated={refreshCourseData}
                 onOpenAnalyticsTab={() => setActiveTab('analytics')}
                 onCreateCourse={() => setIsCreateModalOpen(true)}
+                onDeleteCourse={() => setIsDeleteModalOpen(true)}
               />
             )}
           </>

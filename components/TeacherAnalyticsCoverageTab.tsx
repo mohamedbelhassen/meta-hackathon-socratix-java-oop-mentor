@@ -24,6 +24,32 @@ interface TeacherAnalyticsCoverageTabProps {
   onCourseUpdated?: () => void;
 }
 
+interface UnanchoredLabRef {
+  code: string;
+  fullTitle: string;
+  cleanTitle: string;
+}
+
+/**
+ * Strips redundant leading prefixes from lab titles (e.g., 'TP 1 — Lab 1: ', 'TP 2: ', 'Lab 1 - ')
+ * to cleanly surface the actual lab subject matter.
+ */
+function cleanLabTitle(rawTitle: string, labCode?: string): string {
+  if (!rawTitle) return '';
+  let cleaned = rawTitle.trim();
+
+  // Strip redundant leading prefixes: TP X — Lab X: , Lab X: , TP X : , etc.
+  cleaned = cleaned.replace(/^(?:TP\s*\d+\s*[-—:]+\s*)?(?:Lab\s*\d+\s*[-—:]+\s*)?/i, '');
+
+  if (labCode) {
+    const codeRegex = new RegExp(`^${labCode}\\s*[-—:]*\\s*`, 'i');
+    cleaned = cleaned.replace(codeRegex, '');
+  }
+
+  cleaned = cleaned.replace(/^[-—:]\s*/, '').trim();
+  return cleaned || rawTitle;
+}
+
 export default function TeacherAnalyticsCoverageTab({
   course,
   labs,
@@ -41,9 +67,16 @@ export default function TeacherAnalyticsCoverageTab({
   } | null>(null);
   const [selectedChapterCode, setSelectedChapterCode] = useState<string>('');
   const [selectedCanonicalCode, setSelectedCanonicalCode] = useState<string>('');
+  const [customTitle, setCustomTitle] = useState<string>('');
   const [customSlideRef, setCustomSlideRef] = useState<string>('');
   const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const humanizeConceptCode = (code: string) =>
+    (code || '')
+      .toLowerCase()
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
   const normalizeCode = (c: string) => (c || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
 
@@ -70,7 +103,7 @@ export default function TeacherAnalyticsCoverageTab({
   // 3. Compute Global Curriculum Coverage Matrix: Course Competency Matrix vs Labs
   // Map micro-competencies across all labs
   const conceptToLabsMap = new Map<string, string[]>();
-  const unanchoredConceptsMap = new Map<string, { labs: string[]; labTitles: string[] }>();
+  const unanchoredConceptsMap = new Map<string, { labs: UnanchoredLabRef[] }>();
 
   for (const lab of labs) {
     for (const rawConcept of lab.covered_micro_concepts || []) {
@@ -82,10 +115,13 @@ export default function TeacherAnalyticsCoverageTab({
         }
         conceptToLabsMap.set(canonicalCode, list);
       } else {
-        const entry = unanchoredConceptsMap.get(rawConcept) || { labs: [], labTitles: [] };
-        if (!entry.labs.includes(lab.code)) {
-          entry.labs.push(lab.code);
-          entry.labTitles.push(lab.title);
+        const entry = unanchoredConceptsMap.get(rawConcept) || { labs: [] };
+        if (!entry.labs.some((l) => l.code === lab.code)) {
+          entry.labs.push({
+            code: lab.code,
+            fullTitle: lab.title,
+            cleanTitle: cleanLabTitle(lab.title, lab.code),
+          });
         }
         unanchoredConceptsMap.set(rawConcept, entry);
       }
@@ -111,6 +147,7 @@ export default function TeacherAnalyticsCoverageTab({
           action: 'assign_to_chapter',
           conceptCode: activeUnanchoredAction.conceptCode,
           chapterCode: selectedChapterCode,
+          title: customTitle.trim() || activeUnanchoredAction.conceptCode.replace(/_/g, ' '),
           slideRef: customSlideRef.trim() || 'Assigned from Lab (Practical)',
         };
       } else {
@@ -139,6 +176,7 @@ export default function TeacherAnalyticsCoverageTab({
       setActiveUnanchoredAction(null);
       setSelectedChapterCode('');
       setSelectedCanonicalCode('');
+      setCustomTitle('');
       setCustomSlideRef('');
       if (onCourseUpdated) {
         onCourseUpdated();
@@ -416,7 +454,9 @@ export default function TeacherAnalyticsCoverageTab({
                           </span>
                           {statusBadge}
                         </div>
-                        <p className="text-[11px] text-slate-400 line-clamp-1">{micro.title}</p>
+                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-snug" title={micro.title}>
+                          {micro.title}
+                        </p>
                         {micro.aliases && micro.aliases.length > 0 && (
                           <div className="text-[10px] text-cyan-400/80 font-mono truncate">
                             Aliases: {micro.aliases.join(', ')}
@@ -464,20 +504,61 @@ export default function TeacherAnalyticsCoverageTab({
               {Array.from(unanchoredConceptsMap.entries()).map(([conceptCode, data]) => (
                 <div
                   key={conceptCode}
-                  className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2 flex flex-col justify-between"
+                  className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2.5 flex flex-col justify-between hover:border-slate-750 transition"
                 >
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-1">
-                      <span className="font-mono text-[11px] font-semibold text-slate-200 truncate">
+                      <span
+                        className="font-mono text-[11px] font-semibold text-slate-200 truncate"
+                        title={conceptCode}
+                      >
                         {conceptCode}
                       </span>
-                      <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30 text-[9px] shrink-0">
-                        {data.labs.join(', ')}
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-500/15 text-amber-300 border-amber-500/40 text-[9px] font-medium gap-1 shrink-0"
+                      >
+                        <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+                        Not in syllabus
                       </Badge>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-1">
-                      Practiced in: {data.labTitles.slice(0, 2).join(' • ')}
-                    </p>
+
+                    <div className="text-[10px] text-slate-400 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-slate-400 font-semibold">Exercised in:</span>
+                      <span className="font-mono text-amber-300 font-semibold">
+                        {data.labs.map((l) => l.code).join(', ')}
+                      </span>
+                    </div>
+
+                    {data.labs.length === 1 ? (
+                      <p
+                        className="text-[11px] text-slate-300 leading-snug line-clamp-2"
+                        title={`${data.labs[0].code} — ${data.labs[0].fullTitle}`}
+                      >
+                        <span className="text-slate-500 font-normal">Lab: </span>
+                        <span className="font-medium text-slate-200">{data.labs[0].cleanTitle}</span>
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        <span className="text-slate-500 text-[10px] font-normal block">
+                          Practiced in {data.labs.length} labs:
+                        </span>
+                        <div className="space-y-0.5">
+                          {data.labs.map((lb) => (
+                            <div
+                              key={lb.code}
+                              className="flex items-center gap-1.5 text-[10px] text-slate-300"
+                              title={`${lb.code} — ${lb.fullTitle}`}
+                            >
+                              <span className="px-1 py-0.2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[9px] shrink-0 font-semibold">
+                                {lb.code}
+                              </span>
+                              <span className="truncate text-slate-200">{lb.cleanTitle}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
@@ -488,11 +569,13 @@ export default function TeacherAnalyticsCoverageTab({
                       onClick={() => {
                         setActiveUnanchoredAction({ conceptCode, action: 'assign' });
                         setSelectedChapterCode(chaptersTaxonomy[0]?.chapter_code || '');
+                        setCustomTitle(humanizeConceptCode(conceptCode));
+                        setCustomSlideRef('Assigned from Lab (Practical)');
                         setActionError(null);
                       }}
                       className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 flex-1"
                     >
-                      ➕ Assign Chapter
+                      ➕ Assign to Chapter...
                     </Button>
                     <Button
                       type="button"
@@ -506,7 +589,7 @@ export default function TeacherAnalyticsCoverageTab({
                       }}
                       className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 flex-1"
                     >
-                      🔗 Link Alias
+                      🔗 Link as Alias...
                     </Button>
                   </div>
                 </div>
@@ -531,8 +614,17 @@ export default function TeacherAnalyticsCoverageTab({
                 </button>
               </div>
 
-              <div className="text-xs text-slate-300 space-y-1">
+              <div className="text-xs text-slate-300 space-y-1.5">
                 <div>Concept: <span className="font-mono text-emerald-400 font-semibold">{activeUnanchoredAction.conceptCode}</span></div>
+                {(() => {
+                  const labRefs = unanchoredConceptsMap.get(activeUnanchoredAction.conceptCode)?.labs || [];
+                  if (labRefs.length === 0) return null;
+                  return (
+                    <div className="text-[11px] text-slate-400">
+                      Origin: <span className="text-slate-200 font-medium">{labRefs.map((l) => `${l.code} (${l.cleanTitle})`).join(', ')}</span>
+                    </div>
+                  );
+                })()}
                 <div className="text-slate-400 text-[11px]">
                   {activeUnanchoredAction.action === 'assign'
                     ? 'Attach this lab competency to a course chapter so it appears in the theoretical syllabus.'
@@ -567,6 +659,19 @@ export default function TeacherAnalyticsCoverageTab({
 
                   <div>
                     <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
+                      Competency Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Conditional branching with if/else"
+                      value={customTitle}
+                      onChange={(e) => setCustomTitle(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
                       Slide Reference (Optional)
                     </label>
                     <input
@@ -589,13 +694,15 @@ export default function TeacherAnalyticsCoverageTab({
                       onChange={(e) => setSelectedCanonicalCode(e.target.value)}
                       className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
                     >
-                      {chaptersTaxonomy.flatMap((ch) =>
-                        (ch.micro_competencies || []).map((mc) => (
-                          <option key={mc.code} value={mc.code}>
-                            {mc.code} ({mc.title})
-                          </option>
-                        ))
-                      )}
+                      {chaptersTaxonomy.map((ch) => (
+                        <optgroup key={ch.chapter_code} label={`${ch.chapter_code}: ${ch.competency_title}`}>
+                          {(ch.micro_competencies || []).map((mc) => (
+                            <option key={mc.code} value={mc.code}>
+                              {mc.code} — {mc.title}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -616,9 +723,13 @@ export default function TeacherAnalyticsCoverageTab({
                   size="sm"
                   disabled={isSubmittingAction}
                   onClick={handleExecuteAction}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold text-xs"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-semibold text-xs shadow-md"
                 >
-                  {isSubmittingAction ? 'Saving...' : 'Confirm'}
+                  {isSubmittingAction
+                    ? 'Saving...'
+                    : activeUnanchoredAction.action === 'assign'
+                    ? 'Save & Attach to Chapter'
+                    : 'Confirm Alias Link'}
                 </Button>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServiceSupabase } from './supabase';
 
-const JURY_DEFAULT_PIN = process.env.JURY_PIN || '2026';
+const JURY_DEFAULT_PIN = process.env.JURY_PIN || process.env.NEXT_PUBLIC_JURY_PIN || '2026';
 
 export interface AuthGuardResult {
   authorized: boolean;

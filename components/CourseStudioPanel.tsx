@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Clock,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
@@ -79,6 +80,7 @@ interface CourseStudioPanelProps {
   onCourseUpdated: () => void | Promise<void>;
   onOpenAnalyticsTab?: () => void;
   onCreateCourse?: () => void;
+  onDeleteCourse?: () => void;
 }
 
 export default function CourseStudioPanel({
@@ -86,6 +88,7 @@ export default function CourseStudioPanel({
   onCourseUpdated,
   onOpenAnalyticsTab,
   onCreateCourse,
+  onDeleteCourse,
 }: CourseStudioPanelProps) {
   // Batch processing state
   const [isProcessing, setIsProcessing] = useState(false);
@@ -565,6 +568,18 @@ export default function CourseStudioPanel({
               >
                 <FileText className="w-3.5 h-3.5 mr-1 text-cyan-400" />
                 {inspectingKB ? 'Hide KB' : 'View Compiled KB'}
+              </Button>
+            )}
+            {onDeleteCourse && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onDeleteCourse}
+                className="text-xs h-8 bg-rose-950/20 border-rose-500/30 text-rose-400 hover:text-rose-200 hover:bg-rose-950/50 hover:border-rose-500/60 transition gap-1"
+                title={`Delete course ${course.code} (Protected by Jury PIN 2026)`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Course</span>
               </Button>
             )}
           </div>
@@ -1158,6 +1173,35 @@ export default function CourseStudioPanel({
           </div>
         </div>
       </div>
+
+      {/* DANGER ZONE (SUGGESTION A) */}
+      {onDeleteCourse && (
+        <div className="bg-slate-900/60 border border-rose-900/40 rounded-2xl p-5 space-y-3 shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4" />
+                <span>Danger Zone</span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Permanently delete <span className="font-semibold text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Protected by Hackathon Jury PIN (<code className="text-amber-400 font-mono">{process.env.NEXT_PUBLIC_JURY_PIN || '2026'}</code>) or Teacher authorization.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDeleteCourse}
+              className="bg-rose-950/40 border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 hover:border-rose-600 text-xs font-semibold h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete this Course</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 1: COURSE COMPILATION SUMMARY */}
       {showCompilationModal && course && (
