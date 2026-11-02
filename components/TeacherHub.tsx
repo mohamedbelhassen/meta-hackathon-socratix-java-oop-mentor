@@ -197,7 +197,8 @@ export default function TeacherHub() {
                   const target = courses.find((c) => c.id === e.target.value);
                   if (target) setSelectedCourse(target);
                 }}
-                className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold max-w-[200px] truncate"
+                className="bg-slate-950 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold min-w-[220px] max-w-[360px] xl:max-w-[440px] truncate transition-all shadow-sm"
+                title={selectedCourse ? `${selectedCourse.title} (${selectedCourse.code})` : 'Select course'}
               >
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>

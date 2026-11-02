@@ -24,11 +24,54 @@ import {
   Eye,
   Zap,
   Plus,
+  Lock,
+  AlertTriangle,
+  Clock,
 } from 'lucide-react';
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
 import LabDetailModal from '@/components/LabDetailModal';
 import { getLocalizedChapterTitle, getLocalizedLabTitle } from '@/lib/bilingual-helper';
+
+interface CompilationPhase {
+  step: number;
+  title: string;
+  description: string;
+  pct: number;
+}
+
+const COMPILATION_PHASES: CompilationPhase[] = [
+  {
+    step: 1,
+    title: 'Aggregating Chapter Slides & Analogies',
+    description: 'Combining lecture slides, key metaphors and pedagogical notes into synthesis context',
+    pct: 25,
+  },
+  {
+    step: 2,
+    title: 'Deduplicating Course Competency Matrix',
+    description: 'Meta AI (muse-spark-1.3) resolving canonical taxonomy, canonical keys & eliminating conceptual overlaps',
+    pct: 55,
+  },
+  {
+    step: 3,
+    title: 'Synthesizing Dense Knowledge Base',
+    description: 'Compressing curriculum rules into ~3,500 token Prefix KV Caching format',
+    pct: 80,
+  },
+  {
+    step: 4,
+    title: 'Calibrating Socratic Few-Shots & Anchors',
+    description: 'Generating teacher pedagogical few-shots and anchoring error archetypes to exact slide numbers',
+    pct: 95,
+  },
+  {
+    step: 5,
+    title: 'Course Compilation Complete!',
+    description: 'Knowledge Base, Mentor Prompt & Competency Matrix persisted to Supabase with Realtime sync',
+    pct: 100,
+  },
+];
 
 interface CourseStudioPanelProps {
   course: (Course & { course_chapters?: CourseChapter[]; labs?: Lab[] }) | null;
@@ -51,6 +94,10 @@ export default function CourseStudioPanel({
     total: number;
     filename: string;
   } | null>(null);
+
+  // Compilation multi-phase storytelling & elapsed timer
+  const [compilationPhase, setCompilationPhase] = useState<number>(0);
+  const [compilationElapsed, setCompilationElapsed] = useState<number>(0);
 
   // General error/success banner
   const [statusMessage, setStatusMessage] = useState<{
@@ -370,17 +417,40 @@ export default function CourseStudioPanel({
         total: 1,
         filename: `${course.title} (${course.code})`,
       });
+      setCompilationPhase(0);
+      setCompilationElapsed(0);
 
-      const res = await fetch('/api/studio/compile-course', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId: course.id }),
-      });
+      // Realtime elapsed counter & phased step progression
+      const elapsedInterval = setInterval(() => {
+        setCompilationElapsed((prev) => prev + 1);
+      }, 1000);
+
+      const t1 = setTimeout(() => setCompilationPhase(1), 2800);
+      const t2 = setTimeout(() => setCompilationPhase(2), 7200);
+      const t3 = setTimeout(() => setCompilationPhase(3), 12500);
+
+      let res: Response;
+      try {
+        res = await fetch('/api/studio/compile-course', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseId: course.id }),
+        });
+      } finally {
+        clearInterval(elapsedInterval);
+        clearTimeout(t1);
+        clearTimeout(t2);
+        clearTimeout(t3);
+      }
 
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.error || 'Failed to compile course');
       }
+
+      // Visual completion state (Phase 5: 100%)
+      setCompilationPhase(4);
+      await new Promise((r) => setTimeout(r, 600));
 
       await onCourseUpdated();
       setForceRedistillChapters(false);
@@ -539,7 +609,82 @@ export default function CourseStudioPanel({
       </div>
 
       {/* STATUS & PROGRESS BANNERS */}
-      {currentProgress && (
+      {currentProgress && currentProgress.stage === 'Synthesizing KB & Prompt' ? (
+        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                  Distilling Curriculum with Meta AI
+                  <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400 font-mono">
+                    muse-spark-1.3
+                  </Badge>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  {COMPILATION_PHASES[compilationPhase]?.title}
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-base font-bold text-emerald-400 font-mono">
+                {COMPILATION_PHASES[compilationPhase]?.pct}%
+              </span>
+              <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 justify-end">
+                <Clock className="w-3 h-3 text-slate-500" />
+                <span>{compilationElapsed}s elapsed</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Bar with smooth transition */}
+          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-2 rounded-full transition-all duration-700 ease-out"
+              style={{ width: `${COMPILATION_PHASES[compilationPhase]?.pct}%` }}
+            />
+          </div>
+
+          {/* 4-Step Visual Stepper */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            {COMPILATION_PHASES.slice(0, 4).map((p, idx) => {
+              const isPast = compilationPhase > idx;
+              const isCurrent = compilationPhase === idx;
+              return (
+                <div
+                  key={p.step}
+                  className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                    isPast
+                      ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                      : isCurrent
+                      ? 'bg-slate-950 border-cyan-500/50 text-cyan-200 shadow-sm'
+                      : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] font-bold">Step {p.step}</span>
+                    {isPast ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : isCurrent ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                    ) : (
+                      <span className="w-2 h-2 rounded-full bg-slate-800" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-medium leading-tight line-clamp-1">{p.title}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-850">
+            <span className="text-emerald-400 font-semibold mr-1.5">Active Process:</span>
+            {COMPILATION_PHASES[compilationPhase]?.description}
+          </p>
+        </div>
+      ) : currentProgress ? (
         <div className="bg-cyan-950/40 border border-cyan-500/40 rounded-2xl p-4 text-xs space-y-2 animate-pulse">
           <div className="flex items-center justify-between font-semibold text-cyan-300">
             <span>
@@ -555,7 +700,7 @@ export default function CourseStudioPanel({
           </div>
           <p className="text-[11px] text-slate-400 truncate">Current File: {currentProgress.filename}</p>
         </div>
-      )}
+      ) : null}
 
       {statusMessage && (
         <div
@@ -706,7 +851,12 @@ export default function CourseStudioPanel({
               ) : isProcessing ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  Synthesizing Taxonomy & Prompt with Meta AI...
+                  Synthesizing with Meta AI ({compilationElapsed}s)...
+                </>
+              ) : chapters.length === 0 ? (
+                <>
+                  <BookOpen className="w-3.5 h-3.5 mr-1.5 opacity-60" />
+                  Upload Chapter PDFs First (Step 2)
                 </>
               ) : (
                 <>
@@ -750,11 +900,53 @@ export default function CourseStudioPanel({
               The AI derives activities, sequential milestones, and 1-click Judge Demo Presets.
             </p>
 
+            {/* PREREQUISITE ALERT WHEN NOT COMPILED */}
+            {!hasTaxonomy ? (
+              <div className="p-3.5 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-2 text-xs">
+                <div className="flex items-start gap-2.5 text-amber-300 font-semibold">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-amber-200">
+                      Prerequisite Required: Compile Knowledge Base First (Step 3)
+                    </p>
+                    <p className="text-[11px] font-normal text-amber-200/80 leading-relaxed">
+                      Before uploading Lab PDFs (TP), Socratix requires the Course Knowledge Base and Competency Matrix to be compiled from your chapter slides. This allows the AI to map lab activities to official lecture concepts.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleCompileCourse}
+                  disabled={isProcessing || chapters.length === 0}
+                  className="w-full bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs h-8 gap-1.5 shadow-sm mt-1"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>
+                    {chapters.length === 0
+                      ? 'Upload Chapter PDFs First (Step 2)'
+                      : '⚡ Compile Knowledge Base & Mentor Prompt Now'}
+                  </span>
+                </Button>
+              </div>
+            ) : (
+              <div className="p-2.5 bg-emerald-950/30 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span className="font-medium text-[11px]">
+                    Knowledge Base &amp; Taxonomy compiled. Ready for Lab PDFs!
+                  </span>
+                </div>
+                <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-400 font-mono">
+                  Step 3 Ready
+                </Badge>
+              </div>
+            )}
+
             {/* BATCH LABS INPUT */}
             <div
               className={`relative border-2 border-dashed rounded-xl p-4 text-center transition ${
                 !hasTaxonomy
-                  ? 'border-slate-850 bg-slate-950/20 opacity-60 cursor-not-allowed'
+                  ? 'border-slate-800 bg-slate-950/30 opacity-70 cursor-not-allowed'
                   : 'border-slate-850 hover:border-cyan-500/50 bg-slate-950/40 cursor-pointer'
               }`}
             >
@@ -766,13 +958,25 @@ export default function CourseStudioPanel({
                 onChange={handleBatchLabsUpload}
                 className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
-              <Upload className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
-              <p className="text-xs font-semibold text-slate-200">
-                {isProcessing ? 'Processing...' : 'Upload Lab PDFs (TP1..TP12)'}
-              </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {!hasTaxonomy ? 'Compile Step 3 first' : 'Select all 12 TP files at once'}
-              </p>
+              {!hasTaxonomy ? (
+                <>
+                  <Lock className="w-5 h-5 text-amber-400/80 mx-auto mb-1.5" />
+                  <p className="text-xs font-semibold text-slate-300">
+                    Upload Locked &mdash; Compile Course First
+                  </p>
+                  <p className="text-[10px] text-amber-400/80 mt-0.5">
+                    Click &ldquo;Compile Knowledge Base &amp; Prompt&rdquo; above to unlock lab ingestion
+                  </p>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
+                  <p className="text-xs font-semibold text-slate-200">
+                    {isProcessing ? 'Processing...' : 'Upload Lab PDFs (TP1..TP12)'}
+                  </p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Select all 12 TP files at once</p>
+                </>
+              )}
             </div>
 
             {/* LIST OF CURRENT LABS */}
