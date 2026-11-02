@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase';
 import { StudentLabSession, ChatMessage, CourseChapter } from '@/types/socratix';
 import { formatRawSlideTextToMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
+import type { Database } from '@/types/database.types';
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ session: null, messages: [] });
     }
 
-    const session = sessionData as StudentLabSession;
+    const session = sessionData as unknown as StudentLabSession;
 
     // Fetch chat history for this session
     const { data: messagesData, error: messagesError } = await supabase
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest) {
       console.error('[Session Context GET] Chat messages error:', messagesError);
     }
 
-    const rawMessages = (messagesData || []) as ChatMessage[];
+    const rawMessages = (messagesData || []) as unknown as ChatMessage[];
     let hydratedMessages = rawMessages;
 
     // Check if any message has course_reference that needs slide_markdown enrichment
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
         .select('chapter_number, code, title, title_i18n, pdf_url, pages_json')
         .eq('course_id', session.course_id);
 
-      const chapters = (chaptersData || []) as CourseChapter[];
+      const chapters = (chaptersData || []) as unknown as CourseChapter[];
       if (chapters.length > 0) {
         hydratedMessages = rawMessages.map((msg) => {
           if (!msg.course_reference?.chapter_code || !msg.course_reference?.page_number) {
@@ -124,7 +125,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const updateFields: Record<string, unknown> = {
+    const updateFields: Database['public']['Tables']['student_lab_sessions']['Update'] = {
       updated_at: new Date().toISOString(),
     };
 
@@ -152,7 +153,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      session: updatedSession as StudentLabSession | null,
+      session: (updatedSession as unknown as StudentLabSession) || null,
     });
   } catch (error) {
     console.error('[Session Context PATCH] Exception:', error);

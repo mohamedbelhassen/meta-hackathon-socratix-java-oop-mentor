@@ -1,4 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+
+export type { Database };
+export type TypedSupabaseClient = SupabaseClient<Database>;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -42,4 +46,20 @@ export function getServiceSupabase(): SupabaseClient {
     },
   });
   return serviceClient;
+}
+
+/**
+ * Helper to obtain a strictly typed Supabase Client with the Database schema.
+ */
+export function getTypedServiceSupabase(): SupabaseClient<Database> {
+  const key = supabaseServiceRoleKey || supabaseAnonKey;
+  if (!supabaseUrl || !key) {
+    throw new Error('Supabase URL or Service Role Key is missing for server operations.');
+  }
+  return createClient<Database>(supabaseUrl, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }

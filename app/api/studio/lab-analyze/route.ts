@@ -373,6 +373,28 @@ ${pagesTextSample}`;
       };
     });
 
+    let canonicalDescription: string | null = null;
+    let descriptionI18n: { en: string; fr: string } | null = null;
+
+    if (typeof parsed.description === 'object' && parsed.description !== null) {
+      const descObj = parsed.description as { en?: string; fr?: string };
+      const en = descObj.en?.trim() || '';
+      const fr = descObj.fr?.trim() || '';
+      canonicalDescription = en || fr || null;
+      descriptionI18n = {
+        en: en || canonicalDescription || '',
+        fr: fr || canonicalDescription || '',
+      };
+    } else if (typeof parsed.description === 'string' && parsed.description.trim()) {
+      const cleanDesc = parsed.description.trim();
+      canonicalDescription = cleanDesc;
+      descriptionI18n = { en: cleanDesc, fr: cleanDesc };
+    } else if (description?.trim()) {
+      const cleanDesc = description.trim();
+      canonicalDescription = cleanDesc;
+      descriptionI18n = { en: cleanDesc, fr: cleanDesc };
+    }
+
     const labRecord = {
       course_id: courseId,
       lab_number: Number(labNumber),
@@ -382,17 +404,14 @@ ${pagesTextSample}`;
         en: cleanEnTitle,
         fr: cleanFrTitle,
       },
-      description:
-        typeof parsed.description === 'object' && parsed.description !== null
-          ? JSON.stringify(parsed.description)
-          : (typeof parsed.description === 'string' ? parsed.description.trim() : (description?.trim() || null)),
+      description: canonicalDescription,
+      description_i18n: descriptionI18n,
       pdf_url: pdfUrl || null,
       pages_json: cleanedPages,
       activities: mappedActivities,
       covered_micro_concepts: parsed.covered_micro_concepts || [],
       demo_presets: mappedPresets,
       is_active: true,
-      created_at: new Date().toISOString(),
     };
 
     const { data: savedLab, error: saveError } = await supabase

@@ -75,6 +75,13 @@ const COMPILATION_PHASES: CompilationPhase[] = [
   },
 ];
 
+export type StudioProgressStage =
+  | 'Chapters / Slides'
+  | 'Distilling Chapters'
+  | 'Synthesizing KB & Prompt'
+  | 'Labs / TP'
+  | 'Re-analyzing Labs';
+
 interface CourseStudioPanelProps {
   course: (Course & { course_chapters?: CourseChapter[]; labs?: Lab[] }) | null;
   onCourseUpdated: () => void | Promise<void>;
@@ -93,7 +100,7 @@ export default function CourseStudioPanel({
   // Batch processing state
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentProgress, setCurrentProgress] = useState<{
-    stage: string;
+    stage: StudioProgressStage;
     current: number;
     total: number;
     filename: string;

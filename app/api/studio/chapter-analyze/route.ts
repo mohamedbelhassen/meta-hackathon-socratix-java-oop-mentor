@@ -369,7 +369,6 @@ Do NOT summarize multiple slides together. Preserve exact class, variable, and m
       markdown_content: markdownContent,
       pages_json: enrichedPages,
       key_analogies: keyAnalogies,
-      created_at: new Date().toISOString(),
     };
 
     const { data: savedChapter, error: saveError } = await supabase

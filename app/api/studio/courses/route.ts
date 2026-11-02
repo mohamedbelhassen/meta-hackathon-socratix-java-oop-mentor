@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
+    const assignedTeacherId = body.teacher_id || body.teacherId || '11111111-1111-1111-1111-111111111111';
     const payload = {
       code: code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
       title: title.trim(),
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
       file_extensions,
       stuck_threshold_turns: Number(stuck_threshold_turns) || 2,
       is_published: true,
+      teacher_id: assignedTeacherId,
       updated_at: new Date().toISOString(),
     };
 

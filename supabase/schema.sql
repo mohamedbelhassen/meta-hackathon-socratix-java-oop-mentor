@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT UNIQUE,
-    role TEXT NOT NULL CHECK (role IN ('student', 'teacher', 'guest_student')),
+    role TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'teacher')),
     display_name TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     is_guest BOOLEAN NOT NULL DEFAULT false
@@ -30,7 +30,7 @@ CREATE TABLE public.profiles (
 -- 3. COURSES (Generic multi-course definition)
 CREATE TABLE public.courses (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    teacher_id UUID,
+    teacher_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     code TEXT UNIQUE NOT NULL, -- e.g., 'JAVA_OOP', 'PARSE_PLATFORM'
     title TEXT NOT NULL, -- e.g., 'Programmation Orientée Objet (Java)'
     description TEXT,
@@ -58,6 +58,7 @@ CREATE TABLE public.course_chapters (
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     key_analogies JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_chapter UNIQUE(course_id, code)
 );
@@ -70,12 +71,14 @@ CREATE TABLE public.labs (
     code TEXT NOT NULL, -- e.g., 'TP1', 'TP5', 'TP12'
     title TEXT NOT NULL,
     description TEXT,
+    description_i18n JSONB, -- { en: string, fr: string }
     pdf_url TEXT,
     activities JSONB NOT NULL DEFAULT '[]'::jsonb,
     covered_micro_concepts TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     demo_presets JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_lab UNIQUE(course_id, code)
@@ -155,6 +158,16 @@ CREATE TRIGGER update_courses_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION public.update_updated_at_column();
 
+CREATE TRIGGER update_course_chapters_updated_at
+    BEFORE UPDATE ON public.course_chapters
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
+CREATE TRIGGER update_labs_updated_at
+    BEFORE UPDATE ON public.labs
+    FOR EACH ROW
+    EXECUTE FUNCTION public.update_updated_at_column();
+
 CREATE TRIGGER update_student_lab_sessions_updated_at
     BEFORE UPDATE ON public.student_lab_sessions
     FOR EACH ROW
@@ -169,12 +182,13 @@ CREATE TRIGGER update_student_lab_sessions_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, display_name, role)
+  INSERT INTO public.profiles (id, email, display_name, role, is_guest)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'display_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'student')
+    COALESCE(NEW.raw_user_meta_data->>'role', 'student'),
+    false
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,

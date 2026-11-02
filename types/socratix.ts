@@ -59,7 +59,6 @@ export interface BilingualText {
 export interface PagedSlide {
   page: number;
   text: string;
-  en_summary?: string;
   en_markdown?: string;
   fr_markdown?: string;
 }
@@ -76,6 +75,7 @@ export interface CourseChapter {
   pages_json: PagedSlide[];
   key_analogies: KeyAnalogy[];
   created_at: string;
+  updated_at?: string;
 }
 
 export interface LabMilestone {
@@ -120,6 +120,7 @@ export interface Lab {
   title: string;
   title_i18n?: BilingualText | null;
   description?: string | null;
+  description_i18n?: BilingualText | null;
   pdf_url?: string | null;
   pages_json?: Array<{ page: number; text: string }>;
   activities: LabActivity[];
@@ -127,6 +128,7 @@ export interface Lab {
   demo_presets: DemoPreset[];
   is_active: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 // ----------------------------------------------------------------------------
