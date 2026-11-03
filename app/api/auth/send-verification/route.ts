@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     if (!rateCheck.success) {
       return NextResponse.json(
         {
-          error: 'Trop de demandes de vérification envoyées. Veuillez patienter une minute avant de réessayer.',
+          error: 'Too many verification requests sent. Please wait a minute before retrying.',
           retryAfter: rateCheck.resetSeconds,
         },
         { status: 429 }
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const isNewRegistration = body.isNewRegistration !== false;
 
     if (!rawEmail || !rawEmail.includes('@') || !rawEmail.includes('.')) {
-      return NextResponse.json({ error: 'Adresse email invalide.' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid email address.' }, { status: 400 });
     }
 
     const baseUrl = getAppBaseUrl();
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
             error:
               magicResult.error?.message ||
               recoveryResult.error?.message ||
-              'Impossible de générer le jeton de sécurité pour cette adresse email.',
+              'Unable to generate a security token for this email address.',
           },
           { status: 400 }
         );
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
     } else if (linkData?.properties?.action_link) {
       confirmationUrl = linkData.properties.action_link;
     } else {
-      return NextResponse.json({ error: 'Jeton de vérification manquant dans la réponse.' }, { status: 500 });
+      return NextResponse.json({ error: 'Missing verification token in response.' }, { status: 500 });
     }
 
     // 4. Render branded Socratix HTML template
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     if (sendResult.success) {
       return NextResponse.json({
         success: true,
-        message: 'Email de vérification envoyé avec succès via Brevo.',
+        message: 'Verification email sent successfully via Brevo.',
         messageId: sendResult.messageId,
       });
     } else {
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           configured: !isMissingConfig,
-          error: sendResult.error || "Erreur lors de l'envoi de l'email via Brevo.",
+          error: sendResult.error || 'Failed to send verification email via Brevo.',
         },
         { status: isMissingConfig ? 200 : 502 }
       );

@@ -19,7 +19,7 @@ export interface AdminNewUserEmailParams {
 }
 
 /**
- * Returns an HTML email template for account verification / welcome on Socratix.
+ * Returns an HTML email template for account verification / welcome on Socratix (100% in English for hackathon jury evaluation).
  */
 export function getWelcomeVerificationTemplate(params: WelcomeEmailParams): {
   subject: string;
@@ -27,12 +27,12 @@ export function getWelcomeVerificationTemplate(params: WelcomeEmailParams): {
   text: string;
 } {
   const { displayName, confirmationUrl, role } = params;
-  const roleLabel = role === 'teacher' ? 'Enseignant / Mentor' : 'Étudiant';
-  const subject = `🦉 Confirmez votre compte Socratix — ${roleLabel}`;
+  const roleLabel = role === 'teacher' ? 'Instructor / Mentor' : 'Student';
+  const subject = `🦉 Confirm your Socratix account — ${roleLabel}`;
 
   const html = `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -166,28 +166,28 @@ export function getWelcomeVerificationTemplate(params: WelcomeEmailParams): {
       <div class="header">
         <div class="brand-icon">🦉</div>
         <h1 class="brand-title">Socratix AI</h1>
-        <p class="brand-subtitle">Plateforme Pédagogique Intelligente</p>
+        <p class="brand-subtitle">Intelligent Pedagogical Platform</p>
       </div>
       <div class="content">
-        <span class="role-badge">Profil ${roleLabel}</span>
-        <h2 class="greeting">Bienvenue, ${displayName} !</h2>
+        <span class="role-badge">${roleLabel} Account</span>
+        <h2 class="greeting">Welcome, ${displayName}!</h2>
         <p class="text">
-          Votre compte a été initialisé sur Socratix. Pour finaliser votre inscription et accéder à vos espaces de TP avec le mentor IA socratique, veuillez confirmer votre adresse email :
+          Your account has been initialized on Socratix. To finalize your registration and access your coding labs with the real-time Socratic AI mentor, please verify your email address:
         </p>
         <div class="btn-container">
-          <a href="${confirmationUrl}" class="btn" target="_blank">Confirmer mon adresse email &rarr;</a>
+          <a href="${confirmationUrl}" class="btn" target="_blank">Verify Email Address &rarr;</a>
         </div>
         <div class="alert-box">
-          🔒 <strong>Lien sécurisé à usage unique :</strong> Ce lien expirera après 24 heures. Si vous n&apos;êtes pas à l&apos;origine de cette demande, vous pouvez ignorer ce message.
+          🔒 <strong>One-time secure link:</strong> This verification link will expire in 24 hours. If you did not create an account on Socratix, you can safely ignore this email.
         </div>
         <p class="fallback">
-          Si le bouton ne fonctionne pas, copiez et collez le lien direct suivant dans votre navigateur :<br>
+          If the button above does not work, copy and paste this direct link into your browser:<br>
           <a href="${confirmationUrl}">${confirmationUrl}</a>
         </p>
       </div>
       <div class="footer">
-        <p style="margin: 0 0 6px 0;">Socratix AI — Mentor OOP &amp; Assistant Pédagogique Intelligent</p>
-        <p style="margin: 0;">Développé pour le Hackathon Meta AI 2026</p>
+        <p style="margin: 0 0 6px 0;">Socratix AI — Java OOP Socratic Mentor &amp; Real-Time ERP</p>
+        <p style="margin: 0;">Built for the Meta Global AI Developer Hackathon 2026</p>
       </div>
     </div>
   </div>
@@ -196,19 +196,19 @@ export function getWelcomeVerificationTemplate(params: WelcomeEmailParams): {
   `.trim();
 
   const text = `
-Bienvenue sur Socratix, ${displayName} !
+Welcome to Socratix, ${displayName}!
 
-Votre compte (${roleLabel}) a été créé. Pour confirmer votre adresse email et accéder à la plateforme, veuillez cliquer sur ce lien :
+Your ${roleLabel} account has been created. To verify your email address and access the platform, please click the link below:
 ${confirmationUrl}
 
-Ce lien est sécurisé et valable 24 heures.
+This secure link is valid for 24 hours. If you did not request this, please ignore this email.
   `.trim();
 
   return { subject, html, text };
 }
 
 /**
- * Returns an HTML email template for password reset.
+ * Returns an HTML email template for password reset (100% in English for hackathon jury evaluation).
  */
 export function getPasswordResetTemplate(params: PasswordResetEmailParams): {
   subject: string;
@@ -216,11 +216,11 @@ export function getPasswordResetTemplate(params: PasswordResetEmailParams): {
   text: string;
 } {
   const { displayName, resetUrl } = params;
-  const subject = `🔐 Réinitialisation de votre mot de passe — Socratix AI`;
+  const subject = `🔐 Reset your Socratix password — Socratix AI`;
 
   const html = `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -246,25 +246,25 @@ export function getPasswordResetTemplate(params: PasswordResetEmailParams): {
     <div class="card">
       <div class="header">
         <h1 style="margin:0; font-size:24px;">Socratix AI</h1>
-        <p style="margin:6px 0 0 0; font-size:13px; color:#bfdbfe; text-transform:uppercase;">Sécurité du compte</p>
+        <p style="margin:6px 0 0 0; font-size:13px; color:#bfdbfe; text-transform:uppercase;">Account Security</p>
       </div>
       <div class="content">
-        <h2 class="greeting">Bonjour ${displayName},</h2>
+        <h2 class="greeting">Hello ${displayName},</h2>
         <p class="text">
-          Une demande de réinitialisation de mot de passe a été demandée pour votre compte Socratix.
+          A password reset was requested for your Socratix account. Please click the button below to set a new password:
         </p>
         <div class="btn-container">
-          <a href="${resetUrl}" class="btn" target="_blank">Définir un nouveau mot de passe &rarr;</a>
+          <a href="${resetUrl}" class="btn" target="_blank">Reset Password &rarr;</a>
         </div>
         <div class="alert-box">
-          🔒 Ce lien expire après 1 heure. Si vous n&apos;avez pas initié cette demande, aucune action n&apos;est requise de votre part.
+          🔒 This link will expire in 1 hour. If you did not initiate this request, no action is needed and your account remains secure.
         </div>
         <p class="fallback">
-          Lien direct : <a href="${resetUrl}">${resetUrl}</a>
+          Direct link: <a href="${resetUrl}">${resetUrl}</a>
         </p>
       </div>
       <div class="footer">
-        <p style="margin:0;">Socratix AI Platform</p>
+        <p style="margin:0;">Socratix AI Platform — Meta AI Hackathon 2026</p>
       </div>
     </div>
   </div>
@@ -273,19 +273,19 @@ export function getPasswordResetTemplate(params: PasswordResetEmailParams): {
   `.trim();
 
   const text = `
-Bonjour ${displayName},
+Hello ${displayName},
 
-Pour réinitialiser votre mot de passe Socratix, suivez ce lien :
+To reset your Socratix password, please follow this link:
 ${resetUrl}
 
-Ce lien est valable 1 heure.
+This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this message.
   `.trim();
 
   return { subject, html, text };
 }
 
 /**
- * Returns an HTML email template for notifying the administrator of a new user registration.
+ * Returns an HTML email template for notifying the administrator of a new user registration (100% in English for hackathon jury evaluation).
  */
 export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailParams): {
   subject: string;
@@ -293,13 +293,13 @@ export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailPar
   text: string;
 } {
   const { userEmail, displayName, role, registeredAt, ipAddress, dashboardUrl } = params;
-  const roleLabel = role === 'teacher' ? 'Enseignant / Mentor' : 'Étudiant';
+  const roleLabel = role === 'teacher' ? 'Instructor / Mentor' : 'Student';
   const timestamp = registeredAt || new Date().toISOString();
-  const subject = `🔔 Nouvelle Inscription Socratix : ${displayName} (${roleLabel})`;
+  const subject = `🔔 New Socratix Registration: ${displayName} (${roleLabel})`;
 
   const html = `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -433,37 +433,37 @@ export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailPar
       <div class="header">
         <div style="font-size: 32px; margin-bottom: 6px;">🔔</div>
         <h1 class="brand-title">Socratix AI</h1>
-        <p class="brand-subtitle">Notification Administrateur</p>
+        <p class="brand-subtitle">Administrator Notification</p>
       </div>
       <div class="content">
-        <h2 class="title">Nouvel utilisateur enregistré sur la plateforme</h2>
+        <h2 class="title">New User Registered on Socratix</h2>
         <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 16px 0;">
-          Un nouveau compte vient d'être créé sur votre instance Socratix :
+          A new user account was just created on your Socratix instance:
         </p>
 
         <table class="table-info">
           <tr>
-            <td class="label">Nom affiché</td>
+            <td class="label">Display Name</td>
             <td class="value"><strong>${displayName}</strong></td>
           </tr>
           <tr>
-            <td class="label">Adresse email</td>
+            <td class="label">Email Address</td>
             <td class="value"><a href="mailto:${userEmail}" style="color: #818cf8; text-decoration: none;">${userEmail}</a></td>
           </tr>
           <tr>
-            <td class="label">Rôle attribué</td>
+            <td class="label">Assigned Role</td>
             <td class="value">
               <span class="${role === 'teacher' ? 'badge-teacher' : 'badge-student'}">${roleLabel}</span>
             </td>
           </tr>
           <tr>
-            <td class="label">Date d'inscription</td>
+            <td class="label">Registration Date</td>
             <td class="value" style="font-family: monospace; font-size: 12px;">${timestamp}</td>
           </tr>
           ${
             ipAddress
               ? `<tr>
-            <td class="label">Adresse IP</td>
+            <td class="label">IP Address</td>
             <td class="value" style="font-family: monospace; font-size: 12px;">${ipAddress}</td>
           </tr>`
               : ''
@@ -473,14 +473,14 @@ export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailPar
         ${
           dashboardUrl
             ? `<div class="btn-container">
-          <a href="${dashboardUrl}" class="btn" target="_blank">Accéder au Hub Enseignant &rarr;</a>
+          <a href="${dashboardUrl}" class="btn" target="_blank">Open Teacher Hub &rarr;</a>
         </div>`
             : ''
         }
       </div>
       <div class="footer">
-        <p style="margin: 0 0 4px 0;">Notification automatique émise à destination de l'administrateur système.</p>
-        <p style="margin: 0;">Socratix AI Mentor — Hackathon Meta AI 2026</p>
+        <p style="margin: 0 0 4px 0;">Automated notification sent to the system administrator.</p>
+        <p style="margin: 0;">Socratix AI Mentor — Meta AI Hackathon 2026</p>
       </div>
     </div>
   </div>
@@ -489,11 +489,11 @@ export function getAdminNewUserNotificationTemplate(params: AdminNewUserEmailPar
   `.trim();
 
   const text = `
-Socratix AI — Nouvelle Inscription
+Socratix AI — New User Registration
 
-Nom: ${displayName}
+Name: ${displayName}
 Email: ${userEmail}
-Rôle: ${roleLabel}
+Role: ${roleLabel}
 Date: ${timestamp}
 IP: ${ipAddress || 'N/A'}
   `.trim();

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sparkles, GraduationCap, School, Mail, RefreshCw } from 'lucide-react';
+import { Sparkles, GraduationCap, School, Mail, RefreshCw, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
 import { getAppBaseUrl } from '@/lib/url-utils';
 
 export default function LoginPage() {
@@ -16,7 +16,9 @@ export default function LoginPage() {
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [teacherPin, setTeacherPin] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const isSignUp = authMode === 'signup';
+  const isForgot = authMode === 'forgot';
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
@@ -29,6 +31,48 @@ export default function LoginPage() {
     const supabase = getBrowserSupabase();
 
     try {
+      if (isForgot) {
+        if (!email || !email.includes('@')) {
+          setMessage({
+            type: 'error',
+            text: 'Please enter a valid email address to receive password reset instructions.',
+          });
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          setMessage({
+            type: 'success',
+            text: 'Password reset link sent! Please check your email inbox (and spam folder) for instructions.',
+          });
+        } else if (data.fallbackToClient) {
+          const baseUrl = getAppBaseUrl();
+          const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${baseUrl}/auth/callback?next=/reset-password`,
+          });
+          if (resetErr) throw resetErr;
+          setMessage({
+            type: 'success',
+            text: 'Password reset email sent! Please check your inbox to choose a new password.',
+          });
+        } else {
+          setMessage({
+            type: 'error',
+            text: data.error || 'Failed to dispatch password reset request.',
+          });
+        }
+        return;
+      }
+
       if (isSignUp) {
         if (role === 'teacher' && !teacherPin.trim()) {
           setMessage({
@@ -41,13 +85,16 @@ export default function LoginPage() {
 
         const baseUrl = getAppBaseUrl();
         const redirectUrl = `${baseUrl}/auth/callback?next=/`;
+        const cleanDisplayName = displayName.trim() || email.split('@')[0];
 
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data: {
-              display_name: displayName || email.split('@')[0],
+              name: cleanDisplayName,
+              full_name: cleanDisplayName,
+              display_name: cleanDisplayName,
               role,
               teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
             },
@@ -65,7 +112,7 @@ export default function LoginPage() {
               Authorization: `Bearer ${data.session.access_token}`,
             },
             body: JSON.stringify({
-              display_name: displayName || email.split('@')[0],
+              display_name: cleanDisplayName,
               role,
               teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
               is_new_signup: true,
@@ -89,7 +136,7 @@ export default function LoginPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               email,
-              displayName: displayName || email.split('@')[0],
+              displayName: cleanDisplayName,
               role,
               isNewRegistration: true,
             }),
@@ -260,18 +307,31 @@ export default function LoginPage() {
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3 text-xs">
             <span className="font-semibold text-slate-300">
-              {isSignUp ? 'Register with Email' : 'Email Sign In'}
+              {isForgot ? 'Reset Password' : isSignUp ? 'Register with Email' : 'Email Sign In'}
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setMessage(null);
-              }}
-              className="text-emerald-400 hover:underline"
-            >
-              {isSignUp ? 'Already have an account?' : 'Need an account?'}
-            </button>
+            {isForgot ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode('signin');
+                  setMessage(null);
+                }}
+                className="text-emerald-400 hover:underline flex items-center gap-1"
+              >
+                <ArrowLeft className="w-3 h-3" /> Back to Sign In
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode(isSignUp ? 'signin' : 'signup');
+                  setMessage(null);
+                }}
+                className="text-emerald-400 hover:underline"
+              >
+                {isSignUp ? 'Already have an account?' : 'Need an account?'}
+              </button>
+            )}
           </div>
 
           {message && (
@@ -286,111 +346,176 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-3">
-            {isSignUp && (
-              <>
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-400">Full Name</label>
-                  <Input
-                    type="text"
-                    required
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="e.g. Alice Dev"
-                    className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-400">Role</label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setRole('student')}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition ${
-                        role === 'student'
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      Student
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('teacher')}
-                      className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition ${
-                        role === 'teacher'
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                          : 'bg-slate-950 border-slate-800 text-slate-400'
-                      }`}
-                    >
-                      Teacher
-                    </button>
-                  </div>
-                </div>
+          {isForgot ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Enter your account email to receive a secure recovery link. You will be able to choose a new password.
+              </p>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Email Address</label>
+                <Input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@institution.edu"
+                  className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9 focus-visible:ring-emerald-500"
+                />
+              </div>
 
-                {role === 'teacher' && (
-                  <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-amber-300">Teacher Secret PIN</label>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-9 transition shadow-lg shadow-emerald-950/40"
+              >
+                {loading ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending Link...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5" /> Send Reset Link via Brevo
+                  </span>
+                )}
+              </Button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {isSignUp && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Full Name</label>
+                    <Input
+                      type="text"
+                      required
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="e.g. Alice Dev"
+                      className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400">Role</label>
+                    <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setTeacherPin('2026')}
-                        className="text-[10px] font-mono text-amber-400 hover:text-amber-200 underline cursor-pointer"
-                        title="Auto-fill Demo Jury PIN"
+                        onClick={() => setRole('student')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition ${
+                          role === 'student'
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400'
+                        }`}
                       >
-                        Demo Jury: 2026 (Auto-fill)
+                        Student
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRole('teacher')}
+                        className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium border transition ${
+                          role === 'teacher'
+                            ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                            : 'bg-slate-950 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        Teacher
                       </button>
                     </div>
-                    <Input
-                      type="password"
-                      required
-                      value={teacherPin}
-                      onChange={(e) => setTeacherPin(e.target.value)}
-                      placeholder="Enter PIN (Demo: 2026)"
-                      className="bg-slate-950 border-amber-500/40 text-slate-100 text-xs h-9 focus-visible:ring-amber-500"
-                    />
-                    <p className="text-[10px] text-slate-400 leading-tight">
-                      To prevent unauthorized self-elevation, teacher registration requires a PIN. For hackathon evaluators, use <strong className="text-amber-300">2026</strong>.
-                    </p>
                   </div>
-                )}
-              </>
-            )}
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Email Address</label>
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@institution.edu"
-                className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
-              />
-            </div>
+                  {role === 'teacher' && (
+                    <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-amber-300">Teacher Secret PIN</label>
+                        <button
+                          type="button"
+                          onClick={() => setTeacherPin('2026')}
+                          className="text-[10px] font-mono text-amber-400 hover:text-amber-200 underline cursor-pointer"
+                          title="Auto-fill Demo Jury PIN"
+                        >
+                          Demo Jury: 2026 (Auto-fill)
+                        </button>
+                      </div>
+                      <Input
+                        type="password"
+                        required
+                        value={teacherPin}
+                        onChange={(e) => setTeacherPin(e.target.value)}
+                        placeholder="Enter PIN (Demo: 2026)"
+                        className="bg-slate-950 border-amber-500/40 text-slate-100 text-xs h-9 focus-visible:ring-amber-500"
+                      />
+                      <p className="text-[10px] text-slate-400 leading-tight">
+                        To prevent unauthorized self-elevation, teacher registration requires a PIN. For hackathon evaluators, use <strong className="text-amber-300">2026</strong>.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
 
-            <div className="space-y-1">
-              <label className="text-xs text-slate-400">Password</label>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
-              />
-            </div>
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Email Address</label>
+                <Input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@institution.edu"
+                  className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
+                />
+              </div>
 
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-semibold text-xs h-9 mt-2"
-            >
-              {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
-            </Button>
-          </form>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs text-slate-400">Password</label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMode('forgot');
+                        setMessage(null);
+                      }}
+                      className="text-[11px] text-emerald-400 hover:text-emerald-300 hover:underline cursor-pointer"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <Input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="bg-slate-950 border-slate-800 text-slate-100 text-xs h-9"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-semibold text-xs h-9 mt-2"
+              >
+                {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+              </Button>
+            </form>
+          )}
 
           {/* RESEND VERIFICATION EMAIL ACTION */}
+          {!isForgot && (
+            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+              <span className="flex items-center gap-1 text-slate-400">
+                <Mail className="w-3 h-3 text-slate-400" /> Need verification link?
+              </span>
+              <button
+                type="button"
+                disabled={resending}
+                onClick={handleResendVerification}
+                className="text-emerald-400 hover:text-emerald-300 hover:underline disabled:opacity-50 flex items-center gap-1 font-medium"
+              >
+                <RefreshCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
+                {resending ? 'Sending...' : 'Resend via Brevo'}
+              </button>
+            </div>
+          )}
           <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
             <span className="flex items-center gap-1 text-slate-400">
               <Mail className="w-3 h-3 text-slate-400" /> Need verification link?

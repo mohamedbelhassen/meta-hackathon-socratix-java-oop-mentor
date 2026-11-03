@@ -127,7 +127,7 @@ export default function AuthCallbackPage() {
         setTimeout(() => {
           setStatus((prev) => {
             if (prev === 'loading') {
-              setErrorMessage('Le jeton de session est introuvable ou a déjà été utilisé.');
+              setErrorMessage('Session token not found or already utilized.');
               return 'error';
             }
             return prev;
@@ -139,7 +139,7 @@ export default function AuthCallbackPage() {
         setErrorMessage(
           err instanceof Error
             ? err.message
-            : 'Échec de la validation du jeton de sécurité. Le lien a peut-être expiré.'
+            : 'Security token validation failed. The link may have expired.'
         );
       }
     };
@@ -164,15 +164,17 @@ export default function AuthCallbackPage() {
     return () => clearInterval(interval);
   }, [status, redirectPath, router]);
 
+  const isPasswordRecovery = redirectPath.includes('/reset-password');
+
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
       <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
         {status === 'loading' && (
           <div className="py-8 space-y-4">
             <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mx-auto" />
-            <h1 className="text-lg font-bold text-slate-100">Vérification de votre compte...</h1>
+            <h1 className="text-lg font-bold text-slate-100">Verifying your account...</h1>
             <p className="text-xs text-slate-400">
-              Finalisation de l&apos;authentification et synchronisation de votre profil.
+              Finalizing authentication and synchronizing your profile.
             </p>
           </div>
         )}
@@ -186,59 +188,85 @@ export default function AuthCallbackPage() {
             <div className="space-y-2">
               <span
                 className={`text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                  targetRole === 'teacher'
+                  isPasswordRecovery
+                    ? 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                    : targetRole === 'teacher'
                     ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                     : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
                 }`}
               >
-                Compte Activé • {targetRole === 'teacher' ? 'Enseignant / Mentor' : 'Étudiant'}
+                {isPasswordRecovery
+                  ? 'Password Recovery'
+                  : `Account Verified • ${targetRole === 'teacher' ? 'Instructor / Mentor' : 'Student'}`}
               </span>
-              <h1 className="text-2xl font-extrabold text-white">Bienvenue sur Socratix 🦉</h1>
+              <h1 className="text-2xl font-extrabold text-white">
+                {isPasswordRecovery ? 'Identity Verified 🦉' : 'Welcome to Socratix 🦉'}
+              </h1>
               <p className="text-sm text-slate-300">
-                Votre adresse email a été confirmée avec succès,{' '}
-                <strong className={targetRole === 'teacher' ? 'text-amber-400' : 'text-emerald-400'}>{userName}</strong>.
+                {isPasswordRecovery ? (
+                  <>
+                    Recovery session authenticated for{' '}
+                    <strong className="text-blue-400">{userName}</strong>.
+                  </>
+                ) : (
+                  <>
+                    Your email address has been successfully confirmed,{' '}
+                    <strong className={targetRole === 'teacher' ? 'text-amber-400' : 'text-emerald-400'}>{userName}</strong>.
+                  </>
+                )}
               </p>
             </div>
 
             <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400">
-              Redirection automatique vers l&apos;accueil dans{' '}
+              {isPasswordRecovery ? 'Redirecting to password reset in ' : 'Redirecting to homepage in '}
               <span className="font-bold text-emerald-400">{countdown}s</span>...
             </div>
 
             <div className="space-y-2 pt-1">
               <Link
-                href="/"
+                href={redirectPath}
                 className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-950/50"
               >
-                <Home className="w-4 h-4" />
-                <span>Accéder à la page d&apos;accueil</span>
-                <ArrowRight className="w-4 h-4" />
+                {isPasswordRecovery ? (
+                  <>
+                    <span>Proceed to Reset Password</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                ) : (
+                  <>
+                    <Home className="w-4 h-4" />
+                    <span>Proceed to Homepage</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </Link>
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <Link
-                  href="/teacher"
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
-                    targetRole === 'teacher'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  <School className="w-3.5 h-3.5" />
-                  <span>Teacher Hub</span>
-                </Link>
-                <Link
-                  href="/student"
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
-                    targetRole === 'student'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                  }`}
-                >
-                  <GraduationCap className="w-3.5 h-3.5" />
-                  <span>Student Workspace</span>
-                </Link>
-              </div>
+              {!isPasswordRecovery && (
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Link
+                    href="/teacher"
+                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                      targetRole === 'teacher'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    <School className="w-3.5 h-3.5" />
+                    <span>Teacher Hub</span>
+                  </Link>
+                  <Link
+                    href="/student"
+                    className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                      targetRole === 'student'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                        : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                    }`}
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Student Workspace</span>
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -250,9 +278,9 @@ export default function AuthCallbackPage() {
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-xl font-bold text-white">Lien expiré ou invalide</h1>
+              <h1 className="text-xl font-bold text-white">Expired or Invalid Link</h1>
               <p className="text-xs text-rose-300/90 leading-relaxed">
-                {errorMessage || 'Le jeton de confirmation est manquant, invalide ou a expiré.'}
+                {errorMessage || 'The security token is missing, invalid, or has expired.'}
               </p>
             </div>
 
@@ -261,7 +289,7 @@ export default function AuthCallbackPage() {
                 href="/login"
                 className="inline-flex w-full items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 transition"
               >
-                <span>Retour à la page de connexion</span>
+                <span>Return to Login</span>
               </Link>
             </div>
           </div>

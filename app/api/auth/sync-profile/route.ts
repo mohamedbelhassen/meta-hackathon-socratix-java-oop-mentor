@@ -105,6 +105,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Ensure Supabase Auth raw_user_meta_data keeps name, full_name, and display_name in sync
+    // so that the Users table in Supabase Studio / Dashboard displays the name instead of '-'
+    try {
+      await supabase.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...(user.user_metadata || {}),
+          name: cleanName,
+          full_name: cleanName,
+          display_name: cleanName,
+          role: safeRole,
+        },
+      });
+    } catch (authMetaErr) {
+      console.warn('[Sync Profile] Auth metadata update warning:', authMetaErr);
+    }
+
     if (body.is_new_signup) {
       const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 'unknown';
       const baseUrl = getAppBaseUrl();

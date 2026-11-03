@@ -63,7 +63,7 @@ export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendR
 
   if (!apiKey || !defaultSenderEmail) {
     const errorMsg =
-      'Configuration Brevo manquante : veuillez renseigner BREVO_API_KEY et BREVO_SENDER_EMAIL dans vos variables d’environnement.';
+      'Brevo configuration missing: please set BREVO_API_KEY and BREVO_SENDER_EMAIL in your environment variables.';
     console.warn(`[Brevo Email Gateway] ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
@@ -71,15 +71,15 @@ export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendR
   // Guard against unreplaced placeholder keys
   if (apiKey.includes('votre-cle') || apiKey.includes('your-brevo') || apiKey.startsWith('xsmtpsib-')) {
     const errorMsg = apiKey.startsWith('xsmtpsib-')
-      ? 'La clé BREVO_API_KEY commence par "xsmtpsib-" (clé SMTP). Pour l’API REST v3, utilisez votre clé API Brevo "xkeysib-...".'
-      : "La variable BREVO_API_KEY contient encore une valeur d’exemple. Veuillez la renseigner avec votre vraie clé Brevo API v3 (xkeysib-...).";
+      ? 'BREVO_API_KEY starts with "xsmtpsib-" (SMTP key). For the REST API v3, use your Brevo API key "xkeysib-...".'
+      : 'BREVO_API_KEY still contains a placeholder value. Please update it with your real Brevo v3 API key (xkeysib-...).';
     console.error(`[Brevo Email Gateway] Configuration Error: ${errorMsg}`);
     return { success: false, error: errorMsg };
   }
 
   const recipients = normalizeRecipients(options.to);
   if (recipients.length === 0) {
-    return { success: false, error: 'Aucun destinataire valide spécifié.' };
+    return { success: false, error: 'No valid recipient specified.' };
   }
 
   const sender = {
@@ -132,7 +132,7 @@ export async function sendSystemEmail(options: EmailOptions): Promise<EmailSendR
       // Translate Brevo's standard unauthorized message into actionable guidance
       if (result.message === 'Key not found' || result.code === 'unauthorized') {
         errorDetail =
-          'Clé Brevo introuvable (Key not found). Vérifiez que la variable BREVO_API_KEY sur Vercel est bien votre clé API v3 (xkeysib-...) sans guillemets, et non une clé SMTP.';
+          'Brevo API key not found (Key not found). Verify that BREVO_API_KEY on Vercel is set to your v3 API key (xkeysib-...) without quotes, not an SMTP key.';
       }
 
       console.error(`[Brevo Email Gateway] API error (${response.status}): ${errorDetail}`);
