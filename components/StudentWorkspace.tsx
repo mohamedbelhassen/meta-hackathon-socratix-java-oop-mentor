@@ -208,15 +208,26 @@ export default function StudentWorkspace() {
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
   const [briefLang, setBriefLang] = useState<'en' | 'fr'>('en');
 
-  // Layout Resizing (1/3 of screen width initially, freely draggable)
-  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(480);
+  // Layout Resizing (40% of screen width initially, freely draggable & customizable)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(560);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize divider position to 1/3 of available screen width on mount
+  // Initialize divider position to 40% of available screen width on mount (or saved custom width)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setLeftPanelWidth(Math.round(window.innerWidth / 3));
+      try {
+        const saved = localStorage.getItem('socratix_student_panel_width');
+        if (saved) {
+          const num = Number(saved);
+          const maxAllowed = Math.max(800, window.innerWidth * 0.75);
+          if (!isNaN(num) && num >= 280 && num <= maxAllowed) {
+            setLeftPanelWidth(num);
+            return;
+          }
+        }
+      } catch {}
+      setLeftPanelWidth(Math.round(window.innerWidth * 0.40));
     }
   }, []);
 
@@ -682,6 +693,12 @@ export default function StudentWorkspace() {
     const handleMouseUp = () => {
       if (isDragging) {
         setIsDragging(false);
+        setLeftPanelWidth((current) => {
+          try {
+            localStorage.setItem('socratix_student_panel_width', String(current));
+          } catch {}
+          return current;
+        });
       }
     };
 
@@ -1626,11 +1643,24 @@ export default function StudentWorkspace() {
         </div>
       </div>
 
-      {/* Resize Handle */}
+      {/* Resize Handle / Splitter (Draggable & double-click to reset to 40%) */}
       <div
         onMouseDown={() => setIsDragging(true)}
-        className="w-1.5 bg-slate-800 hover:bg-emerald-500 cursor-col-resize shrink-0 transition-colors"
-      />
+        onDoubleClick={() => {
+          const defaultWidth = Math.round(window.innerWidth * 0.40);
+          setLeftPanelWidth(defaultWidth);
+          try {
+            localStorage.setItem('socratix_student_panel_width', String(defaultWidth));
+          } catch {}
+        }}
+        title="Glisser pour ajuster la largeur / Double-cliquer pour réinitialiser à 40%"
+        className={`w-1.5 relative group cursor-col-resize shrink-0 transition-colors z-20 ${
+          isDragging ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-slate-800 hover:bg-emerald-500'
+        }`}
+      >
+        {/* Invisible wider hit area (12px) for effortless mouse/trackpad grabbing */}
+        <div className="absolute inset-y-0 -left-1 -right-1 cursor-col-resize" />
+      </div>
 
       {/* ==================================================================== */}
       {/* RIGHT PANEL: SOCRATIC CHAT & GUIDANCE */}

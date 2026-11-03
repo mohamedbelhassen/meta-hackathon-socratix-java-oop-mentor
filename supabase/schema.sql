@@ -1,5 +1,6 @@
 -- ============================================================================
 -- SOCRATIX v2 - COMPLETE SUPABASE SCHEMA (MULTI-COURSE & REALTIME ERP)
+-- Synchronized with live database: peddvhsykuglvicfaezr (eu-west-1)
 -- ============================================================================
 
 -- 0. EXTENSIONS
@@ -58,7 +59,7 @@ CREATE TABLE public.course_chapters (
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     key_analogies JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_chapter UNIQUE(course_id, code)
 );
@@ -78,7 +79,7 @@ CREATE TABLE public.labs (
     demo_presets JSONB NOT NULL DEFAULT '[]'::jsonb,
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     pages_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     title_i18n JSONB, -- { en: string, fr: string }
     CONSTRAINT unique_course_lab UNIQUE(course_id, code)
@@ -129,17 +130,24 @@ CREATE TABLE public.chat_messages (
 );
 
 -- ============================================================================
--- 8. PERFORMANCE INDEXES
+-- 8. PERFORMANCE INDEXES (PERF-03 / PERF-08 Composite & Foreign Key Indexes)
 -- ============================================================================
-CREATE INDEX idx_courses_teacher ON public.courses(teacher_id);
-CREATE INDEX idx_course_chapters_course ON public.course_chapters(course_id, chapter_number);
-CREATE INDEX idx_labs_course ON public.labs(course_id, lab_number);
-CREATE INDEX idx_student_lab_sessions_lookup ON public.student_lab_sessions(course_id, lab_id);
-CREATE INDEX idx_student_lab_sessions_lab_id ON public.student_lab_sessions(lab_id);
-CREATE INDEX idx_student_lab_sessions_status ON public.student_lab_sessions(status);
-CREATE INDEX idx_chat_messages_session_created ON public.chat_messages(student_lab_session_id, created_at ASC);
-CREATE INDEX idx_chat_messages_activity ON public.chat_messages(student_lab_session_id, activity_id);
-CREATE INDEX idx_chat_messages_created ON public.chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_courses_code ON public.courses(code);
+CREATE INDEX IF NOT EXISTS idx_courses_teacher ON public.courses(teacher_id);
+
+CREATE INDEX IF NOT EXISTS idx_course_chapters_course ON public.course_chapters(course_id, chapter_number);
+
+CREATE INDEX IF NOT EXISTS idx_labs_course ON public.labs(course_id, lab_number);
+
+CREATE INDEX IF NOT EXISTS idx_student_lab_sessions_lookup ON public.student_lab_sessions(course_id, lab_id);
+CREATE INDEX IF NOT EXISTS idx_student_lab_sessions_lab_id ON public.student_lab_sessions(lab_id);
+CREATE INDEX IF NOT EXISTS idx_student_lab_sessions_student ON public.student_lab_sessions(student_id);
+CREATE INDEX IF NOT EXISTS idx_student_lab_sessions_status ON public.student_lab_sessions(status);
+
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session ON public.chat_messages(student_lab_session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created ON public.chat_messages(student_lab_session_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_activity ON public.chat_messages(student_lab_session_id, activity_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON public.chat_messages(created_at);
 
 -- ============================================================================
 -- 9. AUTOMATIC UPDATED_AT TRIGGER
@@ -157,21 +165,27 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.update_updated_at_column() FROM PUBLIC, anon, authenticated;
 
+DROP TRIGGER IF EXISTS update_courses_updated_at ON public.courses;
 CREATE TRIGGER update_courses_updated_at
     BEFORE UPDATE ON public.courses
     FOR EACH ROW
     EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER update_course_chapters_updated_at
+DROP TRIGGER IF EXISTS set_course_chapters_updated_at ON public.course_chapters;
+DROP TRIGGER IF EXISTS update_course_chapters_updated_at ON public.course_chapters;
+CREATE TRIGGER set_course_chapters_updated_at
     BEFORE UPDATE ON public.course_chapters
     FOR EACH ROW
     EXECUTE FUNCTION public.update_updated_at_column();
 
-CREATE TRIGGER update_labs_updated_at
+DROP TRIGGER IF EXISTS set_labs_updated_at ON public.labs;
+DROP TRIGGER IF EXISTS update_labs_updated_at ON public.labs;
+CREATE TRIGGER set_labs_updated_at
     BEFORE UPDATE ON public.labs
     FOR EACH ROW
     EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_student_lab_sessions_updated_at ON public.student_lab_sessions;
 CREATE TRIGGER update_student_lab_sessions_updated_at
     BEFORE UPDATE ON public.student_lab_sessions
     FOR EACH ROW
