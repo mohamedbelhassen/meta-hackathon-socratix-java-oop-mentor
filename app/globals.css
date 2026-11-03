@@ -92,6 +92,13 @@
     color-scheme: dark;
   }
 
+  /* Responsive Compact Density for Laptops & 125%/150% Windows Scaling */
+  @media screen and (max-height: 880px), screen and (max-width: 1536px) {
+    html {
+      font-size: 14px;
+    }
+  }
+
   /* Custom dark scrollbars matching IDE aesthetics */
   * {
     scrollbar-width: thin;

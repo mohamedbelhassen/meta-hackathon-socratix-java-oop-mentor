@@ -1208,10 +1208,10 @@ export default function StudentWorkspace() {
         }`}
       >
         {/* Workspace Top Header: Course & Lab Selectors */}
-        <div className="p-3 border-b border-slate-800 bg-slate-950/80 space-y-2">
+        <div className="p-2 sm:p-2.5 border-b border-slate-800 bg-slate-950/80 space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-emerald-400">🦉 Socratix</span>
+              <span className="text-sm font-bold text-emerald-400">🦉 Socratix</span>
               <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] px-1.5 py-0">
                 Workspace v2
               </Badge>
@@ -1252,25 +1252,25 @@ export default function StudentWorkspace() {
               variant="ghost"
               size="sm"
               onClick={() => setIsResetModalOpen(true)}
-              className="h-7 text-[11px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-2 gap-1"
+              className="h-6 text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-1.5 gap-1"
               title="Reset current student session"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-2.5 h-2.5" />
               Reset
             </Button>
           </div>
 
           {/* Course & Lab Pickers */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-2 gap-1.5 text-xs">
             <div>
-              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Course</label>
+              <label className="text-[9px] uppercase font-semibold text-slate-400 block mb-0.5">Course</label>
               <select
                 value={activeCourse?.id || ''}
                 onChange={(e) => {
                   const c = courses.find((x) => x.id === e.target.value);
                   if (c) setActiveCourse(c);
                 }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               >
                 {courses.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -1281,7 +1281,7 @@ export default function StudentWorkspace() {
             </div>
 
             <div>
-              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Lab (TP)</label>
+              <label className="text-[9px] uppercase font-semibold text-slate-400 block mb-0.5">Lab (TP)</label>
               <select
                 value={activeLab?.id || ''}
                 onChange={(e) => {
@@ -1300,7 +1300,7 @@ export default function StudentWorkspace() {
                     });
                   }
                 }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
               >
                 {labs.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -1313,11 +1313,11 @@ export default function StudentWorkspace() {
 
           {/* Quick Syllabus & Materials Launcher */}
           {activeCourse && (
-            <div className="pt-0.5">
+            <div>
               <button
                 type="button"
                 onClick={() => setIsSyllabusModalOpen(true)}
-                className="w-full py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 hover:border-emerald-500/50 flex items-center justify-between transition group shadow-sm"
+                className="w-full py-1 px-2.5 rounded-md text-[11px] font-medium bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 hover:border-emerald-500/50 flex items-center justify-between transition group shadow-sm"
                 title="Browse course syllabus, lecture slides and chapter PDFs"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -1448,7 +1448,7 @@ export default function StudentWorkspace() {
 
         {/* Activity & Milestone Brief (Collapsible) */}
         {activeLab && activeActivity && (
-          <div className="border-b border-slate-800 bg-slate-950/40 p-3 space-y-2">
+          <div className="border-b border-slate-800 bg-slate-950/40 p-2 sm:p-2.5 space-y-1.5">
             {/* Multi-Activity 1-Click Tab Bar (Option B) */}
             {activeLab.activities && activeLab.activities.length > 1 && (
               <div
@@ -1457,7 +1457,7 @@ export default function StudentWorkspace() {
                     e.currentTarget.scrollLeft += e.deltaY;
                   }
                 }}
-                className="flex items-center gap-1.5 overflow-x-auto pb-1.5 border-b border-slate-800/70 scrollbar-thin"
+                className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-800/70 scrollbar-thin"
               >
                 {activeLab.activities.map((act) => {
                   const isSelected = activeActivity.id === act.id;
@@ -1468,7 +1468,7 @@ export default function StudentWorkspace() {
                       key={act.id}
                       type="button"
                       onClick={() => handleSelectActivity(act)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 ${
+                      className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-all shrink-0 ${
                         isSelected
                           ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm'
                           : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
@@ -1479,7 +1479,7 @@ export default function StudentWorkspace() {
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                       ) : (
                         <span
-                          className={`w-2 h-2 rounded-full shrink-0 ${
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                             isSelected ? 'bg-emerald-400 ring-2 ring-emerald-500/30' : 'bg-slate-600'
                           }`}
                         />
@@ -1529,9 +1529,9 @@ export default function StudentWorkspace() {
             </div>
 
             {/* Dual Progress Gauges */}
-            <div className="grid grid-cols-2 gap-2 text-[11px]">
-              <div className="bg-slate-900 border border-slate-800 rounded p-1.5">
-                <div className="flex justify-between text-slate-400 mb-1">
+            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div className="bg-slate-900 border border-slate-800 rounded p-1">
+                <div className="flex justify-between text-slate-400 mb-0.5">
                   <span>Activity</span>
                   <span className="font-semibold text-emerald-400">
                     {actProgress ? `${actProgress.completed_milestones.length}/${actProgress.total_milestones}` : `0/${activeActivity.milestones.length}`}
@@ -1545,8 +1545,8 @@ export default function StudentWorkspace() {
                 </div>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded p-1.5">
-                <div className="flex justify-between text-slate-400 mb-1">
+              <div className="bg-slate-900 border border-slate-800 rounded p-1">
+                <div className="flex justify-between text-slate-400 mb-0.5">
                   <span>Total Lab</span>
                   <span className="font-semibold text-cyan-400">
                     {sessionState?.progress_percent || 0}%
@@ -1643,7 +1643,7 @@ export default function StudentWorkspace() {
         )}
 
         {/* Source Switcher: Presets vs Disk */}
-        <div className="p-3 border-b border-slate-800 bg-slate-900/60 space-y-2">
+        <div className="p-2 sm:p-2.5 border-b border-slate-800 bg-slate-900/60 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium text-slate-400 flex items-center gap-1.5">
               <FileCode className="w-3.5 h-3.5 text-emerald-400" />
@@ -1745,7 +1745,7 @@ export default function StudentWorkspace() {
         {/* Code Editor / Viewer */}
         <div className="flex-1 min-h-0 bg-slate-950 relative overflow-hidden">
           {sourceMode === 'disk' ? (
-            <div className="h-full overflow-y-auto p-4">
+            <div className="h-full overflow-y-auto p-3">
               <CodeBlockHighlighter
                 language={getSyntaxLanguage(currentFile.name)}
                 code={currentFile.content || '// Empty file'}
@@ -1758,7 +1758,7 @@ export default function StudentWorkspace() {
             <textarea
               value={currentFile.content}
               onChange={(e) => handleCodeChange(e.target.value)}
-              className="w-full h-full block p-4 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
+              className="w-full h-full block p-3 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
               spellCheck={false}
             />
           )}
@@ -1944,14 +1944,14 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Chat Input & Action Bar */}
-        <div className="p-3 border-t border-slate-800 bg-slate-900/40">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+        <div className="p-2 sm:p-2.5 border-t border-slate-800 bg-slate-900/40">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
             {/* 1. Check Code Button */}
             <Button
               type="button"
               onClick={handleCheckCode}
               disabled={isAnalyzing}
-              className="h-10 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-emerald-950/20 shrink-0 transition-all"
+              className="h-8.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-emerald-950/20 shrink-0 transition-all"
               title="Evaluate current workspace code against active milestones"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-white" />
@@ -1963,7 +1963,7 @@ export default function StudentWorkspace() {
               type="button"
               onClick={handleAskForHint}
               disabled={isAnalyzing}
-              className="h-10 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-amber-950/20 shrink-0 transition-all"
+              className="h-8.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-amber-950/20 shrink-0 transition-all"
               title="Get an instant Socratic hint for your active milestone"
             >
               <Lightbulb className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
@@ -1975,7 +1975,7 @@ export default function StudentWorkspace() {
               type="button"
               onClick={handleExplainConcept}
               disabled={isAnalyzing}
-              className="h-10 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-xl gap-1.5 shadow-md shadow-indigo-950/20 shrink-0 transition-all"
+              className="h-8.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-indigo-950/20 shrink-0 transition-all"
               title="Explain theoretical lecture concepts and relevant slides for this activity"
             >
               <BookOpen className="w-3.5 h-3.5 text-white" />
@@ -1991,13 +1991,13 @@ export default function StudentWorkspace() {
                   : 'Ask Socratix a question...'
               }
               disabled={isAnalyzing}
-              className="flex-1 bg-slate-900 border-slate-800 text-xs h-10 rounded-xl focus-visible:ring-emerald-500"
+              className="flex-1 bg-slate-900 border-slate-800 text-xs h-8.5 rounded-lg focus-visible:ring-emerald-500"
             />
 
             <Button
               type="submit"
               disabled={isAnalyzing || !input.trim()}
-              className="h-10 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 rounded-xl gap-1.5 shadow-md shadow-emerald-950/20"
+              className="h-8.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 sm:px-4 rounded-lg gap-1.5 shadow-md shadow-emerald-950/20"
             >
               <Send className="w-3.5 h-3.5" />
               <span>Send</span>

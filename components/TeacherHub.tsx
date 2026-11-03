@@ -216,9 +216,9 @@ export default function TeacherHub() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
       <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-emerald-400 flex items-center gap-2">
+            <span className="text-lg font-bold text-emerald-400 flex items-center gap-2">
               🦉 Socratix ERP
             </span>
             <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-xs">
@@ -306,18 +306,18 @@ export default function TeacherHub() {
         </div>
 
         {/* Navigation Tabs & KPI Banner */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-800/60 pt-1">
+        <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-800/60">
           {/* 4 Tabs */}
           <nav className="flex space-x-1">
             <button
               onClick={() => setActiveTab('live')}
-              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'live'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Activity className="w-4 h-4" />
+              <Activity className="w-3.5 h-3.5" />
               <span>📡 Live Lab Sessions</span>
               {blockedCount > 0 && (
                 <span className="ml-1 px-1.5 py-0.2 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-mono">
@@ -328,43 +328,43 @@ export default function TeacherHub() {
 
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'analytics'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <BarChart3 className="w-4 h-4" />
+              <BarChart3 className="w-3.5 h-3.5" />
               <span>📊 Class Analytics</span>
             </button>
 
             <button
               onClick={() => setActiveTab('coverage')}
-              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'coverage'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Compass className="w-4 h-4" />
+              <Compass className="w-3.5 h-3.5" />
               <span>🧭 Curriculum Coverage</span>
             </button>
 
             <button
               onClick={() => setActiveTab('studio')}
-              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'studio'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
-              <BookOpen className="w-4 h-4" />
+              <BookOpen className="w-3.5 h-3.5" />
               <span>🧠 Course Studio</span>
             </button>
           </nav>
 
           {/* Quick Stats Pill */}
-          <div className="hidden md:flex items-center gap-4 text-xs font-mono text-slate-400 pb-2">
+          <div className="hidden md:flex items-center gap-3.5 text-xs font-mono text-slate-400 py-1.5">
             <span className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-slate-500" />
               <strong className="text-slate-200">{totalActive}</strong> students
@@ -382,7 +382,7 @@ export default function TeacherHub() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {!selectedCourse ? (
           <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
             <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />

@@ -493,17 +493,17 @@ export default function TeacherLiveSessionsTab({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400">
-                    <th className="py-3 px-4">Student & Workstation</th>
-                    <th className="py-3 px-4">Lab & Activity Progress</th>
-                    <th className="py-3 px-4">Covered Micro-Competencies (Drill-Down)</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
+                    <th className="py-2.5 px-3.5">Student & Workstation</th>
+                    <th className="py-2.5 px-3.5">Lab & Activity Progress</th>
+                    <th className="py-2.5 px-3.5">Covered Micro-Competencies (Drill-Down)</th>
+                    <th className="py-2.5 px-3.5">Status</th>
+                    <th className="py-2.5 px-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {filteredSessions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-12 text-center text-slate-500">
+                      <td colSpan={5} className="py-10 text-center text-slate-500">
                         <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         <p className="text-sm">No student sessions found for this lab.</p>
                         <p className="text-[11px] text-slate-400 mt-1">
@@ -538,13 +538,13 @@ export default function TeacherLiveSessionsTab({
                           }`}
                         >
                           {/* Col 1: Student & Workstation */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-2.5 px-3.5">
                             <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">
+                              <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[11px]">
                                 {session.profiles?.display_name?.[0] || 'S'}
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5 font-medium text-slate-200">
+                                <div className="flex items-center gap-1.5 font-medium text-slate-200 text-xs">
                                   <span>{session.profiles?.display_name || 'Anonymous Student'}</span>
                                   {session.profiles?.is_guest && (
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-400">
@@ -552,8 +552,8 @@ export default function TeacherLiveSessionsTab({
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono mt-0.5">
-                                  <Monitor className="w-3 h-3 text-slate-500" />
+                                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-0.5">
+                                  <Monitor className="w-2.5 h-2.5 text-slate-500" />
                                   <span>{session.seat_label || 'PC --'}</span>
                                 </div>
                               </div>
@@ -561,14 +561,14 @@ export default function TeacherLiveSessionsTab({
                           </td>
 
                           {/* Col 2: Progress (Interactive Milestones Breakdown) */}
-                          <td className="py-3.5 px-4 min-w-[210px]">
+                          <td className="py-2.5 px-3.5 min-w-[190px]">
                             <button
                               type="button"
                               onClick={() => setSelectedSessionForMilestones(session)}
                               title="Click to view detailed milestones breakdown across all activities"
-                              className="w-full text-left space-y-1.5 p-1.5 -m-1.5 rounded-lg hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
+                              className="w-full text-left space-y-1 p-1 -m-1 rounded-lg hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
                             >
-                              <div className="flex justify-between items-center text-[11px]">
+                              <div className="flex justify-between items-center text-[10px]">
                                 <span className="text-slate-400 group-hover:text-cyan-300 transition-colors flex items-center gap-1">
                                   <span>Total Progress</span>
                                   <span className="text-[9px] opacity-0 group-hover:opacity-100 text-cyan-400 font-normal transition-opacity">
@@ -579,7 +579,7 @@ export default function TeacherLiveSessionsTab({
                                   {session.progress_percent}%
                                 </span>
                               </div>
-                              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
+                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
                                 <div
                                   className={`h-full transition-all duration-300 ${
                                     isCompleted
@@ -601,8 +601,8 @@ export default function TeacherLiveSessionsTab({
                           </td>
 
                           {/* Col 3: Micro-Competencies Drill-Down */}
-                          <td className="py-3.5 px-4">
-                            <div className="flex flex-wrap gap-1.5">
+                          <td className="py-2.5 px-3.5">
+                            <div className="flex flex-wrap gap-1">
                               {(selectedLab?.covered_micro_concepts || Object.keys(microState)).map((conceptKey) => {
                                 const entry = microState[conceptKey];
                                 const status = entry?.status || 'UNTESTED';
@@ -629,7 +629,7 @@ export default function TeacherLiveSessionsTab({
                                         occurrences: entry?.occurrences || [],
                                       })
                                     }
-                                    className={`text-[10px] px-2 py-0.5 rounded-md border font-mono transition-colors flex items-center gap-1 ${badgeStyle}`}
+                                    className={`text-[10px] px-1.5 py-0.5 rounded border font-mono transition-colors flex items-center gap-1 ${badgeStyle}`}
                                     title={hasRemediation ? `${conceptKey}: Acquis (après remédiation) • Cliquez pour inspecter` : 'Click to view code occurrence drill-down'}
                                   >
                                     <span>{conceptKey}</span>
@@ -648,30 +648,30 @@ export default function TeacherLiveSessionsTab({
                           </td>
 
                           {/* Col 4: Status */}
-                          <td className="py-3.5 px-4">
+                          <td className="py-2.5 px-3.5">
                             {isBlocked ? (
-                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold animate-pulse">
-                                <AlertTriangle className="w-3.5 h-3.5" />
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[11px] font-semibold animate-pulse">
+                                <AlertTriangle className="w-3 h-3" />
                                 <span>BLOCKED</span>
-                                <span className="text-[10px] bg-rose-950/60 px-1 rounded text-rose-300">
-                                  {session.consecutive_errors} errors
+                                <span className="text-[9px] bg-rose-950/60 px-1 rounded text-rose-300">
+                                  {session.consecutive_errors}
                                 </span>
                               </div>
                             ) : isCompleted ? (
-                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+                                <CheckCircle2 className="w-3 h-3" />
                                 <span>COMPLETED</span>
                               </div>
                             ) : (
-                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
-                                <Clock className="w-3.5 h-3.5" />
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-semibold">
+                                <Clock className="w-3 h-3" />
                                 <span>IN PROGRESS</span>
                               </div>
                             )}
                           </td>
 
                           {/* Col 5: Actions */}
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-2.5 px-3.5 text-right">
                             <div className="flex items-center justify-end gap-1.5">
                               <Button
                                 variant="outline"
