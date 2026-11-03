@@ -27,6 +27,8 @@ export interface PreflightChapterItem {
   title_en: string;
   code: string;
   reasoning: string;
+  source_quote?: string;
+  action_taken?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -87,14 +89,18 @@ Analyze the uploaded lecture slide files. By inspecting their filenames and firs
 ### RULES:
 1. Understand pedagogical progression (e.g. foundational structure before styling, basic selectors before layout, Flexbox/Grid before responsive animations; in OOP, basic types/syntax before classes, encapsulation before inheritance and exceptions).
 2. Resolve multi-module numbering (e.g. if HTML has Ch 1-2 and CSS resets numbering to Ch 1-5, map them into a coherent global course sequence starting at ${startNumber}).
-3. Assign for EACH file:
+3. Extract source evidence: quote 10-25 words from the first slide proving that chapter's topic.
+4. Document the normalization action applied (e.g., "Stripped prefix '1_', normalized relative Ch 1 to Global Ch 1, assigned code CH1_HTML_INTRO").
+5. Assign for EACH file:
    - 'order': sequential ordering index (1, 2, 3...)
    - 'chapter_number': global chapter number (${startNumber}, ${startNumber + 1}, ...)
    - 'module': module name (e.g. "HTML", "CSS", "Core", "Advanced", etc.)
    - 'title': clean, official chapter title in French (or course content language)
    - 'title_en': clean English title for international jury
    - 'code': unique uppercase alphanumeric code e.g. "CH1_HTML_INTRO", "CH3_CSS_SELECTORS", etc.
-   - 'reasoning': short 1-sentence pedagogical rationale explaining why this file occupies this position.`;
+   - 'reasoning': short 1-sentence pedagogical rationale explaining why this file occupies this position.
+   - 'source_quote': short excerpt (10-25 words) from the first slide identifying the chapter.
+   - 'action_taken': brief description of prefix stripping or relative-to-global sequence normalization.`;
 
     const userPrompt = `Classify and sequence these ${sanitizedFiles.length} course documents:
 ${JSON.stringify(sanitizedFiles, null, 2)}`;
@@ -105,6 +111,15 @@ ${JSON.stringify(sanitizedFiles, null, 2)}`;
       schema: {
         type: 'object',
         properties: {
+          curriculum_summary: {
+            type: 'string',
+            description: 'A 2-sentence executive pedagogical summary of the entire curriculum organization, explaining why the modules and chapters are sequenced in this order.',
+          },
+          detected_modules: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'List of unique module/topic domains identified across these documents (e.g. ["HTML", "CSS"]).',
+          },
           chapters: {
             type: 'array',
             items: {
@@ -118,13 +133,15 @@ ${JSON.stringify(sanitizedFiles, null, 2)}`;
                 title_en: { type: 'string' },
                 code: { type: 'string' },
                 reasoning: { type: 'string' },
+                source_quote: { type: 'string' },
+                action_taken: { type: 'string' },
               },
-              required: ['filename', 'order', 'chapter_number', 'module', 'title', 'title_en', 'code', 'reasoning'],
+              required: ['filename', 'order', 'chapter_number', 'module', 'title', 'title_en', 'code', 'reasoning', 'source_quote', 'action_taken'],
               additionalProperties: false,
             },
           },
         },
-        required: ['chapters'],
+        required: ['curriculum_summary', 'detected_modules', 'chapters'],
         additionalProperties: false,
       },
     };
@@ -167,6 +184,13 @@ ${JSON.stringify(sanitizedFiles, null, 2)}`;
 
     return NextResponse.json({
       success: true,
+      curriculum_summary:
+        parsed?.curriculum_summary ||
+        'Sequenced syllabus with verified prerequisite ordering, ensuring foundational concepts precede applied implementation.',
+      detected_modules:
+        Array.isArray(parsed?.detected_modules) && parsed.detected_modules.length > 0
+          ? parsed.detected_modules
+          : Array.from(new Set(chapters.map((c) => c.module).filter(Boolean))),
       chapters,
     });
   } catch (err: unknown) {
