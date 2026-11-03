@@ -5,12 +5,9 @@ import { Course, CourseChapter, Lab } from '@/types/socratix';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  extractPdfPagesInBrowser,
   extractPdfPagesFromUrl,
   extractFirstPageInBrowser,
   inferNumberAndTitle,
-  slugifyStorageKey,
-  uploadCoursePdf,
 } from '@/lib/pdf-client-extractor';
 import {
   Sparkles,
@@ -38,6 +35,8 @@ import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
 import LabDetailModal from '@/components/LabDetailModal';
 import ChapterStagingModal, { StagedChapterItem } from '@/components/ChapterStagingModal';
 import { PreflightChapterItem } from '@/app/api/studio/chapters-preflight/route';
+import LabStagingModal, { StagedLabItem } from '@/components/LabStagingModal';
+import { PreflightLabItem } from '@/app/api/studio/labs-preflight/route';
 import { getLocalizedChapterTitle, getLocalizedLabTitle } from '@/lib/bilingual-helper';
 
 interface CompilationPhase {
@@ -138,6 +137,14 @@ export default function CourseStudioPanel({
   const [showStagingModal, setShowStagingModal] = useState(false);
   const [preflightLogs, setPreflightLogs] = useState<string[]>([]);
   const [isPreflighting, setIsPreflighting] = useState(false);
+
+  // Lab AI Pre-flight & Staging modal
+  const [stagedLabs, setStagedLabs] = useState<StagedLabItem[]>([]);
+  const [labsCurriculumSummary, setLabsCurriculumSummary] = useState<string>('');
+  const [labsDetectedModules, setLabsDetectedModules] = useState<string[]>([]);
+  const [showLabStagingModal, setShowLabStagingModal] = useState(false);
+  const [labsPreflightLogs, setLabsPreflightLogs] = useState<string[]>([]);
+  const [isLabsPreflighting, setIsLabsPreflighting] = useState(false);
 
   // Studio UI language toggle & chapter re-distillation toggle
   const [lang, setLang] = useState<'en' | 'fr'>('en');
@@ -351,7 +358,67 @@ export default function CourseStudioPanel({
   };
 
   // --------------------------------------------------------------------------
-  // BATCH UPLOAD: LABS / TP
+  // IN-PLACE LAB MANAGEMENT (REORDER & DELETE)
+  // --------------------------------------------------------------------------
+  const handleMoveExistingLab = async (labId: string, direction: 'up' | 'down') => {
+    const sorted = [...labs].sort((a, b) => a.lab_number - b.lab_number);
+    const idx = sorted.findIndex((l) => l.id === labId);
+    if (idx === -1) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === sorted.length - 1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const currNum = sorted[idx].lab_number;
+    const targetNum = sorted[targetIdx].lab_number;
+
+    const updates = [
+      { id: sorted[idx].id, lab_number: targetNum },
+      { id: sorted[targetIdx].id, lab_number: currNum },
+    ];
+
+    try {
+      const res = await fetch('/api/studio/labs-reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          labs: updates,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to reorder labs');
+      await onCourseUpdated();
+    } catch (err) {
+      console.error('[Move Lab Error]:', err);
+    }
+  };
+
+  const handleDeleteLab = async (labId: string, labTitle: string) => {
+    if (!confirm(`Delete lab "${labTitle}" from course?`)) return;
+
+    try {
+      const res = await fetch('/api/studio/lab-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          labId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete lab');
+      }
+      await onCourseUpdated();
+    } catch (err) {
+      console.error('[Delete Lab Error]:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete lab');
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // BATCH UPLOAD: LABS / TP (AI PRE-FLIGHT & HUMAN-IN-THE-LOOP STAGING)
   // --------------------------------------------------------------------------
   const handleBatchLabsUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
@@ -367,66 +434,101 @@ export default function CourseStudioPanel({
     }
 
     const files = Array.from(fileList);
-    // Natural numeric sort: TP1 before TP2 before TP10
-    files.sort((a, b) => {
-      const numA = inferNumberAndTitle(a.name).number;
-      const numB = inferNumberAndTitle(b.name).number;
-      return numA - numB;
-    });
-
     setIsProcessing(true);
+    setIsLabsPreflighting(true);
     setStatusMessage(null);
+    setLabsPreflightLogs([
+      `📄 [Client Extractor] Scanning ${files.length} lab assignment deck(s) in browser memory...`,
+    ]);
 
     try {
+      // 1. Quick client-side scan of page 1 for each lab (< 300ms total)
+      const preflightPayload = [];
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const info = inferNumberAndTitle(file.name, i + 1);
-
-        setCurrentProgress({
-          stage: 'Labs / TP',
-          current: i + 1,
-          total: files.length,
-          filename: file.name,
-        });
-
-        // 1. Extract text in browser
-        const pages = await extractPdfPagesInBrowser(file);
-
-        // 2. Upload PDF with accent-free slug
-        const storagePath = slugifyStorageKey(file.name, course.code, 'labs');
-        const pdfUrl = await uploadCoursePdf(file, storagePath);
-
-        // 3. Call backend AI analyzer with Golden Lab Decomposition Shot
-        const res = await fetch('/api/studio/lab-analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: course.id,
-            labNumber: info.number,
-            code: info.code,
-            title: info.suggestedTitle,
-            pdfUrl,
-            pages,
-          }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(`Failed to analyze lab "${file.name}": ${errData.error || res.statusText}`);
-        }
+        const f = files[i];
+        const firstSlideText = await extractFirstPageInBrowser(f);
+        preflightPayload.push({ filename: f.name, firstSlideText });
+        const snippet = firstSlideText ? firstSlideText.slice(0, 45).replace(/\s+/g, ' ').trim() : 'Title page detected';
+        setLabsPreflightLogs((prev) => [
+          ...prev,
+          `✔ [Vector Parse] Page 1 scanned: "${f.name}" (${snippet}...)`,
+        ]);
       }
 
-      await onCourseUpdated();
-      setShowLabsIngestionModal(true);
-      setStatusMessage({
-        type: 'success',
-        text: `Successfully decomposed and configured ${files.length} lab(s) with activities, milestones, and demo presets!`,
+      // 2. Call Meta AI Labs Pre-flight
+      setLabsPreflightLogs((prev) => [
+        ...prev,
+        `🧠 [Meta AI muse-spark-1.3] Streaming manifest (${files.length} decks) for lab progression & variant resolution...`,
+        `⚡ [Engine] Detecting assignments, sub-labs (e.g. 'bis'), and competency alignments...`,
+      ]);
+
+      const preflightRes = await fetch('/api/studio/labs-preflight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          files: preflightPayload,
+        }),
       });
+
+      if (!preflightRes.ok) {
+        const errData = await preflightRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Labs pre-flight analysis failed');
+      }
+
+      const preflightData = await preflightRes.json();
+      const fileMap = new Map<string, File>();
+      files.forEach((f) => fileMap.set(f.name, f));
+
+      const staged: StagedLabItem[] = (preflightData.labs || []).map((lb: PreflightLabItem) => ({
+        ...lb,
+        file: fileMap.get(lb.filename) || files[0],
+      }));
+
+      setLabsPreflightLogs((prev) => [
+        ...prev,
+        `🎯 [Continuum Engine] Inferred continuous lab progression 1..${staged.length}`,
+        `🛡️ [Collision Shield] Reconciled variants & assigned unique codes (${staged.map((s) => s.code).join(', ')})`,
+        `✨ Lab pre-flight complete! Launching Interactive Staging Console...`,
+      ]);
+
+      setStagedLabs(staged);
+      setLabsCurriculumSummary(preflightData.curriculum_summary || '');
+      setLabsDetectedModules(preflightData.detected_modules || []);
+
+      await new Promise((r) => setTimeout(r, 600));
+      setIsLabsPreflighting(false);
+      setShowLabStagingModal(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Batch lab upload failed';
-      setStatusMessage({ type: 'error', text: msg });
+      console.error('[Labs Pre-flight Error]:', err);
+      // Fallback
+      const fileMap = new Map<string, File>();
+      files.forEach((f) => fileMap.set(f.name, f));
+      const fallbackStaged: StagedLabItem[] = files.map((f, idx) => {
+        const info = inferNumberAndTitle(f.name, idx + 1);
+        return {
+          filename: f.name,
+          order: idx + 1,
+          lab_number: info.number,
+          module: 'Practice',
+          title: info.suggestedTitle,
+          title_en: info.suggestedTitle,
+          code: info.code,
+          reasoning: 'Sequential lab order.',
+          source_quote: 'Extracted from file metadata.',
+          action_taken: 'Sequential order heuristic.',
+          target_files: course.file_extensions ? [`solution${course.file_extensions[0] || '.txt'}`] : [],
+          file: f,
+        };
+      });
+      setStagedLabs(fallbackStaged);
+      setLabsCurriculumSummary('Fallback sequence determined from sequential file naming.');
+      setLabsDetectedModules(['Practice']);
+      setIsLabsPreflighting(false);
+      setShowLabStagingModal(true);
     } finally {
       setIsProcessing(false);
+      setIsLabsPreflighting(false);
       setCurrentProgress(null);
       e.target.value = '';
     }
@@ -1243,13 +1345,34 @@ export default function CourseStudioPanel({
             {/* LIST OF CURRENT LABS */}
             {labs.length > 0 && (
               <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {labs.map((lb) => (
+                {[...labs].sort((a, b) => a.lab_number - b.lab_number).map((lb, idx, arr) => (
                   <div
                     key={lb.id}
                     className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs hover:border-slate-750 transition"
                   >
                     <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono text-[10px] text-cyan-400 font-semibold">TP {lb.lab_number}</span>
+                      {/* Reorder Buttons */}
+                      <div className="flex flex-col gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          disabled={idx === 0}
+                          onClick={() => handleMoveExistingLab(lb.id, 'up')}
+                          className="text-slate-500 hover:text-cyan-400 disabled:opacity-20 transition"
+                          title="Move lab up"
+                        >
+                          <ArrowUp className="w-2.5 h-2.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={idx === arr.length - 1}
+                          onClick={() => handleMoveExistingLab(lb.id, 'down')}
+                          className="text-slate-500 hover:text-cyan-400 disabled:opacity-20 transition"
+                          title="Move lab down"
+                        >
+                          <ArrowDown className="w-2.5 h-2.5" />
+                        </button>
+                      </div>
+                      <span className="font-mono text-[10px] text-cyan-400 font-semibold">{lb.code || `TP ${lb.lab_number}`}</span>
                       <span className="text-slate-200 truncate">{getLocalizedLabTitle(lb, lang)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
@@ -1274,6 +1397,14 @@ export default function CourseStudioPanel({
                           PDF ↗
                         </a>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLab(lb.id, lb.title)}
+                        className="p-1 text-slate-500 hover:text-rose-400 transition rounded hover:bg-rose-950/30 ml-1"
+                        title="Delete lab"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1426,6 +1557,78 @@ export default function CourseStudioPanel({
             setStatusMessage({
               type: 'success',
               text: `Successfully imported and distilled ${stagedChapters.length} chapter(s)! You can now compile the Knowledge Base.`,
+            });
+          }}
+        />
+      )}
+
+      {/* PROPOSITION 1B: LIVE AI LABS PRE-FLIGHT TELEMETRY MODAL */}
+      {isLabsPreflighting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-xl bg-slate-950 border border-cyan-500/40 rounded-2xl shadow-2xl overflow-hidden font-mono text-xs">
+            {/* Terminal Title Bar */}
+            <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-cyan-500/80 inline-block" />
+                </div>
+                <span className="text-slate-200 font-semibold text-xs ml-2 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                  Meta AI Hands-On Lab Pre-flight Telemetry
+                </span>
+              </div>
+              <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/30 text-[10px] font-mono">
+                muse-spark-1.3
+              </Badge>
+            </div>
+
+            {/* Terminal Logs Body */}
+            <div className="p-4 space-y-2 max-h-72 overflow-y-auto text-[11px] bg-slate-950 text-slate-300">
+              {labsPreflightLogs.map((log, idx) => (
+                <div key={idx} className="flex items-start gap-2 animate-in fade-in duration-150">
+                  <span className="text-cyan-500 select-none">➜</span>
+                  <span
+                    className={
+                      log.includes('✔')
+                        ? 'text-emerald-300'
+                        : log.includes('🧠') || log.includes('⚡')
+                        ? 'text-cyan-300 font-semibold'
+                        : log.includes('✨')
+                        ? 'text-white font-bold'
+                        : 'text-slate-300'
+                    }
+                  >
+                    {log}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center gap-2 text-cyan-400 pt-1 border-t border-slate-900">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span className="animate-pulse">Synthesizing hands-on progression & resolving lab variants...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 0B: LAB STAGING & REORDERING MODAL */}
+      {showLabStagingModal && course && (
+        <LabStagingModal
+          isOpen={showLabStagingModal}
+          onClose={() => setShowLabStagingModal(false)}
+          courseId={course.id}
+          courseCode={course.code}
+          curriculumSummary={labsCurriculumSummary}
+          detectedModules={labsDetectedModules}
+          initialItems={stagedLabs}
+          onDistillationComplete={async () => {
+            await onCourseUpdated();
+            setShowLabsIngestionModal(true);
+            setStatusMessage({
+              type: 'success',
+              text: `Successfully decomposed and registered ${stagedLabs.length} lab(s)! You can now review activities, milestones, and demo presets.`,
             });
           }}
         />
