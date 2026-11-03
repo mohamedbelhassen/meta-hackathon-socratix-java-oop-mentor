@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { StructuredCourseReference } from '@/types/socratix';
-import { ExternalLink, X, BookOpen, Sparkles, FileText } from 'lucide-react';
+import { ExternalLink, X, BookOpen, Sparkles, FileText, Loader2, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getSlideCleanMarkdown, extractSlideTitle } from '@/lib/pdf-cleaner';
@@ -22,14 +22,84 @@ export default function SmartSlideViewerModal({
   courseTitle,
 }: SmartSlideViewerModalProps) {
   const [slideViewMode, setSlideViewMode] = useState<'clean_en' | 'pdf' | 'clean_fr'>('clean_en');
+  const [jitTranslation, setJitTranslation] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
+  const cleanEnText = reference ? getSlideCleanMarkdown(reference, 'en') : '';
+  const cleanFrText = reference ? getSlideCleanMarkdown(reference, 'fr') : '';
+
+  // Reset local JIT translation cache when changing slides
+  useEffect(() => {
+    setJitTranslation(null);
+    setIsTranslating(false);
+    setTranslationError(null);
+  }, [reference?.chapter_code, reference?.page_number]);
+
+  const hasNativeEn = Boolean(
+    reference?.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0
+  );
+
+  const triggerTranslation = useCallback(async () => {
+    if (!reference || isTranslating) return;
+    setIsTranslating(true);
+    setTranslationError(null);
+    try {
+      const res = await fetch('/api/studio/translate-slide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chapterCode: reference.chapter_code,
+          pageNumber: reference.page_number,
+          frContent: cleanFrText,
+        }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to translate slide');
+      }
+      const data = await res.json();
+      if (data.en_markdown) {
+        setJitTranslation(data.en_markdown);
+      }
+    } catch (err: unknown) {
+      console.warn('[SmartSlideViewerModal] JIT Translation failed:', err);
+      setTranslationError(err instanceof Error ? err.message : 'Translation error');
+    } finally {
+      setIsTranslating(false);
+    }
+  }, [reference, isTranslating, cleanFrText]);
+
+  // Automatic JIT translation when viewing clean English tab and no native translation exists
+  useEffect(() => {
+    if (
+      isOpen &&
+      reference &&
+      slideViewMode === 'clean_en' &&
+      !hasNativeEn &&
+      !jitTranslation &&
+      !isTranslating &&
+      !translationError
+    ) {
+      triggerTranslation();
+    }
+  }, [
+    isOpen,
+    reference,
+    slideViewMode,
+    hasNativeEn,
+    jitTranslation,
+    isTranslating,
+    translationError,
+    triggerTranslation,
+  ]);
 
   if (!isOpen || !reference) return null;
 
-  const cleanEnText = getSlideCleanMarkdown(reference, 'en');
-  const cleanFrText = getSlideCleanMarkdown(reference, 'fr');
+  const effectiveEnText = jitTranslation || (hasNativeEn ? cleanEnText : null);
 
   // Synchronize modal header title with active slide tab (clean_en vs clean_fr)
-  const activeCleanText = slideViewMode === 'clean_en' ? cleanEnText : cleanFrText;
+  const activeCleanText = slideViewMode === 'clean_en' ? (effectiveEnText || cleanEnText) : cleanFrText;
   const activeCanonicalTitle =
     extractSlideTitle(activeCleanText) ||
     extractSlideTitle(cleanFrText) ||
@@ -154,11 +224,53 @@ export default function SmartSlideViewerModal({
                   className="w-full h-full rounded-xl border border-slate-800 bg-white shadow-inner"
                   title={`Slide ${reference.page_number}`}
                 />
+              ) : slideViewMode === 'clean_en' && isTranslating ? (
+                <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center space-y-4 shadow-inner">
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                    <Loader2 className="w-8 h-8 animate-spin" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <h4 className="text-sm font-bold text-slate-100 flex items-center justify-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-400" />
+                      Generating Clean English Translation...
+                    </h4>
+                    <p className="text-xs text-slate-400 max-w-sm">
+                      Meta AI (muse-spark-1.3) is translating this slide in real time, preserving all code tags, CSS rules and architectural invariants.
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-emerald-400/80 font-mono flex items-center gap-1.5 bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Just-In-Time Curriculum Synthesis</span>
+                  </div>
+                </div>
+              ) : slideViewMode === 'clean_en' && translationError && !effectiveEnText ? (
+                <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto shadow-inner space-y-4">
+                  <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between">
+                    <span>Clean English translation encountered a momentary error: {translationError}</span>
+                    <Button
+                      size="sm"
+                      onClick={triggerTranslation}
+                      className="bg-amber-600 hover:bg-amber-500 text-white text-xs gap-1.5 h-7 px-2.5 ml-2 shrink-0"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Retry Translation
+                    </Button>
+                  </div>
+                  <div className="prose prose-invert prose-sm max-w-none text-slate-200 leading-relaxed space-y-3 [&_h3]:text-emerald-400 [&_h3]:text-base [&_h3]:font-bold [&_h4]:text-slate-100 [&_h4]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-slate-950 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-slate-950 [&_pre]:border [&_pre]:border-slate-800 [&_pre]:p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-500/50 [&_blockquote]:bg-emerald-950/20 [&_blockquote]:p-3 [&_blockquote]:rounded-r-lg [&_strong]:text-emerald-200">
+                    <ReactMarkdown>{cleanFrText}</ReactMarkdown>
+                  </div>
+                </div>
               ) : (
                 <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-6 overflow-y-auto shadow-inner">
+                  {slideViewMode === 'clean_en' && jitTranslation && (
+                    <div className="mb-3 flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2.5 py-1 rounded-lg w-fit font-mono">
+                      <Sparkles className="w-3 h-3 text-emerald-400" />
+                      <span>Translated Just-In-Time by Meta AI (Saved to Syllabus Cache)</span>
+                    </div>
+                  )}
                   <div className="prose prose-invert prose-sm max-w-none text-slate-200 leading-relaxed space-y-3 [&_h3]:text-emerald-400 [&_h3]:text-base [&_h3]:font-bold [&_h4]:text-slate-100 [&_h4]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-slate-950 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-slate-950 [&_pre]:border [&_pre]:border-slate-800 [&_pre]:p-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-500/50 [&_blockquote]:bg-emerald-950/20 [&_blockquote]:p-3 [&_blockquote]:rounded-r-lg [&_strong]:text-emerald-200">
                     <ReactMarkdown>
-                      {slideViewMode === 'clean_en' ? cleanEnText : cleanFrText}
+                      {slideViewMode === 'clean_en' ? (effectiveEnText || cleanEnText) : cleanFrText}
                     </ReactMarkdown>
                   </div>
                 </div>
