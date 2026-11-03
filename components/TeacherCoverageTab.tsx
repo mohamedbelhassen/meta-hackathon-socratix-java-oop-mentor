@@ -1,27 +1,26 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Course, Lab, StudentLabSession } from '@/types/socratix';
+import { Course, Lab } from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  BarChart3,
-  Layers,
+  Compass,
   CheckCircle2,
   AlertTriangle,
   BookOpen,
   Check,
-  Compass,
   Terminal,
   X,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
-interface TeacherAnalyticsCoverageTabProps {
+interface TeacherCoverageTabProps {
   course: Course;
   labs: Lab[];
-  selectedLab: Lab | null;
-  sessions: StudentLabSession[];
   onCourseUpdated?: () => void;
+  onOpenStudioTab?: () => void;
 }
 
 interface UnanchoredLabRef {
@@ -30,39 +29,24 @@ interface UnanchoredLabRef {
   cleanTitle: string;
 }
 
-/**
- * Strips redundant leading prefixes from lab titles (e.g., 'TP 1 — Lab 1: ', 'TP 2: ', 'Lab 1 - ')
- * to cleanly surface the actual lab subject matter.
- */
 function cleanLabTitle(rawTitle: string, labCode?: string): string {
   if (!rawTitle) return '';
   let cleaned = rawTitle.trim();
-
-  // Strip redundant leading prefixes: TP X — Lab X: , Lab X: , TP X : , etc.
   cleaned = cleaned.replace(/^(?:TP\s*\d+\s*[-—:]+\s*)?(?:Lab\s*\d+\s*[-—:]+\s*)?/i, '');
-
   if (labCode) {
     const codeRegex = new RegExp(`^${labCode}\\s*[-—:]*\\s*`, 'i');
     cleaned = cleaned.replace(codeRegex, '');
   }
-
   cleaned = cleaned.replace(/^[-—:]\s*/, '').trim();
   return cleaned || rawTitle;
 }
 
-export default function TeacherAnalyticsCoverageTab({
+export default function TeacherCoverageTab({
   course,
   labs,
-  selectedLab,
-  sessions,
   onCourseUpdated,
-}: TeacherAnalyticsCoverageTabProps) {
-  const labSessions = useMemo(
-    () => sessions.filter((s) => s.lab_id === selectedLab?.id),
-    [sessions, selectedLab?.id]
-  );
-  const totalStudents = labSessions.length;
-
+  onOpenStudioTab,
+}: TeacherCoverageTabProps) {
   // Dialog state for unanchored lab competency actions
   const [activeUnanchoredAction, setActiveUnanchoredAction] = useState<{
     conceptCode: string;
@@ -84,6 +68,11 @@ export default function TeacherAnalyticsCoverageTab({
   const normalizeCode = (c: string) => (c || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '_');
 
   const chaptersTaxonomy = useMemo(() => course.competency_matrix || [], [course.competency_matrix]);
+
+  // Total syllabus concepts count
+  const totalSyllabusConcepts = useMemo(() => {
+    return chaptersTaxonomy.reduce((acc, ch) => acc + (ch.micro_competencies?.length || 0), 0);
+  }, [chaptersTaxonomy]);
 
   // Memoized canonical concept resolution and coverage matrix (PERF-11)
   const { conceptToLabsMap, unanchoredConceptsMap } = useMemo(() => {
@@ -133,6 +122,33 @@ export default function TeacherAnalyticsCoverageTab({
       unanchoredConceptsMap: uConcepts,
     };
   }, [chaptersTaxonomy, labs]);
+
+  // Design-time coverage stats
+  const { reinforcedCount, coveredCount, gapCount, coverageHealthScore } = useMemo(() => {
+    let reinforced = 0;
+    let covered = 0;
+    let gap = 0;
+
+    for (const chapter of chaptersTaxonomy) {
+      for (const mc of chapter.micro_competencies || []) {
+        const labCount = (conceptToLabsMap.get(mc.code) || []).length;
+        if (labCount >= 2) reinforced += 1;
+        else if (labCount === 1) covered += 1;
+        else gap += 1;
+      }
+    }
+
+    const health = totalSyllabusConcepts > 0
+      ? Math.round(((reinforced + covered) / totalSyllabusConcepts) * 100)
+      : 0;
+
+    return {
+      reinforcedCount: reinforced,
+      coveredCount: covered,
+      gapCount: gap,
+      coverageHealthScore: health,
+    };
+  }, [chaptersTaxonomy, conceptToLabsMap, totalSyllabusConcepts]);
 
   const handleExecuteAction = async () => {
     if (!activeUnanchoredAction || !course.id) return;
@@ -194,185 +210,69 @@ export default function TeacherAnalyticsCoverageTab({
     }
   };
 
-  // 1. Calculate Milestone Completion Rates for Active Lab (Memoized for PERF-11)
-  const milestoneStats = useMemo(() => {
-    const stats: Array<{
-      activityOrder: number;
-      activityTitle: string;
-      milestoneId: string;
-      milestoneTitle: string;
-      completedCount: number;
-      completionRate: number;
-      blockedCount: number;
-    }> = [];
-
-    if (selectedLab?.activities) {
-      for (const act of selectedLab.activities) {
-        for (const m of act.milestones || []) {
-          const completedCount = labSessions.filter((s) =>
-            s.completed_milestone_ids?.includes(m.id)
-          ).length;
-
-          const blockedCount = labSessions.filter(
-            (s) => s.status === 'BLOCKED' && s.current_milestone_id === m.id
-          ).length;
-
-          const rate = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
-
-          stats.push({
-            activityOrder: act.order,
-            activityTitle: act.title,
-            milestoneId: m.id,
-            milestoneTitle: m.title,
-            completedCount,
-            completionRate: rate,
-            blockedCount,
-          });
-        }
-      }
-    }
-    return stats;
-  }, [selectedLab?.activities, labSessions, totalStudents]);
-
-  // 2. Calculate Average Micro-Competency Scores for Active Lab (Memoized for PERF-11)
-  const coveredConcepts = useMemo(
-    () => selectedLab?.covered_micro_concepts || [],
-    [selectedLab?.covered_micro_concepts]
-  );
-
-  const conceptScores = useMemo(() => {
-    const scores: Array<{
-      conceptKey: string;
-      avgScore: number;
-      masteredCount: number;
-      strugglingCount: number;
-    }> = [];
-
-    for (const concept of coveredConcepts) {
-      let scoreSum = 0;
-      let scoredStudents = 0;
-      let masteredCount = 0;
-      let strugglingCount = 0;
-
-      for (const s of labSessions) {
-        const entry = s.micro_competencies_state?.[concept];
-        if (entry && entry.signal_count > 0) {
-          scoreSum += entry.score;
-          scoredStudents += 1;
-          if (entry.status === 'MASTERED') masteredCount += 1;
-          if (entry.status === 'STRUGGLING') strugglingCount += 1;
-        }
-      }
-
-      const avg = scoredStudents > 0 ? Math.round(scoreSum / scoredStudents) : 0;
-      scores.push({
-        conceptKey: concept,
-        avgScore: avg,
-        masteredCount,
-        strugglingCount,
-      });
-    }
-    return scores;
-  }, [coveredConcepts, labSessions]);
-
-
   return (
     <div className="space-y-6">
       {/* ==================================================================== */}
-      {/* 1. TOP CARDS: MILESTONES COMPLETION & CONCEPT SCORES */}
+      {/* 1. TOP DESIGN-TIME KPI BANNER (Curriculum Alignment Score) */}
       {/* ==================================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Left Card: Milestone Completion Breakdown */}
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-              <h3 className="font-semibold text-slate-100 text-sm">
-                Milestone Progress ({selectedLab?.code || 'Active Lab'})
-              </h3>
-            </div>
-            <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
-              {totalStudents} Active Students
-            </Badge>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span>Coverage Score</span>
+            <Sparkles className="w-4 h-4 text-emerald-400" />
           </div>
-
-          {milestoneStats.length === 0 ? (
-            <div className="text-xs text-slate-500 py-6 text-center italic">
-              No milestones defined for this lab.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {milestoneStats.map((stat) => (
-                <div key={stat.milestoneId} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-300 font-medium truncate max-w-[240px]">
-                      {stat.milestoneTitle}
-                    </span>
-                    <div className="flex items-center gap-2 font-mono text-[11px]">
-                      {stat.blockedCount > 0 && (
-                        <span className="text-rose-400 font-semibold flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" /> {stat.blockedCount} blocked
-                        </span>
-                      )}
-                      <span className="text-emerald-400">
-                        {stat.completedCount}/{totalStudents} ({stat.completionRate}%)
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        stat.blockedCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${stat.completionRate}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="text-2xl font-bold text-emerald-400 font-mono">
+            {coverageHealthScore}%
+          </div>
+          <div className="text-[11px] text-slate-500">
+            {reinforcedCount + coveredCount}/{totalSyllabusConcepts} practiced in TP
+          </div>
         </div>
 
-        {/* Right Card: Micro-Competency Mastery on Active Lab */}
-        <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-emerald-400" />
-              <h3 className="font-semibold text-slate-100 text-sm">
-                Average Micro-Concept Mastery
-              </h3>
-            </div>
-            <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
-              {coveredConcepts.length} Tracked Concepts
-            </Badge>
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span>Reinforced (2+ TP)</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           </div>
+          <div className="text-2xl font-bold text-white font-mono">{reinforcedCount}</div>
+          <div className="text-[11px] text-emerald-400/80 font-medium">
+            Solid practical grounding
+          </div>
+        </div>
 
-          {conceptScores.length === 0 ? (
-            <div className="text-xs text-slate-500 py-6 text-center italic">
-              No micro-concepts mapped to this lab yet.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {conceptScores.map((c) => (
-                <div key={c.conceptKey} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-slate-200 text-[11px]">{c.conceptKey}</span>
-                    <span className="font-mono text-emerald-400 font-semibold">{c.avgScore}%</span>
-                  </div>
-                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                    <div
-                      className="bg-emerald-500 h-full transition-all duration-300"
-                      style={{ width: `${c.avgScore}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-slate-500">
-                    <span>{c.masteredCount} Mastered</span>
-                    <span>{c.strugglingCount} Struggling</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span>Covered (1 TP)</span>
+            <Check className="w-4 h-4 text-cyan-400" />
+          </div>
+          <div className="text-2xl font-bold text-cyan-400 font-mono">{coveredCount}</div>
+          <div className="text-[11px] text-slate-500">
+            Practiced once
+          </div>
+        </div>
+
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span>Syllabus Gaps (0 TP)</span>
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
+          </div>
+          <div className="text-2xl font-bold text-rose-400 font-mono">{gapCount}</div>
+          <div className="text-[11px] text-slate-500">
+            Theory without TP practice
+          </div>
+        </div>
+
+        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
+          <div className="flex items-center justify-between text-slate-400 text-xs">
+            <span>Lab Unanchored</span>
+            <Terminal className="w-4 h-4 text-amber-400" />
+          </div>
+          <div className="text-2xl font-bold text-amber-400 font-mono">
+            {unanchoredConceptsMap.size}
+          </div>
+          <div className="text-[11px] text-slate-500">
+            TP skills not in slides
+          </div>
         </div>
       </div>
 
@@ -388,7 +288,7 @@ export default function TeacherAnalyticsCoverageTab({
                 Curriculum Coverage Matrix (Course Syllabus &harr; TP Labs)
               </h3>
               <p className="text-xs text-slate-400">
-                Cross-references theoretical chapter competencies against practical TP exercises.
+                Cross-references theoretical lecture competencies against practical lab assignments.
               </p>
             </div>
           </div>
@@ -406,12 +306,24 @@ export default function TeacherAnalyticsCoverageTab({
         </div>
 
         {chaptersTaxonomy.length === 0 ? (
-          <div className="p-8 text-center border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs">
-            <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p>No chapter competencies compiled yet.</p>
-            <p className="text-[11px] text-slate-600 mt-1">
-              Go to &ldquo;🧠 Course Studio&rdquo; and click &ldquo;⚡ Recompile Course Knowledge Base&rdquo; to build the taxonomy.
-            </p>
+          <div className="p-8 text-center border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs space-y-3">
+            <BookOpen className="w-8 h-8 mx-auto opacity-50" />
+            <div className="space-y-1">
+              <p className="font-medium text-slate-300">No chapter competencies compiled yet.</p>
+              <p className="text-[11px] text-slate-600">
+                Go to Course Studio and synthesize the curriculum (Step 3) to build the taxonomy matrix.
+              </p>
+            </div>
+            {onOpenStudioTab && (
+              <Button
+                type="button"
+                onClick={onOpenStudioTab}
+                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3 rounded-lg shadow-sm gap-1"
+              >
+                <span>Open Course Studio</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -755,3 +667,4 @@ export default function TeacherAnalyticsCoverageTab({
     </div>
   );
 }
+

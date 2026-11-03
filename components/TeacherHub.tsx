@@ -16,12 +16,14 @@ import {
   ExternalLink,
   Plus,
   Trash2,
+  Compass,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import TeacherLiveSessionsTab from './TeacherLiveSessionsTab';
 
 // Dynamic imports for secondary tabs and modals to reduce initial JS bundle (PERF-08)
-const TeacherAnalyticsCoverageTab = dynamic(() => import('./TeacherAnalyticsCoverageTab'), { ssr: false });
+const TeacherAnalyticsTab = dynamic(() => import('./TeacherAnalyticsTab'), { ssr: false });
+const TeacherCoverageTab = dynamic(() => import('./TeacherCoverageTab'), { ssr: false });
 const CourseStudioPanel = dynamic(() => import('./CourseStudioPanel'), { ssr: false });
 const CreateCourseModal = dynamic(() => import('./CreateCourseModal'), { ssr: false });
 const DeleteCourseModal = dynamic(() => import('./DeleteCourseModal'), { ssr: false });
@@ -32,7 +34,7 @@ export default function TeacherHub() {
   const [labs, setLabs] = useState<Lab[]>([]);
   const [selectedLab, setSelectedLab] = useState<Lab | null>(null);
   const [sessions, setSessions] = useState<StudentLabSession[]>([]);
-  const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'studio'>('live');
+  const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'coverage' | 'studio'>('live');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
   // In-memory cache for student profiles to eliminate N+1 queries on Realtime updates (PERF-03)
@@ -305,11 +307,11 @@ export default function TeacherHub() {
 
         {/* Navigation Tabs & KPI Banner */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between border-t border-slate-800/60 pt-1">
-          {/* 3 Tabs */}
+          {/* 4 Tabs */}
           <nav className="flex space-x-1">
             <button
               onClick={() => setActiveTab('live')}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'live'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -326,19 +328,31 @@ export default function TeacherHub() {
 
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'analytics'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
               }`}
             >
               <BarChart3 className="w-4 h-4" />
-              <span>📊 Class Analytics & Coverage</span>
+              <span>📊 Class Analytics</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('coverage')}
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
+                activeTab === 'coverage'
+                  ? 'border-emerald-400 text-emerald-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Compass className="w-4 h-4" />
+              <span>🧭 Curriculum Coverage</span>
             </button>
 
             <button
               onClick={() => setActiveTab('studio')}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-semibold transition-colors ${
                 activeTab === 'studio'
                   ? 'border-emerald-400 text-emerald-400'
                   : 'border-transparent text-slate-400 hover:text-slate-200'
@@ -397,16 +411,28 @@ export default function TeacherHub() {
                 onSelectLab={(l) => setSelectedLab(l)}
                 sessions={sessions}
                 onRefresh={refreshCourseData}
+                onOpenStudioTab={() => setActiveTab('studio')}
               />
             )}
 
             {activeTab === 'analytics' && (
-              <TeacherAnalyticsCoverageTab
+              <TeacherAnalyticsTab
                 course={selectedCourse}
                 labs={labs}
                 selectedLab={selectedLab}
+                onSelectLab={(l) => setSelectedLab(l)}
                 sessions={sessions}
+                onOpenStudioTab={() => setActiveTab('studio')}
+                onOpenCoverageTab={() => setActiveTab('coverage')}
+              />
+            )}
+
+            {activeTab === 'coverage' && (
+              <TeacherCoverageTab
+                course={selectedCourse}
+                labs={labs}
                 onCourseUpdated={refreshCourseData}
+                onOpenStudioTab={() => setActiveTab('studio')}
               />
             )}
 
@@ -414,7 +440,7 @@ export default function TeacherHub() {
               <CourseStudioPanel
                 course={selectedCourse}
                 onCourseUpdated={refreshCourseData}
-                onOpenAnalyticsTab={() => setActiveTab('analytics')}
+                onOpenAnalyticsTab={() => setActiveTab('coverage')}
                 onCreateCourse={() => setIsCreateModalOpen(true)}
                 onDeleteCourse={() => setIsDeleteModalOpen(true)}
               />

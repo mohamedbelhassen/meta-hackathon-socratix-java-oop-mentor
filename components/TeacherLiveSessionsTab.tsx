@@ -1,7 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Course, Lab, StudentLabSession, ChatMessage, DemoPresetFile, StructuredCourseReference } from '@/types/socratix';
+import {
+  Course,
+  CourseChapter,
+  Lab,
+  StudentLabSession,
+  ChatMessage,
+  DemoPresetFile,
+  StructuredCourseReference,
+} from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +19,7 @@ import SmartSlideViewerModal from './SmartSlideViewerModal';
 import { formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import {
   AlertTriangle,
+  ArrowRight,
   BookOpen,
   CheckCircle2,
   Clock,
@@ -28,12 +37,13 @@ import {
 import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 
 interface TeacherLiveSessionsTabProps {
-  course: Course;
+  course: Course & { course_chapters?: CourseChapter[] };
   labs: Lab[];
   selectedLab: Lab | null;
   onSelectLab: (lab: Lab) => void;
   sessions: StudentLabSession[];
   onRefresh: () => void;
+  onOpenStudioTab?: () => void;
 }
 
 export default function TeacherLiveSessionsTab({
@@ -43,10 +53,15 @@ export default function TeacherLiveSessionsTab({
   onSelectLab,
   sessions,
   onRefresh,
+  onOpenStudioTab,
 }: TeacherLiveSessionsTabProps) {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'BLOCKED' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSeedingDemo, setIsSeedingDemo] = useState(false);
+
+  const hasLabs = labs.length > 0;
+  const chaptersCount = course.course_chapters?.length || 0;
+  const isCompiled = Boolean(course.compiled_knowledge_base);
 
   // Drill-down Popover State
   const [drillDownData, setDrillDownData] = useState<{
@@ -268,20 +283,30 @@ export default function TeacherLiveSessionsTab({
         {/* Lab Selector */}
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase font-semibold text-slate-400">Target Lab:</span>
-          <select
-            value={selectedLab?.id || ''}
-            onChange={(e) => {
-              const target = labs.find((l) => l.id === e.target.value);
-              if (target) onSelectLab(target);
-            }}
-            className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
-          >
-            {labs.map((l) => (
-              <option key={l.id} value={l.id}>
-                {formatLabOptionLabel(l.code, l.title)}
-              </option>
-            ))}
-          </select>
+          {hasLabs ? (
+            <select
+              value={selectedLab?.id || ''}
+              onChange={(e) => {
+                const target = labs.find((l) => l.id === e.target.value);
+                if (target) onSelectLab(target);
+              }}
+              className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
+            >
+              {labs.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {formatLabOptionLabel(l.code, l.title)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <select
+              disabled
+              value=""
+              className="bg-slate-950/60 border border-slate-800 text-slate-500 text-xs rounded-lg px-3 py-1.5 cursor-not-allowed italic font-medium"
+            >
+              <option value="">No Practical Labs (TP) yet</option>
+            </select>
+          )}
         </div>
 
         {/* Status Filters */}
@@ -290,8 +315,11 @@ export default function TeacherLiveSessionsTab({
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
+              disabled={!hasLabs}
               className={`px-3 py-1 rounded-lg font-medium transition-colors ${
-                statusFilter === filter
+                !hasLabs
+                  ? 'text-slate-600 cursor-not-allowed'
+                  : statusFilter === filter
                   ? 'bg-slate-800 text-emerald-400 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
@@ -311,8 +339,9 @@ export default function TeacherLiveSessionsTab({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              disabled={!hasLabs}
               placeholder="Search student or PC..."
-              className="h-8 pl-8 pr-7 text-xs bg-slate-950 border-slate-700 w-44 rounded-lg focus-visible:ring-emerald-500"
+              className="h-8 pl-8 pr-7 text-xs bg-slate-950 border-slate-700 w-44 rounded-lg focus-visible:ring-emerald-500 disabled:opacity-50"
             />
             {searchQuery && (
               <button
@@ -330,8 +359,17 @@ export default function TeacherLiveSessionsTab({
           <Button
             size="sm"
             onClick={handleSeedDemoClass}
-            disabled={isSeedingDemo || !selectedLab}
-            className="h-8 text-xs bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white gap-1.5 px-3 rounded-lg shadow-sm"
+            disabled={isSeedingDemo || !selectedLab || !hasLabs}
+            title={
+              !hasLabs
+                ? 'Upload lab PDFs in Course Studio (Step 4) before populating demo sessions.'
+                : 'Seed dynamic test sessions for active lab'
+            }
+            className={`h-8 text-xs gap-1.5 px-3 rounded-lg shadow-sm transition-all ${
+              !hasLabs
+                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/60'
+                : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
+            }`}
           >
             <Sparkles className="w-3.5 h-3.5" />
             {isSeedingDemo ? 'Seeding...' : '🎭 Populate Demo Class'}
@@ -340,225 +378,298 @@ export default function TeacherLiveSessionsTab({
       </div>
 
       {/* ==================================================================== */}
-      {/* 2. CLASSROOM BOTTLENECK DETECTOR ALERT */}
+      {/* 2. INCOMPLETE COURSE SETUP BANNER (When labs.length === 0) */}
       {/* ==================================================================== */}
-      {bottleneckAlert && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3.5 animate-in fade-in slide-in-from-top-2">
-          <div className="p-2 bg-rose-500/20 text-rose-400 rounded-xl mt-0.5">
-            <AlertTriangle className="w-5 h-5 animate-pulse" />
+      {!hasLabs ? (
+        <div className="p-8 sm:p-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-6 space-y-5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
+            <BookOpen className="w-6 h-6" />
           </div>
-          <div className="flex-1 text-xs">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-rose-300 text-sm">Classroom Bottleneck Detected</span>
-              <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/30 text-[10px]">
-                {bottleneckAlert.students.length} Students Stuck
-              </Badge>
-            </div>
-            <p className="text-slate-300 mt-1 leading-relaxed">
-              <span className="font-semibold text-white">
-                {bottleneckAlert.students
-                  .map((s) => `${s.profiles?.display_name || 'Student'} (${s.seat_label})`)
-                  .join(', ')}
-              </span>{' '}
-              are simultaneously blocked on{' '}
-              <span className="font-semibold text-rose-300">
-                Milestone &ldquo;{bottleneckAlert.milestoneTitle}&rdquo;
-              </span>
-              . Consider projecting the associated lecture slide to unlock the whole room!
+          <div className="space-y-1.5">
+            <h3 className="text-base font-semibold text-slate-100">
+              Course Setup Incomplete for Live Lab Sessions
+            </h3>
+            <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+              Live workstation telemetry and the <strong>Populate Demo Class</strong> sandbox require at least one Practical Lab (TP) assignment. Complete your course configuration in Course Studio.
             </p>
           </div>
+
+          {/* Step checklist preview */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left text-xs bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-medium text-slate-300">
+                {chaptersCount > 0 ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                )}
+                <span>1. Chapters ({chaptersCount})</span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {chaptersCount > 0 ? 'Lecture slides uploaded' : 'Upload lecture PDFs'}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-medium text-slate-300">
+                {isCompiled ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                )}
+                <span>2. Compiled KB</span>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                {isCompiled ? 'Knowledge base synthesized' : 'Synthesize curriculum in Studio'}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 font-medium text-amber-300">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>3. Practical Labs (0)</span>
+              </div>
+              <p className="text-[10px] text-amber-400/80 font-medium">
+                Upload & decompose TP PDFs
+              </p>
+            </div>
+          </div>
+
+          {onOpenStudioTab && (
+            <Button
+              type="button"
+              onClick={onOpenStudioTab}
+              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5"
+            >
+              <span>Open Course Studio (Step 4: Upload Lab PDFs)</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
-      )}
+      ) : (
+        <>
+          {/* ==================================================================== */}
+          {/* 2b. CLASSROOM BOTTLENECK DETECTOR ALERT */}
+          {/* ==================================================================== */}
+          {bottleneckAlert && (
+            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3.5 animate-in fade-in slide-in-from-top-2">
+              <div className="p-2 bg-rose-500/20 text-rose-400 rounded-xl mt-0.5">
+                <AlertTriangle className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="flex-1 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-rose-300 text-sm">Classroom Bottleneck Detected</span>
+                  <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/30 text-[10px]">
+                    {bottleneckAlert.students.length} Students Stuck
+                  </Badge>
+                </div>
+                <p className="text-slate-300 mt-1 leading-relaxed">
+                  <span className="font-semibold text-white">
+                    {bottleneckAlert.students
+                      .map((s) => `${s.profiles?.display_name || 'Student'} (${s.seat_label})`)
+                      .join(', ')}
+                  </span>{' '}
+                  are simultaneously blocked on{' '}
+                  <span className="font-semibold text-rose-300">
+                    Milestone &ldquo;{bottleneckAlert.milestoneTitle}&rdquo;
+                  </span>
+                  . Consider projecting the associated lecture slide to unlock the whole room!
+                </p>
+              </div>
+            </div>
+          )}
 
-      {/* ==================================================================== */}
-      {/* 3. CONSOLIDATED STUDENT TABLE (1 Row per Student) */}
-      {/* ==================================================================== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400">
-                <th className="py-3 px-4">Student & Workstation</th>
-                <th className="py-3 px-4">Lab & Activity Progress</th>
-                <th className="py-3 px-4">Covered Micro-Competencies (Drill-Down)</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {filteredSessions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-slate-500">
-                    <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                    <p className="text-sm">No student sessions found for this lab.</p>
-                    <p className="text-[11px] text-slate-600 mt-1">
-                      Click &ldquo;🎭 Populate Demo Class&rdquo; above to generate test sessions instantly.
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                filteredSessions.map((session) => {
-                  const microState = session.micro_competencies_state || {};
-                  const isBlocked = session.status === 'BLOCKED';
-                  const isCompleted = session.status === 'COMPLETED';
-
-                  return (
-                    <tr
-                      key={session.id}
-                      className={`hover:bg-slate-800/40 transition-colors ${
-                        isBlocked ? 'bg-rose-950/10' : ''
-                      }`}
-                    >
-                      {/* Col 1: Student & Workstation */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">
-                            {session.profiles?.display_name?.[0] || 'S'}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5 font-medium text-slate-200">
-                              <span>{session.profiles?.display_name || 'Anonymous Student'}</span>
-                              {session.profiles?.is_guest && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-400">
-                                  Guest
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono mt-0.5">
-                              <Monitor className="w-3 h-3 text-slate-500" />
-                              <span>{session.seat_label || 'PC --'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Col 2: Progress */}
-                      <td className="py-3.5 px-4 min-w-[180px]">
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-400">Total Progress</span>
-                            <span className="font-semibold text-emerald-400">
-                              {session.progress_percent}%
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-300 ${
-                                isCompleted
-                                  ? 'bg-emerald-500'
-                                  : isBlocked
-                                  ? 'bg-rose-500'
-                                  : 'bg-emerald-500'
-                              }`}
-                              style={{ width: `${session.progress_percent}%` }}
-                            />
-                          </div>
-                          <div className="text-[10px] text-slate-500 truncate">
-                            {session.current_activity_id ? `Activity: ${session.current_activity_id}` : 'General'}
-                            {session.current_milestone_id ? ` • Milestone: ${session.current_milestone_id}` : ''}
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Col 3: Micro-Competencies Drill-Down */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-wrap gap-1.5">
-                          {(selectedLab?.covered_micro_concepts || Object.keys(microState)).map((conceptKey) => {
-                            const entry = microState[conceptKey];
-                            const status = entry?.status || 'UNTESTED';
-                            const score = entry?.score ?? 0;
-                            const passCount = entry?.occurrences?.filter((o) => o.status === 'PASS').length ?? 0;
-                            const totalCount = entry?.occurrences?.length ?? 0;
-
-                            let badgeStyle = 'bg-slate-800 text-slate-400 border-slate-700';
-                            if (status === 'MASTERED') badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25';
-                            else if (status === 'IN_PROGRESS') badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25';
-                            else if (status === 'STRUGGLING') badgeStyle = 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25';
-
-                            return (
-                              <button
-                                key={conceptKey}
-                                onClick={() =>
-                                  setDrillDownData({
-                                    studentName: session.profiles?.display_name || 'Student',
-                                    conceptKey,
-                                    score,
-                                    summary: entry?.summary || 'Not yet evaluated.',
-                                    occurrences: entry?.occurrences || [],
-                                  })
-                                }
-                                className={`text-[10px] px-2 py-0.5 rounded-md border font-mono transition-colors flex items-center gap-1 ${badgeStyle}`}
-                                title="Click to view code occurrence drill-down"
-                              >
-                                <span>{conceptKey}</span>
-                                {totalCount > 0 && (
-                                  <span className="font-semibold">
-                                    ({passCount}/{totalCount})
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </td>
-
-                      {/* Col 4: Status */}
-                      <td className="py-3.5 px-4">
-                        {isBlocked ? (
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold animate-pulse">
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            <span>BLOCKED</span>
-                            <span className="text-[10px] bg-rose-950/60 px-1 rounded text-rose-300">
-                              {session.consecutive_errors} errors
-                            </span>
-                          </div>
-                        ) : isCompleted ? (
-                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>COMPLETED</span>
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>IN PROGRESS</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Col 5: Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenInspector(session)}
-                            className="h-7 text-xs border-slate-700 hover:bg-slate-800 text-slate-300 gap-1"
-                          >
-                            <Code2 className="w-3 h-3" />
-                            Inspect
-                          </Button>
-
-                          {session.profiles?.is_guest && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleResetSession(session.student_id, session.lab_id)}
-                              className="h-7 text-xs text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1.5"
-                              title="Reset Guest Session"
-                            >
-                              <RotateCcw className="w-3 h-3" />
-                            </Button>
-                          )}
-                        </div>
+          {/* ==================================================================== */}
+          {/* 3. CONSOLIDATED STUDENT TABLE (1 Row per Student) */}
+          {/* ==================================================================== */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400">
+                    <th className="py-3 px-4">Student & Workstation</th>
+                    <th className="py-3 px-4">Lab & Activity Progress</th>
+                    <th className="py-3 px-4">Covered Micro-Competencies (Drill-Down)</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {filteredSessions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-500">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">No student sessions found for this lab.</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Ask students to connect on <span className="font-mono text-emerald-400">/student</span>, or click <strong className="text-slate-300">&ldquo;🎭 Populate Demo Class&rdquo;</strong> above to generate test sessions instantly.
+                        </p>
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  ) : (
+                    filteredSessions.map((session) => {
+                      const microState = session.micro_competencies_state || {};
+                      const isBlocked = session.status === 'BLOCKED';
+                      const isCompleted = session.status === 'COMPLETED';
+
+                      return (
+                        <tr
+                          key={session.id}
+                          className={`hover:bg-slate-800/40 transition-colors ${
+                            isBlocked ? 'bg-rose-950/10' : ''
+                          }`}
+                        >
+                          {/* Col 1: Student & Workstation */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-xs">
+                                {session.profiles?.display_name?.[0] || 'S'}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 font-medium text-slate-200">
+                                  <span>{session.profiles?.display_name || 'Anonymous Student'}</span>
+                                  {session.profiles?.is_guest && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-400">
+                                      Guest
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono mt-0.5">
+                                  <Monitor className="w-3 h-3 text-slate-500" />
+                                  <span>{session.seat_label || 'PC --'}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Col 2: Progress */}
+                          <td className="py-3.5 px-4 min-w-[180px]">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-slate-400">Total Progress</span>
+                                <span className="font-semibold text-emerald-400">
+                                  {session.progress_percent}%
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full transition-all duration-300 ${
+                                    isCompleted
+                                      ? 'bg-emerald-500'
+                                      : isBlocked
+                                      ? 'bg-rose-500'
+                                      : 'bg-emerald-500'
+                                  }`}
+                                  style={{ width: `${session.progress_percent}%` }}
+                                />
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate">
+                                {session.current_activity_id ? `Activity: ${session.current_activity_id}` : 'General'}
+                                {session.current_milestone_id ? ` • Milestone: ${session.current_milestone_id}` : ''}
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Col 3: Micro-Competencies Drill-Down */}
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-wrap gap-1.5">
+                              {(selectedLab?.covered_micro_concepts || Object.keys(microState)).map((conceptKey) => {
+                                const entry = microState[conceptKey];
+                                const status = entry?.status || 'UNTESTED';
+                                const score = entry?.score ?? 0;
+                                const passCount = entry?.occurrences?.filter((o) => o.status === 'PASS').length ?? 0;
+                                const totalCount = entry?.occurrences?.length ?? 0;
+
+                                let badgeStyle = 'bg-slate-800 text-slate-400 border-slate-700';
+                                if (status === 'MASTERED') badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25';
+                                else if (status === 'IN_PROGRESS') badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25';
+                                else if (status === 'STRUGGLING') badgeStyle = 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25';
+
+                                return (
+                                  <button
+                                    key={conceptKey}
+                                    onClick={() =>
+                                      setDrillDownData({
+                                        studentName: session.profiles?.display_name || 'Student',
+                                        conceptKey,
+                                        score,
+                                        summary: entry?.summary || 'Not yet evaluated.',
+                                        occurrences: entry?.occurrences || [],
+                                      })
+                                    }
+                                    className={`text-[10px] px-2 py-0.5 rounded-md border font-mono transition-colors flex items-center gap-1 ${badgeStyle}`}
+                                    title="Click to view code occurrence drill-down"
+                                  >
+                                    <span>{conceptKey}</span>
+                                    {totalCount > 0 && (
+                                      <span className="font-semibold">
+                                        ({passCount}/{totalCount})
+                                      </span>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </td>
+
+                          {/* Col 4: Status */}
+                          <td className="py-3.5 px-4">
+                            {isBlocked ? (
+                              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs font-semibold animate-pulse">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span>BLOCKED</span>
+                                <span className="text-[10px] bg-rose-950/60 px-1 rounded text-rose-300">
+                                  {session.consecutive_errors} errors
+                                </span>
+                              </div>
+                            ) : isCompleted ? (
+                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>COMPLETED</span>
+                              </div>
+                            ) : (
+                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>IN PROGRESS</span>
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Col 5: Actions */}
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenInspector(session)}
+                                className="h-7 text-xs border-slate-700 hover:bg-slate-800 text-slate-300 gap-1"
+                              >
+                                <Code2 className="w-3 h-3" />
+                                Inspect
+                              </Button>
+
+                              {session.profiles?.is_guest && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleResetSession(session.student_id, session.lab_id)}
+                                  className="h-7 text-xs text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 p-1.5"
+                                  title="Reset Guest Session"
+                                >
+                                  <RotateCcw className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ==================================================================== */}
       {/* 4. DRILL-DOWN OCCURRENCE MODAL / POPOVER */}
