@@ -91,7 +91,6 @@ export async function POST(req: NextRequest) {
     // 4. Determine file names and realistic snippets dynamically based on course / lab
     const courseExts = courseData?.file_extensions || ['.java'];
     let primaryFile = 'Main.java';
-    let fileSnippet = 'public class Main {\n  // Implementation code\n}';
     let failedSnippet = 'public class Main {\n  // Missing check\n}';
 
     const firstTargetFile = firstAct?.target_files?.[0];
@@ -105,31 +104,24 @@ export async function POST(req: NextRequest) {
       const firstExt = courseExts[0]?.toLowerCase().replace(/^\./, '') || 'java';
       if (firstExt === 'html' || firstExt === 'htm') {
         primaryFile = 'index.html';
-        fileSnippet = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>App</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <main class="container">\n    <h1>Hello Socratix</h1>\n  </main>\n</body>\n</html>';
         failedSnippet = '<!DOCTYPE html>\n<html>\n<head></head>\n<body>\n  <!-- Missing required structure -->\n';
       } else if (firstExt === 'css') {
         primaryFile = 'styles.css';
-        fileSnippet = '.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  padding: 1rem;\n}';
         failedSnippet = '.container {\n  width: -100px;\n}';
       } else if (firstExt === 'kt' || firstExt === 'kts') {
         primaryFile = 'Main.kt';
-        fileSnippet = 'class Solution {\n    fun execute(): String = "Validated"\n}';
         failedSnippet = 'class Solution {\n    fun execute(): String = TODO("Unimplemented")\n}';
       } else if (firstExt === 'tsx' || firstExt === 'jsx') {
         primaryFile = 'App.tsx';
-        fileSnippet = 'import React from "react";\nimport { View, Text } from "react-native";\n\nexport default function App() {\n  return (\n    <View>\n      <Text>Socratix Mobile</Text>\n    </View>\n  );\n}';
         failedSnippet = 'import React from "react";\n\nexport default function App() {\n  return <View>Unclosed\n}';
       } else if (firstExt === 'js' || firstExt === 'ts') {
         primaryFile = 'app.js';
-        fileSnippet = 'function calculateTotal(items) {\n  return items.reduce((sum, item) => sum + item.price, 0);\n}';
         failedSnippet = 'function calculateTotal(items) {\n  return items.price;\n}';
       } else if (firstExt === 'py') {
         primaryFile = 'main.py';
-        fileSnippet = 'def process_records(items):\n    return [item.strip() for item in items if item]\n';
         failedSnippet = 'def process_records(items):\n    return items[999]\n';
       } else if (firstExt === 'c' || firstExt === 'h') {
         primaryFile = 'main.c';
-        fileSnippet = '#include <stdio.h>\n\nint main(void) {\n    printf("Socratix C Lab\\n");\n    return 0;\n}';
         failedSnippet = '#include <stdio.h>\n\nint main(void) {\n    int *ptr = NULL;\n    *ptr = 42;\n    return 0;\n}';
       }
     }
