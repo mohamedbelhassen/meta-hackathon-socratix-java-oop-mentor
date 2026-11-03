@@ -167,6 +167,8 @@ export default function CourseStudioPanel({
     currentIndex: number;
     subStep: 1 | 2 | 3;
     completedCodes: string[];
+    failedCodes: string[];
+    failedItems: StagedLabItem[];
     elapsedSeconds: number;
     isFinished: boolean;
     error: string | null;
@@ -315,18 +317,26 @@ export default function CourseStudioPanel({
   };
 
   // --------------------------------------------------------------------------
-  // IN-PAGE BATCH DISTILLATION: LABS
+  // IN-PAGE BATCH DISTILLATION: LABS (RESILIENT NON-BLOCKING ENGINE)
   // --------------------------------------------------------------------------
   const handleStartLabDistillation = async (stagedItems: StagedLabItem[]) => {
     if (stagedItems.length === 0) return;
     setIsProcessing(true);
     setStatusMessage(null);
 
+    // If retrying from an existing batch, keep existing completed items and merge view
+    const existingCompleted = activeLabDistillation?.completedCodes || [];
+    const allBatchItems = activeLabDistillation && activeLabDistillation.items.length >= stagedItems.length
+      ? activeLabDistillation.items
+      : stagedItems;
+
     const initialDistillationState = {
-      items: stagedItems,
+      items: allBatchItems,
       currentIndex: 0,
       subStep: 1 as const,
-      completedCodes: [] as string[],
+      completedCodes: existingCompleted,
+      failedCodes: [] as string[],
+      failedItems: [] as StagedLabItem[],
       elapsedSeconds: 0,
       isFinished: false,
       error: null,
@@ -340,63 +350,140 @@ export default function CourseStudioPanel({
       );
     }, 1000);
 
+    const failed: StagedLabItem[] = [];
+    let lastErrMsg: string | null = null;
+
     try {
       for (let i = 0; i < stagedItems.length; i++) {
         const item = stagedItems[i];
+        const overallIndex = allBatchItems.findIndex((it) => it.code === item.code);
 
         // 1. Vector Extraction
         setActiveLabDistillation((prev) =>
-          prev ? { ...prev, currentIndex: i, subStep: 1 } : prev
+          prev ? { ...prev, currentIndex: overallIndex >= 0 ? overallIndex : i, subStep: 1 } : prev
         );
-        const pages = await extractPdfPagesInBrowser(item.file);
+        let pages;
+        try {
+          pages = await extractPdfPagesInBrowser(item.file);
+        } catch (extractErr) {
+          console.error(`[PDF Extract Error on ${item.filename}]:`, extractErr);
+          failed.push(item);
+          lastErrMsg = `Extraction failed: ${extractErr instanceof Error ? extractErr.message : 'Unknown'}`;
+          setActiveLabDistillation((prev) =>
+            prev ? {
+              ...prev,
+              failedCodes: Array.from(new Set([...prev.failedCodes, item.code])),
+              failedItems: [...prev.failedItems.filter((f) => f.code !== item.code), item],
+            } : prev
+          );
+          continue;
+        }
 
         // 2. Storage CDN Upload
         setActiveLabDistillation((prev) =>
           prev ? { ...prev, subStep: 2 } : prev
         );
-        const storagePath = slugifyStorageKey(item.filename, course.code, 'labs');
-        const pdfUrl = await uploadCoursePdf(item.file, storagePath);
+        let pdfUrl = '';
+        try {
+          const storagePath = slugifyStorageKey(item.filename, course.code, 'labs');
+          pdfUrl = await uploadCoursePdf(item.file, storagePath);
+        } catch (uploadErr) {
+          console.error(`[PDF Upload Error on ${item.filename}]:`, uploadErr);
+          failed.push(item);
+          lastErrMsg = `Upload failed: ${uploadErr instanceof Error ? uploadErr.message : 'Unknown'}`;
+          setActiveLabDistillation((prev) =>
+            prev ? {
+              ...prev,
+              failedCodes: Array.from(new Set([...prev.failedCodes, item.code])),
+              failedItems: [...prev.failedItems.filter((f) => f.code !== item.code), item],
+            } : prev
+          );
+          continue;
+        }
 
-        // 3. Meta AI Decomposition & Presets
+        // 3. Meta AI Decomposition & Presets (with 1 client-side retry)
         setActiveLabDistillation((prev) =>
           prev ? { ...prev, subStep: 3 } : prev
         );
-        const res = await fetch('/api/studio/lab-analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: course.id,
-            labNumber: item.lab_number,
-            code: item.code,
-            title: item.title,
-            pdfUrl,
-            pages,
-          }),
-        });
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(`Failed to decompose "${item.filename}": ${errData.error || res.statusText}`);
+        let labSucceeded = false;
+        let labErrText = 'Decomposition failed';
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            const res = await fetch('/api/studio/lab-analyze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                courseId: course.id,
+                labNumber: item.lab_number,
+                code: item.code,
+                title: item.title,
+                pdfUrl,
+                pages,
+              }),
+            });
+
+            if (res.ok) {
+              labSucceeded = true;
+              break;
+            } else {
+              const errData = await res.json().catch(() => ({}));
+              labErrText = errData.error || res.statusText;
+            }
+          } catch (fetchErr) {
+            labErrText = fetchErr instanceof Error ? fetchErr.message : 'Network timeout';
+          }
+
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 2000));
+          }
         }
 
-        setActiveLabDistillation((prev) =>
-          prev ? { ...prev, completedCodes: [...prev.completedCodes, item.code] } : prev
-        );
+        if (labSucceeded) {
+          setActiveLabDistillation((prev) =>
+            prev ? {
+              ...prev,
+              completedCodes: Array.from(new Set([...prev.completedCodes, item.code])),
+              failedCodes: prev.failedCodes.filter((c) => c !== item.code),
+              failedItems: prev.failedItems.filter((f) => f.code !== item.code),
+            } : prev
+          );
+        } else {
+          failed.push(item);
+          lastErrMsg = labErrText;
+          setActiveLabDistillation((prev) =>
+            prev ? {
+              ...prev,
+              failedCodes: Array.from(new Set([...prev.failedCodes, item.code])),
+              failedItems: [...prev.failedItems.filter((f) => f.code !== item.code), item],
+            } : prev
+          );
+        }
       }
 
       clearInterval(timer);
       await onCourseUpdated();
+
       setActiveLabDistillation((prev) =>
-        prev ? { ...prev, isFinished: true, currentIndex: stagedItems.length } : prev
+        prev ? {
+          ...prev,
+          isFinished: true,
+          currentIndex: allBatchItems.length,
+          error: failed.length > 0
+            ? `${allBatchItems.length - failed.length} / ${allBatchItems.length} labs completed. ${failed.length} lab(s) encountered an issue (${lastErrMsg}).`
+            : null,
+        } : prev
       );
-    } catch (err: unknown) {
+    } catch (globalErr: unknown) {
       clearInterval(timer);
-      console.error('[Lab Distillation Error]:', err);
-      const msg = err instanceof Error ? err.message : 'Lab decomposition failed';
+      console.error('[Batch Lab Distillation Uncaught Error]:', globalErr);
+      const msg = globalErr instanceof Error ? globalErr.message : 'Batch process interrupted';
       setActiveLabDistillation((prev) =>
         prev ? { ...prev, error: msg } : prev
       );
     } finally {
+      clearInterval(timer);
       setIsProcessing(false);
     }
   };
@@ -1368,9 +1455,9 @@ export default function CourseStudioPanel({
                 </h4>
                 <p className="text-[11px] text-slate-400">
                   {activeLabDistillation.isFinished
-                    ? `All ${activeLabDistillation.items.length} labs decomposed into milestones with student presets`
-                    : activeLabDistillation.error
-                    ? 'Batch lab process encountered an error'
+                    ? activeLabDistillation.error
+                      ? `${activeLabDistillation.completedCodes.length} of ${activeLabDistillation.items.length} labs completed (${activeLabDistillation.failedCodes?.length || 0} failed)`
+                      : `All ${activeLabDistillation.items.length} labs decomposed into milestones with student presets`
                     : `Processing lab ${Math.min(activeLabDistillation.currentIndex + 1, activeLabDistillation.items.length)} of ${activeLabDistillation.items.length}: "${activeLabDistillation.items[activeLabDistillation.currentIndex]?.title || ''}"`}
                 </p>
               </div>
@@ -1495,16 +1582,20 @@ export default function CourseStudioPanel({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
               {activeLabDistillation.items.map((item, idx) => {
                 const isCompleted = activeLabDistillation.completedCodes.includes(item.code);
+                const isFailed = activeLabDistillation.failedCodes?.includes(item.code);
                 const isInProgress =
                   idx === activeLabDistillation.currentIndex &&
                   !activeLabDistillation.isFinished &&
-                  !activeLabDistillation.error;
+                  !isCompleted &&
+                  !isFailed;
                 return (
                   <div
                     key={item.code}
                     className={`flex items-center justify-between p-2 rounded-lg border text-xs transition ${
                       isCompleted
                         ? 'bg-cyan-950/15 border-cyan-500/30 text-cyan-200'
+                        : isFailed
+                        ? 'bg-rose-950/25 border-rose-500/40 text-rose-200'
                         : isInProgress
                         ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-100 shadow-inner'
                         : 'bg-slate-900/60 border-slate-800 text-slate-400'
@@ -1516,6 +1607,8 @@ export default function CourseStudioPanel({
                         className={`font-mono text-[9px] shrink-0 ${
                           isCompleted
                             ? 'border-cyan-500/50 text-cyan-300'
+                            : isFailed
+                            ? 'border-rose-500/50 text-rose-300'
                             : isInProgress
                             ? 'border-emerald-500/50 text-emerald-300'
                             : 'border-slate-700 text-slate-400'
@@ -1532,6 +1625,10 @@ export default function CourseStudioPanel({
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-400">
                           <CheckCircle2 className="w-3 h-3 text-cyan-400" /> Decomposed
                         </span>
+                      ) : isFailed ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-400">
+                          <AlertCircle className="w-3 h-3 text-rose-400" /> Failed / Timeout
+                        </span>
                       ) : isInProgress ? (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300">
                           <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
@@ -1547,8 +1644,8 @@ export default function CourseStudioPanel({
             </div>
           </div>
 
-          {/* Celebratory Completion Actions */}
-          {activeLabDistillation.isFinished && (
+          {/* Celebratory Completion Actions (when all succeeded) */}
+          {activeLabDistillation.isFinished && (!activeLabDistillation.failedCodes || activeLabDistillation.failedCodes.length === 0) && (
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-cyan-950/30 border border-cyan-500/40 rounded-xl">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -1577,21 +1674,44 @@ export default function CourseStudioPanel({
             </div>
           )}
 
-          {/* Error Banner */}
+          {/* Error Banner with 1-Click Retry Failed Button */}
           {activeLabDistillation.error && (
-            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between">
+            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span className="text-xs">{activeLabDistillation.error}</span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setActiveLabDistillation(null)}
-                className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
-              >
-                Dismiss
-              </Button>
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                {activeLabDistillation.completedCodes.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowLabsIngestionModal(true)}
+                    className="text-xs h-7 bg-slate-900 border-slate-750 text-cyan-300 hover:text-white gap-1"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    View {activeLabDistillation.completedCodes.length} Decomposed Labs
+                  </Button>
+                )}
+                {activeLabDistillation.failedItems && activeLabDistillation.failedItems.length > 0 && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartLabDistillation(activeLabDistillation.failedItems)}
+                    className="bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs h-7 gap-1.5 shadow-sm"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Retry Failed ({activeLabDistillation.failedItems.length})
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveLabDistillation(null)}
+                  className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
+                >
+                  Dismiss
+                </Button>
+              </div>
             </div>
           )}
         </div>

@@ -10,7 +10,7 @@ import { cleanPdfPages, formatRawSlideTextToMarkdown, CleanedPage } from '@/lib/
 import { GOLDEN_CHAPTER_SYNTHESIS_SHOT } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -20,39 +20,51 @@ interface MetaChatChoice {
   };
 }
 
-async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown, cacheKey?: string, timeoutMs = 60_000) {
-  const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${META_API_KEY}`,
-    },
-    cache: 'no-store',
-    body: JSON.stringify({
-      model: 'muse-spark-1.3',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      response_format: {
-        type: 'json_schema',
-        json_schema: jsonSchema,
-      },
-      temperature: 0.1,
-      reasoning_effort: 'low',
-      ...(cacheKey ? { prompt_cache_key: cacheKey, prompt_cache_retention: '24h' } : {}),
-    }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
+async function callMetaAI(systemPrompt: string, userPrompt: string, jsonSchema: unknown, cacheKey?: string, timeoutMs = 120_000) {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${META_API_KEY}`,
+        },
+        cache: 'no-store',
+        body: JSON.stringify({
+          model: 'muse-spark-1.3',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userPrompt },
+          ],
+          response_format: {
+            type: 'json_schema',
+            json_schema: jsonSchema,
+          },
+          temperature: 0.1,
+          reasoning_effort: 'low',
+          ...(cacheKey ? { prompt_cache_key: cacheKey, prompt_cache_retention: '24h' } : {}),
+        }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
 
-  if (!metaRes.ok) {
-    const errText = await metaRes.text();
-    throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+      if (!metaRes.ok) {
+        const errText = await metaRes.text();
+        throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+      }
+
+      const metaData = await metaRes.json();
+      const content = (metaData.choices as MetaChatChoice[])?.[0]?.message?.content;
+      return typeof content === 'string' ? JSON.parse(content) : content;
+    } catch (err: unknown) {
+      lastErr = err;
+      console.warn(`[Chapter Analyze] Attempt ${attempt + 1}/2 failed:`, err);
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
   }
-
-  const metaData = await metaRes.json();
-  const content = (metaData.choices as MetaChatChoice[])?.[0]?.message?.content;
-  return typeof content === 'string' ? JSON.parse(content) : content;
+  throw lastErr;
 }
 
 export async function POST(req: NextRequest) {

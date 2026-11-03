@@ -11,7 +11,7 @@ import { cleanPdfPages, cleanInstructionsMarkdown } from '@/lib/pdf-cleaner';
 import { GOLDEN_LAB_DECOMPOSITION_SHOT } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -66,9 +66,16 @@ export async function POST(req: NextRequest) {
 
     const { cleanedPages } = cleanPdfPages(pages);
 
+    const MAX_CHARS_PER_PAGE = 5000;
+    const MAX_TOTAL_CHARS = 45000;
+    const totalRawChars = cleanedPages.reduce((sum: number, p: { page: number; text: string }) => sum + (p.text?.length || 0), 0);
+    const dynamicPerCharLimit = totalRawChars > MAX_TOTAL_CHARS
+      ? Math.max(1200, Math.floor(MAX_TOTAL_CHARS / cleanedPages.length))
+      : MAX_CHARS_PER_PAGE;
+
     const pagesTextSample = cleanedPages
-      .slice(0, 30)
-      .map((p: { page: number; text: string }) => `=== PAGE ${p.page} ===\n${p.text.slice(0, 15000)}`)
+      .slice(0, 20)
+      .map((p: { page: number; text: string }) => `=== PAGE ${p.page} ===\n${(p.text || '').slice(0, dynamicPerCharLimit)}`)
       .join('\n\n');
 
     const allowedExtensions = Array.isArray(course.file_extensions) && course.file_extensions.length > 0
@@ -88,10 +95,10 @@ Your job is to read an authentic university programming lab assignment (TP), ext
    - Scripting, Functional & Web/DB (Python, JS/TS, PHP, SQL/Parse): snake_case or camelCase function/module names (e.g., calculer_moyenne), $variable names, decorators, and database/JSON schema keys (e.g., Parse.Object class and attribute keys).
    - NEVER translate any code identifier between French and English (e.g., do NOT translate Four to Oven, Aliment to Food, or calculer_moyenne to calculate_average!). Only translate the surrounding pedagogical prose.
 4. STRICT FILE EXTENSION & TARGET FILE DISCIPLINE: Every file name in 'target_files' and 'demo_presets' MUST strictly match the files requested in the lab statement and MUST only use extensions allowed by this course (${JSON.stringify(allowedExtensions)}). In multi-file languages like C/C++, include both header (.h) and implementation (.c/.cpp) files when appropriate; never default to '.java' if the course uses another language.
-5. PER-ACTIVITY DEMO PRESETS (BUGGY + VALIDATED PER ACTIVITY): For EVERY activity extracted from the lab, generate exactly 2 1-click Demo Presets in 'demo_presets' targeting the specific files and concepts of THAT activity:
-   - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy'). Contains realistic student mistakes idiomatic to the target language and this specific activity (e.g., broken encapsulation/missing exception in Java; uninitialized pointer in C; mutable default arg in Python).
+5. PER-ACTIVITY DEMO PRESETS (CONCISE & FOCUSED): For the activities extracted from the lab (up to the first 2 primary activities if more than 2 exist), generate 2 1-click Demo Presets in 'demo_presets':
+   - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy'). Contains realistic student mistakes idiomatic to the target language and this specific activity.
    - Preset 2 (Validated Reference Solution): preset_type 'solution', key '<act_id>_solution' (e.g., 'act_1_solution', 'act_2_solution'). Clean, complete, syntactically valid code satisfying all milestones of this activity.
-   Every activity MUST have its own couple of presets (e.g. if the lab has 2 activities, 'demo_presets' must contain 4 presets total: 2 for act_1 and 2 for act_2).
+   - SPEED & BREVITY INSTRUCTION: Keep each preset file focused and concise (< 40 lines per file). Do not write endless boilerplate; focus strictly on the required feature or bug for that activity to ensure fast generation.
 6. STRUCTURED MARKDOWN INSTRUCTIONS (NO REDUNDANT TITLE HEADERS):
    - In both 'instructions_i18n.fr' and 'instructions_i18n.en', format the activity instructions in clean, readable Markdown.
    - DO NOT repeat the activity title (e.g. NEVER start with '### Activité N°1' or '### Activity 1').
@@ -272,37 +279,64 @@ ${pagesTextSample}`;
       },
     };
 
-    const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${META_API_KEY}`,
-      },
-      cache: 'no-store',
-      body: JSON.stringify({
-        model: 'muse-spark-1.3',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: jsonSchema,
-        },
-        temperature: 0.1,
-        reasoning_effort: 'low',
-        prompt_cache_key: `studio-lab-analyze-${courseId}`,
-        prompt_cache_retention: '24h',
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!metaRes.ok) {
-      const errText = await metaRes.text();
-      throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+    interface MetaChatResponse {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
     }
 
-    const metaData = await metaRes.json();
+    let metaData: MetaChatResponse | null = null;
+    let lastMetaError: unknown;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${META_API_KEY}`,
+          },
+          cache: 'no-store',
+          body: JSON.stringify({
+            model: 'muse-spark-1.3',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: {
+              type: 'json_schema',
+              json_schema: jsonSchema,
+            },
+            temperature: 0.1,
+            reasoning_effort: 'low',
+            prompt_cache_key: `studio-lab-analyze-${courseId}`,
+            prompt_cache_retention: '24h',
+          }),
+          signal: AbortSignal.timeout(120_000),
+        });
+
+        if (!metaRes.ok) {
+          const errText = await metaRes.text();
+          throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+        }
+
+        metaData = await metaRes.json();
+        break;
+      } catch (callErr: unknown) {
+        lastMetaError = callErr;
+        console.warn(`[Lab Analyze] Meta AI attempt ${attempt + 1}/2 failed:`, callErr);
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    if (!metaData) {
+      throw lastMetaError || new Error('Failed to obtain decomposition from Meta AI after 2 attempts.');
+    }
+
     const content = metaData.choices?.[0]?.message?.content;
     const parsed = typeof content === 'string' ? JSON.parse(content) : content;
 

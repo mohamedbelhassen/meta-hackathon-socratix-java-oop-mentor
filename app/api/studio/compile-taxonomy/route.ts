@@ -9,7 +9,7 @@ import {
 import { GOLDEN_COMPETENCY_TAXONOMY_SHOT } from '@/lib/meta-prompt-exemplars';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const META_API_KEY = process.env.META_API_KEY;
 
@@ -168,37 +168,64 @@ ${allChaptersSummary}`;
       },
     };
 
-    const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${META_API_KEY}`,
-      },
-      cache: 'no-store',
-      body: JSON.stringify({
-        model: 'muse-spark-1.3',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt },
-        ],
-        response_format: {
-          type: 'json_schema',
-          json_schema: jsonSchema,
-        },
-        temperature: 0.1,
-        reasoning_effort: 'low',
-        prompt_cache_key: `studio-compile-tax-${courseId}`,
-        prompt_cache_retention: '24h',
-      }),
-      signal: AbortSignal.timeout(60_000),
-    });
-
-    if (!metaRes.ok) {
-      const errText = await metaRes.text();
-      throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+    interface MetaChatResponse {
+      choices?: Array<{
+        message?: {
+          content?: string;
+        };
+      }>;
     }
 
-    const metaData = await metaRes.json();
+    let metaData: MetaChatResponse | null = null;
+    let lastMetaError: unknown;
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${META_API_KEY}`,
+          },
+          cache: 'no-store',
+          body: JSON.stringify({
+            model: 'muse-spark-1.3',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            response_format: {
+              type: 'json_schema',
+              json_schema: jsonSchema,
+            },
+            temperature: 0.1,
+            reasoning_effort: 'low',
+            prompt_cache_key: `studio-compile-tax-${courseId}`,
+            prompt_cache_retention: '24h',
+          }),
+          signal: AbortSignal.timeout(100_000),
+        });
+
+        if (!metaRes.ok) {
+          const errText = await metaRes.text();
+          throw new Error(`Meta API Error (${metaRes.status}): ${errText}`);
+        }
+
+        metaData = await metaRes.json();
+        break;
+      } catch (callErr: unknown) {
+        lastMetaError = callErr;
+        console.warn(`[Compile Taxonomy] Attempt ${attempt + 1}/2 failed:`, callErr);
+        if (attempt === 0) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    if (!metaData) {
+      throw lastMetaError || new Error('Failed to obtain taxonomy compilation from Meta AI after 2 attempts.');
+    }
+
     const content = metaData.choices?.[0]?.message?.content;
     const parsed = typeof content === 'string' ? JSON.parse(content) : content;
 
