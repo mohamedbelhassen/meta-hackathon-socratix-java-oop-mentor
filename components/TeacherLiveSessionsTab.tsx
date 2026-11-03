@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { getBrowserSupabase } from '@/lib/supabase';
 import { formatLabOptionLabel } from '@/lib/utils';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
+import TeacherMilestonesBreakdownModal from './TeacherMilestonesBreakdownModal';
 import { formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import { reconcileMicroCompetenciesWithProgress } from '@/lib/telemetry-merger';
 import {
@@ -89,6 +90,9 @@ export default function TeacherLiveSessionsTab({
   // Smart Slide Viewer Modal State for Teacher Drawer
   const [selectedSlideReference, setSelectedSlideReference] = useState<StructuredCourseReference | null>(null);
   const [isSlideModalOpen, setIsSlideModalOpen] = useState(false);
+
+  // Milestone Breakdown Modal State
+  const [selectedSessionForMilestones, setSelectedSessionForMilestones] = useState<StudentLabSession | null>(null);
 
   // Filter sessions for the active lab
   const labSessions = sessions.filter((s) => s.lab_id === selectedLab?.id);
@@ -517,6 +521,15 @@ export default function TeacherLiveSessionsTab({
                       const isBlocked = session.status === 'BLOCKED';
                       const isCompleted = session.status === 'COMPLETED';
 
+                      const curActivity = selectedLab?.activities?.find((a) => a.id === session.current_activity_id);
+                      const curMilestone = curActivity?.milestones?.find((m) => m.id === session.current_milestone_id);
+                      const activityLabel = curActivity
+                        ? `Act. ${curActivity.order}: ${curActivity.title}`
+                        : (session.current_activity_id ? `Activity ${session.current_activity_id}` : 'General');
+                      const milestoneLabel = curMilestone
+                        ? `Jalon ${curMilestone.order}: ${curMilestone.title}`
+                        : (session.current_milestone_id ? `Jalon ${session.current_milestone_id}` : '');
+
                       return (
                         <tr
                           key={session.id}
@@ -547,16 +560,26 @@ export default function TeacherLiveSessionsTab({
                             </div>
                           </td>
 
-                          {/* Col 2: Progress */}
-                          <td className="py-3.5 px-4 min-w-[180px]">
-                            <div className="space-y-1">
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-slate-400">Total Progress</span>
+                          {/* Col 2: Progress (Interactive Milestones Breakdown) */}
+                          <td className="py-3.5 px-4 min-w-[210px]">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSessionForMilestones(session)}
+                              title="Click to view detailed milestones breakdown across all activities"
+                              className="w-full text-left space-y-1.5 p-1.5 -m-1.5 rounded-lg hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
+                            >
+                              <div className="flex justify-between items-center text-[11px]">
+                                <span className="text-slate-400 group-hover:text-cyan-300 transition-colors flex items-center gap-1">
+                                  <span>Total Progress</span>
+                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 text-cyan-400 font-normal transition-opacity">
+                                    &bull; Details &rarr;
+                                  </span>
+                                </span>
                                 <span className="font-semibold text-emerald-400">
                                   {session.progress_percent}%
                                 </span>
                               </div>
-                              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                              <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
                                 <div
                                   className={`h-full transition-all duration-300 ${
                                     isCompleted
@@ -568,11 +591,13 @@ export default function TeacherLiveSessionsTab({
                                   style={{ width: `${session.progress_percent}%` }}
                                 />
                               </div>
-                              <div className="text-[10px] text-slate-500 truncate">
-                                {session.current_activity_id ? `Activity: ${session.current_activity_id}` : 'General'}
-                                {session.current_milestone_id ? ` • Milestone: ${session.current_milestone_id}` : ''}
+                              <div className="text-[10px] text-slate-400 truncate group-hover:text-slate-200 transition-colors">
+                                <span className="text-slate-300 font-medium">{activityLabel}</span>
+                                {milestoneLabel && (
+                                  <span className="text-slate-400"> &bull; {milestoneLabel}</span>
+                                )}
                               </div>
-                            </div>
+                            </button>
                           </td>
 
                           {/* Col 3: Micro-Competencies Drill-Down */}
@@ -872,6 +897,14 @@ export default function TeacherLiveSessionsTab({
         onClose={() => setIsSlideModalOpen(false)}
         reference={selectedSlideReference}
         courseTitle={course?.title || 'Course Slides'}
+      />
+
+      {/* Teacher Milestones Breakdown Modal across all Activities */}
+      <TeacherMilestonesBreakdownModal
+        isOpen={Boolean(selectedSessionForMilestones)}
+        onClose={() => setSelectedSessionForMilestones(null)}
+        session={selectedSessionForMilestones}
+        lab={selectedLab}
       />
     </div>
   );

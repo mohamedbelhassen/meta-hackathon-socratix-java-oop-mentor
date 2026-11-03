@@ -278,12 +278,12 @@ export default function StudentWorkspace() {
   const [isBriefExpanded, setIsBriefExpanded] = useState(false);
   const [briefLang, setBriefLang] = useState<'en' | 'fr'>('en');
 
-  // Layout Resizing (40% of screen width initially, freely draggable & customizable)
-  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(560);
+  // Layout Resizing (50% of screen width initially, freely draggable & customizable)
+  const [leftPanelWidth, setLeftPanelWidth] = useState<number>(700);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize divider position to 40% of available screen width on mount (or saved custom width)
+  // Initialize divider position to 50% of available screen width on mount (or saved custom width)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -297,7 +297,7 @@ export default function StudentWorkspace() {
           }
         }
       } catch {}
-      setLeftPanelWidth(Math.round(window.innerWidth * 0.40));
+      setLeftPanelWidth(Math.round(window.innerWidth * 0.50));
     }
   }, []);
 
@@ -1451,7 +1451,14 @@ export default function StudentWorkspace() {
           <div className="border-b border-slate-800 bg-slate-950/40 p-3 space-y-2">
             {/* Multi-Activity 1-Click Tab Bar (Option B) */}
             {activeLab.activities && activeLab.activities.length > 1 && (
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 border-b border-slate-800/70">
+              <div
+                onWheel={(e) => {
+                  if (e.deltaY !== 0) {
+                    e.currentTarget.scrollLeft += e.deltaY;
+                  }
+                }}
+                className="flex items-center gap-1.5 overflow-x-auto pb-1.5 border-b border-slate-800/70 scrollbar-thin"
+              >
                 {activeLab.activities.map((act) => {
                   const isSelected = activeActivity.id === act.id;
                   const actProg = sessionState?.activities_progress?.[act.id];
@@ -1764,17 +1771,17 @@ export default function StudentWorkspace() {
         </div>
       </div>
 
-      {/* Resize Handle / Splitter (Draggable & double-click to reset to 40%) */}
+      {/* Resize Handle / Splitter (Draggable & double-click to reset to 50%) */}
       <div
         onMouseDown={() => setIsDragging(true)}
         onDoubleClick={() => {
-          const defaultWidth = Math.round(window.innerWidth * 0.40);
+          const defaultWidth = Math.round(window.innerWidth * 0.50);
           setLeftPanelWidth(defaultWidth);
           try {
             localStorage.setItem('socratix_student_panel_width', String(defaultWidth));
           } catch {}
         }}
-        title="Glisser pour ajuster la largeur / Double-cliquer pour réinitialiser à 40%"
+        title="Glisser pour ajuster la largeur / Double-cliquer pour réinitialiser à 50%"
         className={`w-1.5 relative group cursor-col-resize shrink-0 transition-colors z-20 ${
           isDragging ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-slate-800 hover:bg-emerald-500'
         }`}
