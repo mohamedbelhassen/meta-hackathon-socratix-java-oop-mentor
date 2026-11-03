@@ -57,6 +57,23 @@ export function buildCourseSystemPrompt(
   lab: Lab,
   activeActivity?: LabActivity | null
 ): string {
+  const tutorLangName = (course.tutor_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+  const contentLangName = (course.content_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+
+  const languageMandateLayer = `
+### MANDATORY TUTOR INTERACTION LANGUAGE: ${tutorLangName.toUpperCase()} (${(course.tutor_language || 'en').toUpperCase()})
+- **CRITICAL INVARIANT**: You MUST formulate your entire response (\`socratic_reply.message_markdown\`, \`student_acknowledgment\`, \`pedagogical_guidance\`, \`inquiry_question\`, and \`competency_report.congratulations\`) exclusively in **${tutorLangName.toUpperCase()}**!
+- **CROSS-LINGUAL RAG DIRECTIVE**: Even though the lecture slides, code comments, variable names, or lab assignment instructions may be in ${contentLangName} (${course.content_language}), all your pedagogical advice, explanations, guidance clues, and Socratic inquiry questions MUST be delivered in **${tutorLangName.toUpperCase()}**.
+- You must preserve exact technical code identifiers as-is (e.g., class names, function names, tag names), but translate all surrounding pedagogical prose into **${tutorLangName.toUpperCase()}**.
+`;
+
+  const courseContextLayer = `
+### COURSE CONTEXT: ${course.title} (${course.code})
+- Content Language: ${course.content_language} (${contentLangName})
+- Tutor Interaction Language: ${course.tutor_language} (${tutorLangName})
+- File Extensions: ${course.file_extensions?.join(', ') || '.java'}
+`;
+
   // Layer 2: Course Compiled Prompt or Default Anchor
   const courseLayer = course.compiled_tutor_prompt && course.compiled_tutor_prompt.trim().length > 0
     ? course.compiled_tutor_prompt
@@ -94,6 +111,12 @@ ${lab.activities.map((a) => `Activity [${a.id}] ${a.title}:\n` + a.milestones.ma
 `;
 
   return `${UNIVERSAL_SOCRATIC_RULES}
+
+---
+${languageMandateLayer}
+
+---
+${courseContextLayer}
 
 ---
 ${courseLayer}
@@ -143,6 +166,8 @@ export function buildDynamicSocratixSchema(
   const microConcepts = lab.covered_micro_concepts && lab.covered_micro_concepts.length > 0
     ? lab.covered_micro_concepts
     : ['CORE_CONCEPT'];
+
+  const tutorLangName = (course.tutor_language?.toLowerCase() === 'fr') ? 'French' : 'English';
 
   return {
     name: 'socratix_interaction_response',
@@ -207,7 +232,7 @@ export function buildDynamicSocratixSchema(
               },
               diagnostic_note: {
                 type: 'string',
-                description: 'Brief diagnostic note on this occurrence.',
+                description: `Brief diagnostic note on this occurrence written in ${tutorLangName}.`,
               },
             },
             required: ['activity_id', 'micro_concept', 'file', 'location', 'status', 'diagnostic_note'],
@@ -216,7 +241,7 @@ export function buildDynamicSocratixSchema(
         },
         socratic_reply: {
           type: 'object',
-          description: 'The pedagogical message delivered to the student.',
+          description: `The pedagogical message delivered to the student, written exclusively in ${tutorLangName.toUpperCase()}.`,
           properties: {
             direct_answer_attempt_blocked: {
               type: 'boolean',
@@ -224,19 +249,19 @@ export function buildDynamicSocratixSchema(
             },
             student_acknowledgment: {
               type: 'string',
-              description: 'Brief 1-sentence acknowledgment of what was done or fixed.',
+              description: `Brief 1-sentence acknowledgment of what was done or fixed, written in ${tutorLangName.toUpperCase()}.`,
             },
             pedagogical_guidance: {
               type: 'string',
-              description: '1-sentence hint or analogy anchoring the concept to a course slide.',
+              description: `1-sentence hint or analogy anchoring the concept to a course slide, written in ${tutorLangName.toUpperCase()}.`,
             },
             inquiry_question: {
               type: 'string',
-              description: '1 open-ended inquiry question directing the next step.',
+              description: `1 open-ended inquiry question directing the next step, written in ${tutorLangName.toUpperCase()}.`,
             },
             message_markdown: {
               type: 'string',
-              description: 'The full assembled Socratic reply in Markdown (80 to 110 words maximum).',
+              description: `The full assembled Socratic reply in Markdown (80 to 110 words maximum). MUST be written 100% in ${tutorLangName.toUpperCase()}.`,
             },
             course_reference: {
               type: 'object',
@@ -282,11 +307,11 @@ export function buildDynamicSocratixSchema(
         },
         competency_report: {
           type: 'object',
-          description: 'Generated when activity or lab completes.',
+          description: `Generated when activity or lab completes, written in ${tutorLangName.toUpperCase()}.`,
           properties: {
             congratulations: {
               type: 'string',
-              description: 'Warm congratulatory message summarizing the achievement.',
+              description: `Warm congratulatory message summarizing the achievement in ${tutorLangName.toUpperCase()}.`,
             },
             mastered_concepts: {
               type: 'array',

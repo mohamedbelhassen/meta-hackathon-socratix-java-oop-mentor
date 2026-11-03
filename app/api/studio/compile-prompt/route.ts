@@ -80,17 +80,26 @@ export async function POST(req: NextRequest) {
       })
       .join('\n');
 
+    const tutorLangName = (course.tutor_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+    const contentLangName = (course.content_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+
     const systemPrompt = `You are an elite educational AI curriculum architect for Socratix.
 Your job is to draft a high-impact course-specific Tutor System Prompt anchored to the established curriculum taxonomy and analogies.
+
+### CRITICAL LANGUAGE MANDATE (CROSS-LINGUAL RAG):
+- Source Content Language: ${contentLangName} (${course.content_language})
+- Socratic Tutor Language: ${tutorLangName} (${course.tutor_language})
+- MANDATORY INSTRUCTION: The generated "compiled_tutor_prompt" (both the PEDAGOGICAL ANCHORING section and especially the 2 REASONING EXAMPLES few-shots) MUST BE WRITTEN IN ${tutorLangName.toUpperCase()}!
+- Even though the analogies, taxonomy concepts, or course slides were authored in ${contentLangName}, the pedagogical advice, explanations, and assistant dialogue messages in the few-shots MUST be in ${tutorLangName.toUpperCase()} (while keeping exact code identifiers and slide citations intact).
 
 ### GOLDEN EXEMPLAR: CUSTOM TUTOR PROMPT (PEDAGOGICAL ANCHORING & FEW-SHOTS)
 Notice how this anchors domain errors to exact slide numbers and provides 2 domain-specific reasoning examples:
 ${GOLDEN_TUTOR_PROMPT_SHOT}
 
 ### INSTRUCTIONS:
-Generate "compiled_tutor_prompt":
-1. "### PEDAGOGICAL ANCHORING (MANDATORY)" section mapping typical domain mistakes to course analogies and exact slide numbers.
-2. "### REASONING EXAMPLES (FEW-SHOT PROMPTING)" containing Example 1 (in-progress Socratic guidance) and Example 2 (milestone completed congratulatory verdict) tailored specifically to "${course.title}".`;
+Generate "compiled_tutor_prompt" in ${tutorLangName.toUpperCase()}:
+1. "### PEDAGOGICAL ANCHORING (MANDATORY)" section mapping typical domain mistakes to course analogies and exact slide numbers (written in ${tutorLangName.toUpperCase()}).
+2. "### REASONING EXAMPLES (FEW-SHOT PROMPTING)" containing Example 1 (in-progress Socratic guidance) and Example 2 (milestone completed congratulatory verdict) written entirely in ${tutorLangName.toUpperCase()}, tailored specifically to "${course.title}".`;
 
     const userPrompt = `Here is the canonical Competency Taxonomy and Key Analogies for "${course.title}" (${course.code}):
 

@@ -104,8 +104,17 @@ export async function POST(req: NextRequest) {
       )
       .join('\n\n---\n\n');
 
+    const tutorLangName = (course.tutor_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+    const contentLangName = (course.content_language?.toLowerCase() === 'fr') ? 'French' : 'English';
+
     const systemPrompt = `You are an elite educational AI curriculum architect for Socratix.
 Your job is to analyze all chapters of a course, build a canonical deduplicated Competency Taxonomy, and draft a high-impact course-specific Tutor System Prompt.
+
+### CRITICAL LANGUAGE MANDATE (CROSS-LINGUAL RAG):
+- Source Content Language: ${contentLangName} (${course.content_language})
+- Socratic Tutor Language: ${tutorLangName} (${course.tutor_language})
+- MANDATORY INSTRUCTION: The generated "compiled_tutor_prompt" (both PEDAGOGICAL ANCHORING and the 2 REASONING EXAMPLES few-shots) MUST BE WRITTEN IN ${tutorLangName.toUpperCase()}!
+- Even though the slides are in ${contentLangName}, translate all pedagogical explanations and few-shot dialogues into ${tutorLangName.toUpperCase()} so that the runtime AI tutor communicates strictly in ${tutorLangName.toUpperCase()}.
 
 ### GOLDEN EXEMPLAR 1: CANONICAL COMPETENCY TAXONOMY
 Notice the clear SCREAMING_SNAKE_CASE codes, clean titles, and exact slide references:
