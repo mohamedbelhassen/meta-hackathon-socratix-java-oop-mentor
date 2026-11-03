@@ -95,21 +95,23 @@ Your job is to read an authentic university programming lab assignment (TP), ext
    - Scripting, Functional & Web/DB (Python, JS/TS, PHP, SQL/Parse): snake_case or camelCase function/module names (e.g., calculer_moyenne), $variable names, decorators, and database/JSON schema keys (e.g., Parse.Object class and attribute keys).
    - NEVER translate any code identifier between French and English (e.g., do NOT translate Four to Oven, Aliment to Food, or calculer_moyenne to calculate_average!). Only translate the surrounding pedagogical prose.
 4. STRICT FILE EXTENSION & TARGET FILE DISCIPLINE: Every file name in 'target_files' and 'demo_presets' MUST strictly match the files requested in the lab statement and MUST only use extensions allowed by this course (${JSON.stringify(allowedExtensions)}). In multi-file languages like C/C++, include both header (.h) and implementation (.c/.cpp) files when appropriate; never default to '.java' if the course uses another language.
-5. PER-ACTIVITY DEMO PRESETS (AUTONOMOUS SOURCE SCAFFOLDS & REALISTIC BUGS):
-   For the activities extracted from the lab (up to the first 2 primary activities if more than 2 exist), generate 2 1-click Demo Presets in 'demo_presets':
-   - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy').
+5. PER-ACTIVITY DEMO PRESETS FOR ALL ACTIVITIES (AUTONOMOUS SOURCE SCAFFOLDS & REALISTIC BUGS):
+   For EVERY activity extracted from the lab (from Activity 1 to Activity N), you MUST generate exactly 2 1-click Demo Presets in 'demo_presets':
+   - Preset 1 (Buggy Student Attempt): preset_type 'buggy', key '<act_id>_buggy' (e.g., 'act_1_buggy', 'act_2_buggy', 'act_3_buggy', 'act_4_buggy', etc.).
      * Realistic student code targeting the specific learning hurdle of this activity.
      * It is NOT required to be compilable or valid: it MAY contain syntax errors (missing semicolon, unclosed tag), compilation failures (missing imports, type mismatches), architectural flaws, or logical bugs.
      * However, it must still be a realistic whole file containing the surrounding document/class scaffold (e.g., within <body> in HTML or within a class in OOP), NOT an isolated 2-line snippet stripped of its outer context.
-   - Preset 2 (Validated Reference Solution): preset_type 'solution', key '<act_id>_solution' (e.g., 'act_1_solution', 'act_2_solution').
+   - Preset 2 (Validated Reference Solution): preset_type 'solution', key '<act_id>_solution' (e.g., 'act_1_solution', 'act_2_solution', 'act_3_solution', 'act_4_solution', etc.).
      * 100% syntactically valid, compilable/parseable, fully functional, and self-contained.
      * For HTML/CSS: MUST include standard document envelopes (<!DOCTYPE html>, <html>, <head><title>...</title></head>, <body>) and any required parent containers (<main>, etc.).
      * For OOP (Java, C#, TS, C++): MUST include mandatory imports, class declarations, and valid methods.
      * Must immediately satisfy all milestone validation criteria so that 1-click evaluation by the AI tutor passes with green celebration.
+   - MANDATORY COVERAGE RULE:
+     * If the lab has N activities, you MUST output exactly 2 * N presets in total in 'demo_presets' (2 for act_1, 2 for act_2, 2 for act_3, ...). Never omit presets for later activities!
    - CUMULATIVE MULTI-ACTIVITY FILE RULE:
      * When multiple activities target the same file (e.g. index.html or YallaPOS.java), each subsequent activity's presets must preserve the cumulative scaffolding of previous steps (e.g. Activity 5 includes the header and main content from earlier exercises with the footer added), rather than replacing the file with only an isolated snippet.
    - CONCISENESS & SPEED RULE:
-     * Keep files pedagogical and focused (< 35-50 lines per file). Do not write endless boilerplate; focus strictly on the required feature and minimal valid wrapper.
+     * Keep files pedagogical, compact and focused (< 30-45 lines per file). Focus strictly on the required feature and minimal valid wrapper to ensure fast generation.
 6. STRUCTURED MARKDOWN INSTRUCTIONS (NO REDUNDANT TITLE HEADERS):
    - In both 'instructions_i18n.fr' and 'instructions_i18n.en', format the activity instructions in clean, readable Markdown.
    - DO NOT repeat the activity title (e.g. NEVER start with '### Activité N°1' or '### Activity 1').

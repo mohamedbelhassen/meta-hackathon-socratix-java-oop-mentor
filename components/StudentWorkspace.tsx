@@ -138,6 +138,67 @@ export function isSolutionPreset(preset: DemoPreset): boolean {
   );
 }
 
+function generateFallbackStarterFiles(
+  act: LabActivity | null,
+  activeCourse: Course | null,
+  existingFiles: DemoPresetFile[] = []
+): DemoPresetFile[] {
+  const targetFiles = act?.target_files && act.target_files.length > 0
+    ? act.target_files
+    : [activeCourse?.file_extensions?.[0] ? `index${activeCourse.file_extensions[0]}` : 'index.html'];
+
+  return targetFiles.map((fname) => {
+    // If the student already has edited content for this file in previous activity, preserve it!
+    const existing = existingFiles.find((f) => f.name.toLowerCase() === fname.toLowerCase());
+    if (existing && existing.content && existing.content.trim().length > 20) {
+      return existing;
+    }
+
+    const lower = fname.toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) {
+      return {
+        name: fname,
+        content: `<!DOCTYPE html>\n<html lang="fr">\n<head>\n  <meta charset="UTF-8">\n  <title>${act?.title || 'Exercice'}</title>\n</head>\n<body>\n  <!-- TODO: ${act?.title || 'Contenu'} -->\n</body>\n</html>\n`,
+      };
+    }
+    if (lower.endsWith('.css')) {
+      return {
+        name: fname,
+        content: `/* Styles — ${act?.title || 'Exercice'} */\n`,
+      };
+    }
+    if (lower.endsWith('.py')) {
+      return {
+        name: fname,
+        content: `# ${fname} — ${act?.title || 'Exercice'}\n`,
+      };
+    }
+    if (lower.endsWith('.c') || lower.endsWith('.cpp')) {
+      return {
+        name: fname,
+        content: `// ${fname} — ${act?.title || 'Exercice'}\n#include <stdio.h>\n\nint main(void) {\n    return 0;\n}\n`,
+      };
+    }
+    if (lower.endsWith('.js') || lower.endsWith('.ts')) {
+      return {
+        name: fname,
+        content: `// ${fname} — ${act?.title || 'Exercice'}\n`,
+      };
+    }
+    if (lower.endsWith('.sql')) {
+      return {
+        name: fname,
+        content: `-- ${fname} — ${act?.title || 'Exercice'}\n`,
+      };
+    }
+    const className = fname.replace(/\.java$/, '');
+    return {
+      name: fname,
+      content: `// ${fname} — Activity ${act?.order || 1}: ${act?.title || 'Exercice'}\npublic class ${className} {\n    public static void main(String[] args) {\n        // TODO: Implement solution for Activity ${act?.order || 1}\n    }\n}\n`,
+    };
+  });
+}
+
 const IGNORED_DIRECTORIES = new Set([
   'node_modules', '.git', '.svn', 'target', 'build', 'dist', 'out', '.next', 'vendor', '.idea', '.vscode', '__pycache__',
 ]);
@@ -549,15 +610,7 @@ export default function StudentWorkspace() {
         // No presets for this activity: initialize clean starter skeleton based on target_files
         setActivePresetKey('');
         setFolderName(act ? `Activity ${act.order}: ${act.title}` : 'Starter Files');
-        const starterFiles: DemoPresetFile[] = (act?.target_files && act.target_files.length > 0)
-          ? act.target_files.map((fname) => {
-              const className = fname.replace(/\.java$/, '');
-              return {
-                name: fname,
-                content: `// ${fname} — Activity ${act.order}: ${act.title}\npublic class ${className} {\n    public static void main(String[] args) {\n        // TODO: Implement your solution for Activity ${act.order}\n        System.out.println("Starting ${className}...");\n    }\n}\n`,
-              };
-            })
-          : [{ name: 'Main.java', content: `// Activity ${act?.order || 1}: ${act?.title || 'Main'}\npublic class Main {\n    public static void main(String[] args) {\n        // TODO: Implement your solution here\n    }\n}\n` }];
+        const starterFiles = generateFallbackStarterFiles(act, activeCourse);
         setWorkspaceFiles(starterFiles);
       }
       setActiveFileIndex(0);
@@ -834,19 +887,10 @@ export default function StudentWorkspace() {
           handleSelectPreset(actPresets[0]);
         }
       } else {
-        // No presets for this activity (e.g. before lab re-analysis)
-        // Cleanly switch workspace files to target_files starter skeleton instead of stale files from other activities
+        // No presets for this activity: initialize language-aware starter skeleton preserving existing work if present
         setActivePresetKey('');
         setFolderName(`Activity ${act.order}: ${act.title}`);
-        const starterFiles: DemoPresetFile[] = (act.target_files && act.target_files.length > 0)
-          ? act.target_files.map((fname) => {
-              const className = fname.replace(/\.java$/, '');
-              return {
-                name: fname,
-                content: `// ${fname} — Activity ${act.order}: ${act.title}\npublic class ${className} {\n    public static void main(String[] args) {\n        // TODO: Implement your solution for Activity ${act.order}\n        System.out.println("Starting ${className}...");\n    }\n}\n`,
-              };
-            })
-          : [{ name: 'Main.java', content: `// Activity ${act.order}: ${act.title}\npublic class Main {\n    public static void main(String[] args) {\n        // TODO: Implement your solution here\n    }\n}\n` }];
+        const starterFiles = generateFallbackStarterFiles(act, activeCourse, workspaceFiles);
         setWorkspaceFiles(starterFiles);
         setActiveFileIndex(0);
       }
