@@ -838,57 +838,67 @@ export default function CourseStudioPanel({
         }
       }
 
-      // 2. Synthesize Course Knowledge Base & Custom Tutor Prompt
+      // 2. Synthesize Course Knowledge Base & Custom Tutor Prompt (2-Pass Resilient Pipeline)
       setCurrentProgress({
         stage: 'Synthesizing KB & Prompt',
         current: 1,
-        total: 1,
+        total: 2,
         filename: `${course.title} (${course.code})`,
       });
       setCompilationPhase(0);
       setCompilationElapsed(0);
 
-      // Realtime elapsed counter & phased step progression
+      // Realtime elapsed counter
       const elapsedInterval = setInterval(() => {
         setCompilationElapsed((prev) => prev + 1);
       }, 1000);
 
-      const t1 = setTimeout(() => setCompilationPhase(1), 2800);
-      const t2 = setTimeout(() => setCompilationPhase(2), 7200);
-      const t3 = setTimeout(() => setCompilationPhase(3), 12500);
-
-      let res: Response;
       try {
-        res = await fetch('/api/studio/compile-course', {
+        // PASS 1: Extract 100% Integral Competency Taxonomy from all chapters
+        setCompilationPhase(1); // Deduplicating Course Competency Matrix (55%)
+        const taxRes = await fetch('/api/studio/compile-taxonomy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ courseId: course.id }),
         });
+
+        if (!taxRes.ok) {
+          const errData = await taxRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to extract competency taxonomy');
+        }
+
+        // PASS 2: Socratic Prompt Calibration & Dense Knowledge Base
+        setCompilationPhase(2); // Synthesizing Dense Knowledge Base (80%)
+        await new Promise((r) => setTimeout(r, 600));
+        setCompilationPhase(3); // Calibrating Socratic Few-Shots & Anchors (95%)
+
+        const promptRes = await fetch('/api/studio/compile-prompt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ courseId: course.id }),
+        });
+
+        if (!promptRes.ok) {
+          const errData = await promptRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to compile tutor prompt and knowledge base');
+        }
+
+        // Visual completion state (Phase 5: 100%)
+        setCompilationPhase(4);
+        await new Promise((r) => setTimeout(r, 600));
+
+        await onCourseUpdated();
+        setForceRedistillChapters(false);
+        setShowCompilationModal(true);
+        setStatusMessage({
+          type: 'success',
+          text: chaptersNeedingDistillation.length > 0
+            ? `Successfully distilled ${chaptersNeedingDistillation.length} chapter(s) with full text and synthesized Course Knowledge Base & Mentor Prompt!`
+            : 'Course Knowledge Base compiled successfully! Custom Mentor Prompt and Competency Taxonomy are active.',
+        });
       } finally {
         clearInterval(elapsedInterval);
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
       }
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to compile course');
-      }
-
-      // Visual completion state (Phase 5: 100%)
-      setCompilationPhase(4);
-      await new Promise((r) => setTimeout(r, 600));
-
-      await onCourseUpdated();
-      setForceRedistillChapters(false);
-      setShowCompilationModal(true);
-      setStatusMessage({
-        type: 'success',
-        text: chaptersNeedingDistillation.length > 0
-          ? `Successfully distilled ${chaptersNeedingDistillation.length} chapter(s) with full text and synthesized Course Knowledge Base & Mentor Prompt!`
-          : 'Course Knowledge Base compiled successfully! Custom Mentor Prompt and Competency Taxonomy are active.',
-      });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Compilation failed';
       setStatusMessage({ type: 'error', text: msg });

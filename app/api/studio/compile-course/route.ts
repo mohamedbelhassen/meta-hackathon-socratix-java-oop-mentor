@@ -92,14 +92,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Combine chapters markdown
+    // Combine chapters markdown with slide anchors & analogies (100% integral text)
     const allChaptersSummary = chapters
       .map(
         (c) => {
           const chTitle = (c.title_i18n && typeof c.title_i18n === 'object' && (c.title_i18n as { fr?: string }).fr)
             ? (c.title_i18n as { fr: string }).fr
             : c.title;
-          return `### Chapitre ${c.chapter_number} : ${chTitle} (${c.code})\n${c.markdown_content}\nKey Analogies: ${JSON.stringify(c.key_analogies)}`;
+          return `### Chapitre ${c.chapter_number} : ${chTitle} (${c.code})\n${c.markdown_content || ''}\nKey Analogies: ${JSON.stringify(c.key_analogies || [])}`;
         }
       )
       .join('\n\n---\n\n');
@@ -203,10 +203,11 @@ ${allChaptersSummary}`;
           json_schema: jsonSchema,
         },
         temperature: 0.1,
+        reasoning_effort: 'low',
         prompt_cache_key: `studio-compile-${courseId}`,
         prompt_cache_retention: '24h',
       }),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(100_000),
     });
 
     if (!metaRes.ok) {
@@ -286,6 +287,7 @@ ${parsed.competency_matrix
     });
   } catch (err: unknown) {
     console.error('[Compile Course Error]:', err);
-    return NextResponse.json({ error: 'Course compilation failed. Please verify AI connectivity or try again.' }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Course compilation failed. Please verify AI connectivity or try again.';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
