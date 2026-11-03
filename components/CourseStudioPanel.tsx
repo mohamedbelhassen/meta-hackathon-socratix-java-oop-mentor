@@ -188,6 +188,7 @@ export default function CourseStudioPanel({
   const [showGlobalReanalyzeModal, setShowGlobalReanalyzeModal] = useState(false);
   const [globalReanalyzeSessionCount, setGlobalReanalyzeSessionCount] = useState<number>(0);
   const [purgeConfirmInput, setPurgeConfirmInput] = useState('');
+  const [activeReanalyzingLabId, setActiveReanalyzingLabId] = useState<string | null>(null);
 
   // Smooth scroll reference to keep active progress banners in view on laptops/desktops
   const progressBannerRef = useRef<HTMLDivElement>(null);
@@ -198,7 +199,7 @@ export default function CourseStudioPanel({
         behavior: 'smooth',
         block: 'center',
       });
-    }, 80);
+    }, 100);
   };
 
   if (!course) {
@@ -238,7 +239,7 @@ export default function CourseStudioPanel({
   const isSynthesizingKB = isProcessing && currentProgress?.stage === 'Synthesizing KB & Prompt';
   const isUploadingChapters = isProcessing && currentProgress?.stage === 'Chapters / Slides';
   const isUploadingLabs = isProcessing && currentProgress?.stage === 'Labs / TP';
-  const isReanalyzingLabs = isProcessing && currentProgress?.stage === 'Re-analyzing Labs';
+  const isReanalyzingAllLabs = isProcessing && activeReanalyzingLabId === 'ALL';
 
   // --------------------------------------------------------------------------
   // IN-PAGE BATCH DISTILLATION: CHAPTERS
@@ -875,8 +876,10 @@ export default function CourseStudioPanel({
     const sessionCount = targetedLabSessionCount;
     setTargetedLabToReanalyze(null);
 
+    setActiveReanalyzingLabId(lb.id);
     setIsProcessing(true);
     setStatusMessage(null);
+    scrollToProgress();
 
     setCurrentProgress({
       stage: 'Re-analyzing Labs',
@@ -918,6 +921,7 @@ export default function CourseStudioPanel({
     } finally {
       setIsProcessing(false);
       setCurrentProgress(null);
+      setActiveReanalyzingLabId(null);
     }
   };
 
@@ -951,8 +955,10 @@ export default function CourseStudioPanel({
   const handleReanalyzeAllLabs = async () => {
     if (!labs || labs.length === 0) return;
 
+    setActiveReanalyzingLabId('ALL');
     setIsProcessing(true);
     setStatusMessage(null);
+    scrollToProgress();
 
     // Sort naturally: TP1, TP2, ..., TP12
     const sortedLabs = [...labs].sort((a, b) => a.lab_number - b.lab_number);
@@ -1004,6 +1010,7 @@ export default function CourseStudioPanel({
     } finally {
       setIsProcessing(false);
       setCurrentProgress(null);
+      setActiveReanalyzingLabId(null);
     }
   };
 
@@ -1121,6 +1128,7 @@ export default function CourseStudioPanel({
     } finally {
       setIsProcessing(false);
       setCurrentProgress(null);
+      setActiveReanalyzingLabId(null);
     }
   };
 
@@ -1905,7 +1913,7 @@ export default function CourseStudioPanel({
           </p>
         </div>
       ) : currentProgress ? (
-        <div className="bg-cyan-950/40 border border-cyan-500/40 rounded-2xl p-4 text-xs space-y-2 animate-pulse">
+        <div className="bg-cyan-950/40 border border-cyan-500/50 rounded-2xl p-4 text-xs space-y-2 animate-pulse ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10 transition-all">
           <div className="flex items-center justify-between font-semibold text-cyan-300">
             <span>
               Analyzing {currentProgress.stage} ({currentProgress.current} of {currentProgress.total})...
@@ -2349,16 +2357,28 @@ export default function CourseStudioPanel({
                         <Eye className="w-3 h-3" />
                         <span>Inspect</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRequestTargetedLabReanalyze(lb)}
-                        disabled={isProcessing || isQueryingTargetedLab}
-                        className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 bg-amber-950/30 border border-amber-500/30 px-2 py-0.5 rounded-md hover:bg-amber-900/40 transition font-medium disabled:opacity-50"
-                        title="Re-analyze this TP with Meta AI (destructive confirmation required)"
-                      >
-                        <Zap className="w-3 h-3 text-amber-400" />
-                        <span>Re-analyze</span>
-                      </button>
+                      {activeReanalyzingLabId === lb.id ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="inline-flex items-center gap-1.5 text-[10px] text-amber-300 bg-amber-950/60 border border-amber-500/60 px-2 py-0.5 rounded-md font-semibold animate-pulse cursor-wait shadow-sm shadow-amber-500/20"
+                          title="Re-analyzing with Meta AI in progress..."
+                        >
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                          <span>Re-analyzing...</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleRequestTargetedLabReanalyze(lb)}
+                          disabled={isProcessing || isQueryingTargetedLab}
+                          className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 bg-amber-950/30 border border-amber-500/30 px-2 py-0.5 rounded-md hover:bg-amber-900/40 transition font-medium disabled:opacity-50"
+                          title="Re-analyze this TP with Meta AI (destructive confirmation required)"
+                        >
+                          <Zap className="w-3 h-3 text-amber-400" />
+                          <span>Re-analyze</span>
+                        </button>
+                      )}
                       <span className="text-[10px] text-slate-500">
                         {lb.activities?.length || 0} act.
                       </span>
@@ -2445,7 +2465,7 @@ export default function CourseStudioPanel({
               disabled={isProcessing}
               className="bg-rose-950/40 border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 hover:border-rose-600 text-xs font-semibold h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
             >
-              {isReanalyzingLabs && currentProgress ? (
+              {isReanalyzingAllLabs && currentProgress ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
                   <span>Re-analyzing ({currentProgress.current}/{currentProgress.total})...</span>
