@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   extractPdfPagesFromUrl,
+  extractPdfPagesInBrowser,
   extractFirstPageInBrowser,
   inferNumberAndTitle,
+  uploadCoursePdf,
+  slugifyStorageKey,
 } from '@/lib/pdf-client-extractor';
 import {
   Sparkles,
@@ -146,6 +149,28 @@ export default function CourseStudioPanel({
   const [labsPreflightLogs, setLabsPreflightLogs] = useState<string[]>([]);
   const [isLabsPreflighting, setIsLabsPreflighting] = useState(false);
 
+  // Active In-Page Batch Distillation for Chapters
+  const [activeChapterDistillation, setActiveChapterDistillation] = useState<{
+    items: StagedChapterItem[];
+    currentIndex: number;
+    subStep: 1 | 2 | 3;
+    completedCodes: string[];
+    elapsedSeconds: number;
+    isFinished: boolean;
+    error: string | null;
+  } | null>(null);
+
+  // Active In-Page Batch Distillation for Labs
+  const [activeLabDistillation, setActiveLabDistillation] = useState<{
+    items: StagedLabItem[];
+    currentIndex: number;
+    subStep: 1 | 2 | 3;
+    completedCodes: string[];
+    elapsedSeconds: number;
+    isFinished: boolean;
+    error: string | null;
+  } | null>(null);
+
   // Studio UI language toggle & chapter re-distillation toggle
   const [lang, setLang] = useState<'en' | 'fr'>('en');
   const [forceRedistillChapters, setForceRedistillChapters] = useState(false);
@@ -188,6 +213,178 @@ export default function CourseStudioPanel({
   const isUploadingChapters = isProcessing && currentProgress?.stage === 'Chapters / Slides';
   const isUploadingLabs = isProcessing && currentProgress?.stage === 'Labs / TP';
   const isReanalyzingLabs = isProcessing && currentProgress?.stage === 'Re-analyzing Labs';
+
+  // --------------------------------------------------------------------------
+  // IN-PAGE BATCH DISTILLATION: CHAPTERS
+  // --------------------------------------------------------------------------
+  const handleStartChapterDistillation = async (stagedItems: StagedChapterItem[]) => {
+    if (stagedItems.length === 0) return;
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    const initialDistillationState = {
+      items: stagedItems,
+      currentIndex: 0,
+      subStep: 1 as const,
+      completedCodes: [] as string[],
+      elapsedSeconds: 0,
+      isFinished: false,
+      error: null,
+    };
+    setActiveChapterDistillation(initialDistillationState);
+
+    const timer = setInterval(() => {
+      setActiveChapterDistillation((prev) =>
+        prev && !prev.isFinished ? { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 } : prev
+      );
+    }, 1000);
+
+    try {
+      for (let i = 0; i < stagedItems.length; i++) {
+        const item = stagedItems[i];
+
+        // 1. Vector Extraction
+        setActiveChapterDistillation((prev) =>
+          prev ? { ...prev, currentIndex: i, subStep: 1 } : prev
+        );
+        const pages = await extractPdfPagesInBrowser(item.file);
+
+        // 2. Storage CDN Upload
+        setActiveChapterDistillation((prev) =>
+          prev ? { ...prev, subStep: 2 } : prev
+        );
+        const storagePath = slugifyStorageKey(item.filename, course.code, 'chapters');
+        const pdfUrl = await uploadCoursePdf(item.file, storagePath);
+
+        // 3. Meta AI Synthesis
+        setActiveChapterDistillation((prev) =>
+          prev ? { ...prev, subStep: 3 } : prev
+        );
+        const res = await fetch('/api/studio/chapter-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: course.id,
+            chapterNumber: item.chapter_number,
+            code: item.code,
+            title: item.title,
+            pdfUrl,
+            pages,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(`Failed to distill "${item.filename}": ${errData.error || res.statusText}`);
+        }
+
+        setActiveChapterDistillation((prev) =>
+          prev ? { ...prev, completedCodes: [...prev.completedCodes, item.code] } : prev
+        );
+      }
+
+      clearInterval(timer);
+      await onCourseUpdated();
+      setActiveChapterDistillation((prev) =>
+        prev ? { ...prev, isFinished: true, currentIndex: stagedItems.length } : prev
+      );
+    } catch (err: unknown) {
+      clearInterval(timer);
+      console.error('[Chapter Distillation Error]:', err);
+      const msg = err instanceof Error ? err.message : 'Chapter distillation failed';
+      setActiveChapterDistillation((prev) =>
+        prev ? { ...prev, error: msg } : prev
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // IN-PAGE BATCH DISTILLATION: LABS
+  // --------------------------------------------------------------------------
+  const handleStartLabDistillation = async (stagedItems: StagedLabItem[]) => {
+    if (stagedItems.length === 0) return;
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    const initialDistillationState = {
+      items: stagedItems,
+      currentIndex: 0,
+      subStep: 1 as const,
+      completedCodes: [] as string[],
+      elapsedSeconds: 0,
+      isFinished: false,
+      error: null,
+    };
+    setActiveLabDistillation(initialDistillationState);
+
+    const timer = setInterval(() => {
+      setActiveLabDistillation((prev) =>
+        prev && !prev.isFinished ? { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 } : prev
+      );
+    }, 1000);
+
+    try {
+      for (let i = 0; i < stagedItems.length; i++) {
+        const item = stagedItems[i];
+
+        // 1. Vector Extraction
+        setActiveLabDistillation((prev) =>
+          prev ? { ...prev, currentIndex: i, subStep: 1 } : prev
+        );
+        const pages = await extractPdfPagesInBrowser(item.file);
+
+        // 2. Storage CDN Upload
+        setActiveLabDistillation((prev) =>
+          prev ? { ...prev, subStep: 2 } : prev
+        );
+        const storagePath = slugifyStorageKey(item.filename, course.code, 'labs');
+        const pdfUrl = await uploadCoursePdf(item.file, storagePath);
+
+        // 3. Meta AI Decomposition & Presets
+        setActiveLabDistillation((prev) =>
+          prev ? { ...prev, subStep: 3 } : prev
+        );
+        const res = await fetch('/api/studio/lab-analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            courseId: course.id,
+            labNumber: item.lab_number,
+            code: item.code,
+            title: item.title,
+            pdfUrl,
+            pages,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(`Failed to decompose "${item.filename}": ${errData.error || res.statusText}`);
+        }
+
+        setActiveLabDistillation((prev) =>
+          prev ? { ...prev, completedCodes: [...prev.completedCodes, item.code] } : prev
+        );
+      }
+
+      clearInterval(timer);
+      await onCourseUpdated();
+      setActiveLabDistillation((prev) =>
+        prev ? { ...prev, isFinished: true, currentIndex: stagedItems.length } : prev
+      );
+    } catch (err: unknown) {
+      clearInterval(timer);
+      console.error('[Lab Distillation Error]:', err);
+      const msg = err instanceof Error ? err.message : 'Lab decomposition failed';
+      setActiveLabDistillation((prev) =>
+        prev ? { ...prev, error: msg } : prev
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // --------------------------------------------------------------------------
   // BATCH UPLOAD: CHAPTERS (AI PRE-FLIGHT & HUMAN-IN-THE-LOOP STAGING)
@@ -865,6 +1062,513 @@ export default function CourseStudioPanel({
       </div>
 
       {/* STATUS & PROGRESS BANNERS */}
+      {/* IN-PAGE BATCH DISTILLATION: CHAPTERS */}
+      {activeChapterDistillation && (
+        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                {activeChapterDistillation.isFinished ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                ) : activeChapterDistillation.error ? (
+                  <AlertCircle className="w-5 h-5 text-rose-400" />
+                ) : (
+                  <Sparkles className="w-5 h-5 animate-spin text-emerald-400" />
+                )}
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                  {activeChapterDistillation.isFinished
+                    ? 'Curriculum Chapters Distilled Successfully'
+                    : 'Distilling Curriculum Chapters (In-Page Batch Engine)'}
+                  <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400 font-mono">
+                    muse-spark-1.3
+                  </Badge>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  {activeChapterDistillation.isFinished
+                    ? `All ${activeChapterDistillation.items.length} chapters processed & ready for Knowledge Base compilation`
+                    : activeChapterDistillation.error
+                    ? 'Batch process encountered an error'
+                    : `Processing chapter ${Math.min(activeChapterDistillation.currentIndex + 1, activeChapterDistillation.items.length)} of ${activeChapterDistillation.items.length}: "${activeChapterDistillation.items[activeChapterDistillation.currentIndex]?.title || ''}"`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-base font-bold text-emerald-400 font-mono">
+                  {activeChapterDistillation.isFinished
+                    ? '100%'
+                    : `${Math.min(
+                        99,
+                        Math.round(
+                          ((activeChapterDistillation.currentIndex +
+                            (activeChapterDistillation.subStep - 1) / 3) /
+                            activeChapterDistillation.items.length) *
+                            100
+                        )
+                      )}%`}
+                </span>
+                <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 justify-end">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  <span>{activeChapterDistillation.elapsedSeconds}s elapsed</span>
+                </p>
+              </div>
+              {(activeChapterDistillation.isFinished || activeChapterDistillation.error) && (
+                <button
+                  onClick={() => setActiveChapterDistillation(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                  title="Dismiss banner"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar with smooth transition */}
+          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div
+              className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-2 rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: activeChapterDistillation.isFinished
+                  ? '100%'
+                  : `${Math.max(
+                      5,
+                      Math.min(
+                        99,
+                        Math.round(
+                          ((activeChapterDistillation.currentIndex +
+                            (activeChapterDistillation.subStep - 1) / 3) /
+                            activeChapterDistillation.items.length) *
+                            100
+                        )
+                      )
+                    )}%`,
+              }}
+            />
+          </div>
+
+          {/* 3 Sub-step Indicator Chips (when active) */}
+          {!activeChapterDistillation.isFinished && !activeChapterDistillation.error && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              {[
+                {
+                  step: 1,
+                  title: '1. Vector Extraction',
+                  desc: 'Extracting text & page structures in browser',
+                },
+                {
+                  step: 2,
+                  title: '2. Storage Upload',
+                  desc: 'Uploading PDF asset to Supabase Storage CDN',
+                },
+                {
+                  step: 3,
+                  title: '3. Meta AI Synthesis',
+                  desc: 'Extracting analogies, concepts & misconceptions',
+                },
+              ].map((s) => {
+                const isPast = activeChapterDistillation.subStep > s.step;
+                const isCurrent = activeChapterDistillation.subStep === s.step;
+                return (
+                  <div
+                    key={s.step}
+                    className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                      isPast
+                        ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                        : isCurrent
+                        ? 'bg-slate-950 border-cyan-500/50 text-cyan-200 shadow-sm'
+                        : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] font-bold">{s.title}</span>
+                      {isPast ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : isCurrent ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-800" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 line-clamp-1">{s.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Real-time Grid of Items */}
+          <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
+              <span>
+                Chapter Batch Queue ({activeChapterDistillation.completedCodes.length} /{' '}
+                {activeChapterDistillation.items.length} Completed)
+              </span>
+              <span className="font-mono text-[10px] text-slate-500">
+                {activeChapterDistillation.items.length} files staged
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+              {activeChapterDistillation.items.map((item, idx) => {
+                const isCompleted = activeChapterDistillation.completedCodes.includes(item.code);
+                const isInProgress =
+                  idx === activeChapterDistillation.currentIndex &&
+                  !activeChapterDistillation.isFinished &&
+                  !activeChapterDistillation.error;
+                return (
+                  <div
+                    key={item.code}
+                    className={`flex items-center justify-between p-2 rounded-lg border text-xs transition ${
+                      isCompleted
+                        ? 'bg-emerald-950/15 border-emerald-500/30 text-emerald-200'
+                        : isInProgress
+                        ? 'bg-cyan-950/30 border-cyan-500/50 text-cyan-100 shadow-inner'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <Badge
+                        variant="outline"
+                        className={`font-mono text-[9px] shrink-0 ${
+                          isCompleted
+                            ? 'border-emerald-500/50 text-emerald-300'
+                            : isInProgress
+                            ? 'border-cyan-500/50 text-cyan-300'
+                            : 'border-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {item.code}
+                      </Badge>
+                      <span className="truncate text-[11px] font-medium" title={item.title}>
+                        {item.title}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Distilled
+                        </span>
+                      ) : isInProgress ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-300">
+                          <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                          Step {activeChapterDistillation.subStep}/3
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-slate-500">⏳ Queued</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Celebratory Completion Actions */}
+          {activeChapterDistillation.isFinished && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-emerald-950/30 border border-emerald-500/40 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-xs text-emerald-200 font-medium">
+                  All {activeChapterDistillation.items.length} chapters successfully ingested & vectorized! Ready to compile knowledge base.
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={handleCompileCourse}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-7 gap-1.5 shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Compile Knowledge Base & Prompt ➔
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveChapterDistillation(null)}
+                  className="text-xs h-7 bg-slate-900 border-slate-750 text-slate-300 hover:text-white"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {activeChapterDistillation.error && (
+            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span className="text-xs">{activeChapterDistillation.error}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveChapterDistillation(null)}
+                className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* IN-PAGE BATCH DISTILLATION: LABS */}
+      {activeLabDistillation && (
+        <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+                {activeLabDistillation.isFinished ? (
+                  <CheckCircle2 className="w-5 h-5 text-cyan-400" />
+                ) : activeLabDistillation.error ? (
+                  <AlertCircle className="w-5 h-5 text-rose-400" />
+                ) : (
+                  <Layers className="w-5 h-5 animate-spin text-cyan-400" />
+                )}
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                  {activeLabDistillation.isFinished
+                    ? 'Practical Labs Decomposed Successfully'
+                    : 'Decomposing Practical Labs & TP (In-Page Batch Engine)'}
+                  <Badge variant="outline" className="text-[10px] border-cyan-500/40 text-cyan-400 font-mono">
+                    muse-spark-1.3
+                  </Badge>
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  {activeLabDistillation.isFinished
+                    ? `All ${activeLabDistillation.items.length} labs decomposed into milestones with student presets`
+                    : activeLabDistillation.error
+                    ? 'Batch lab process encountered an error'
+                    : `Processing lab ${Math.min(activeLabDistillation.currentIndex + 1, activeLabDistillation.items.length)} of ${activeLabDistillation.items.length}: "${activeLabDistillation.items[activeLabDistillation.currentIndex]?.title || ''}"`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <span className="text-base font-bold text-cyan-400 font-mono">
+                  {activeLabDistillation.isFinished
+                    ? '100%'
+                    : `${Math.min(
+                        99,
+                        Math.round(
+                          ((activeLabDistillation.currentIndex +
+                            (activeLabDistillation.subStep - 1) / 3) /
+                            activeLabDistillation.items.length) *
+                            100
+                        )
+                      )}%`}
+                </span>
+                <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 justify-end">
+                  <Clock className="w-3 h-3 text-slate-500" />
+                  <span>{activeLabDistillation.elapsedSeconds}s elapsed</span>
+                </p>
+              </div>
+              {(activeLabDistillation.isFinished || activeLabDistillation.error) && (
+                <button
+                  onClick={() => setActiveLabDistillation(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                  title="Dismiss banner"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar with smooth transition */}
+          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div
+              className="bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 h-2 rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: activeLabDistillation.isFinished
+                  ? '100%'
+                  : `${Math.max(
+                      5,
+                      Math.min(
+                        99,
+                        Math.round(
+                          ((activeLabDistillation.currentIndex +
+                            (activeLabDistillation.subStep - 1) / 3) /
+                            activeLabDistillation.items.length) *
+                            100
+                        )
+                      )
+                    )}%`,
+              }}
+            />
+          </div>
+
+          {/* 3 Sub-step Indicator Chips (when active) */}
+          {!activeLabDistillation.isFinished && !activeLabDistillation.error && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+              {[
+                {
+                  step: 1,
+                  title: '1. Vector Extraction',
+                  desc: 'Extracting instructions & exercises in browser',
+                },
+                {
+                  step: 2,
+                  title: '2. Storage Upload',
+                  desc: 'Uploading PDF asset to Supabase Storage CDN',
+                },
+                {
+                  step: 3,
+                  title: '3. Meta AI Decomposition',
+                  desc: 'Extracting milestones, pitfalls & starter presets',
+                },
+              ].map((s) => {
+                const isPast = activeLabDistillation.subStep > s.step;
+                const isCurrent = activeLabDistillation.subStep === s.step;
+                return (
+                  <div
+                    key={s.step}
+                    className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                      isPast
+                        ? 'bg-cyan-950/20 border-cyan-500/40 text-cyan-300'
+                        : isCurrent
+                        ? 'bg-slate-950 border-emerald-500/50 text-emerald-200 shadow-sm'
+                        : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] font-bold">{s.title}</span>
+                      {isPast ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                      ) : isCurrent ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-800" />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 line-clamp-1">{s.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Real-time Grid of Items */}
+          <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
+              <span>
+                Practical Labs Queue ({activeLabDistillation.completedCodes.length} /{' '}
+                {activeLabDistillation.items.length} Completed)
+              </span>
+              <span className="font-mono text-[10px] text-slate-500">
+                {activeLabDistillation.items.length} labs staged
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+              {activeLabDistillation.items.map((item, idx) => {
+                const isCompleted = activeLabDistillation.completedCodes.includes(item.code);
+                const isInProgress =
+                  idx === activeLabDistillation.currentIndex &&
+                  !activeLabDistillation.isFinished &&
+                  !activeLabDistillation.error;
+                return (
+                  <div
+                    key={item.code}
+                    className={`flex items-center justify-between p-2 rounded-lg border text-xs transition ${
+                      isCompleted
+                        ? 'bg-cyan-950/15 border-cyan-500/30 text-cyan-200'
+                        : isInProgress
+                        ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-100 shadow-inner'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                      <Badge
+                        variant="outline"
+                        className={`font-mono text-[9px] shrink-0 ${
+                          isCompleted
+                            ? 'border-cyan-500/50 text-cyan-300'
+                            : isInProgress
+                            ? 'border-emerald-500/50 text-emerald-300'
+                            : 'border-slate-700 text-slate-400'
+                        }`}
+                      >
+                        {item.code}
+                      </Badge>
+                      <span className="truncate text-[11px] font-medium" title={item.title}>
+                        {item.title}
+                      </span>
+                    </div>
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-400">
+                          <CheckCircle2 className="w-3 h-3 text-cyan-400" /> Decomposed
+                        </span>
+                      ) : isInProgress ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300">
+                          <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                          Step {activeLabDistillation.subStep}/3
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-slate-500">⏳ Queued</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Celebratory Completion Actions */}
+          {activeLabDistillation.isFinished && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-cyan-950/30 border border-cyan-500/40 rounded-xl">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span className="text-xs text-cyan-200 font-medium">
+                  All {activeLabDistillation.items.length} practical labs decomposed into milestones with interactive starter presets!
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  onClick={() => setShowLabsIngestionModal(true)}
+                  className="bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs h-7 gap-1.5 shadow-sm"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  View Labs Briefing & Presets 📋
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveLabDistillation(null)}
+                  className="text-xs h-7 bg-slate-900 border-slate-750 text-slate-300 hover:text-white"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {activeLabDistillation.error && (
+            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span className="text-xs">{activeLabDistillation.error}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveLabDistillation(null)}
+                className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       {currentProgress && currentProgress.stage === 'Synthesizing KB & Prompt' ? (
         <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
           <div className="flex items-center justify-between">
@@ -1552,13 +2256,7 @@ export default function CourseStudioPanel({
           curriculumSummary={curriculumSummary}
           detectedModules={detectedModules}
           initialItems={stagedChapters}
-          onDistillationComplete={async () => {
-            await onCourseUpdated();
-            setStatusMessage({
-              type: 'success',
-              text: `Successfully imported and distilled ${stagedChapters.length} chapter(s)! You can now compile the Knowledge Base.`,
-            });
-          }}
+          onConfirmAndStartDistill={handleStartChapterDistillation}
         />
       )}
 
@@ -1623,14 +2321,7 @@ export default function CourseStudioPanel({
           curriculumSummary={labsCurriculumSummary}
           detectedModules={labsDetectedModules}
           initialItems={stagedLabs}
-          onDistillationComplete={async () => {
-            await onCourseUpdated();
-            setShowLabsIngestionModal(true);
-            setStatusMessage({
-              type: 'success',
-              text: `Successfully decomposed and registered ${stagedLabs.length} lab(s)! You can now review activities, milestones, and demo presets.`,
-            });
-          }}
+          onConfirmAndStartDecompose={handleStartLabDistillation}
         />
       )}
 
