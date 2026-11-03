@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   extractPdfPagesInBrowser,
   extractPdfPagesFromUrl,
+  extractFirstPageInBrowser,
   inferNumberAndTitle,
   slugifyStorageKey,
   uploadCoursePdf,
@@ -29,10 +30,14 @@ import {
   Clock,
   RotateCcw,
   Trash2,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import CourseCompilationSummaryModal from '@/components/CourseCompilationSummaryModal';
 import LabsBatchIngestionModal from '@/components/LabsBatchIngestionModal';
 import LabDetailModal from '@/components/LabDetailModal';
+import ChapterStagingModal, { StagedChapterItem } from '@/components/ChapterStagingModal';
+import { PreflightChapterItem } from '@/app/api/studio/chapters-preflight/route';
 import { getLocalizedChapterTitle, getLocalizedLabTitle } from '@/lib/bilingual-helper';
 
 interface CompilationPhase {
@@ -76,6 +81,7 @@ const COMPILATION_PHASES: CompilationPhase[] = [
 ];
 
 export type StudioProgressStage =
+  | 'Pre-flight Analysis'
   | 'Chapters / Slides'
   | 'Distilling Chapters'
   | 'Synthesizing KB & Prompt'
@@ -125,6 +131,10 @@ export default function CourseStudioPanel({
   const [showLabsIngestionModal, setShowLabsIngestionModal] = useState(false);
   const [selectedLabForInspection, setSelectedLabForInspection] = useState<Lab | null>(null);
 
+  // Chapter AI Pre-flight & Staging modal
+  const [stagedChapters, setStagedChapters] = useState<StagedChapterItem[]>([]);
+  const [showStagingModal, setShowStagingModal] = useState(false);
+
   // Studio UI language toggle & chapter re-distillation toggle
   const [lang, setLang] = useState<'en' | 'fr'>('en');
   const [forceRedistillChapters, setForceRedistillChapters] = useState(false);
@@ -169,74 +179,156 @@ export default function CourseStudioPanel({
   const isReanalyzingLabs = isProcessing && currentProgress?.stage === 'Re-analyzing Labs';
 
   // --------------------------------------------------------------------------
-  // BATCH UPLOAD: CHAPTERS
+  // BATCH UPLOAD: CHAPTERS (AI PRE-FLIGHT & HUMAN-IN-THE-LOOP STAGING)
   // --------------------------------------------------------------------------
   const handleBatchChaptersUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = e.target.files;
     if (!fileList || fileList.length === 0) return;
 
     const files = Array.from(fileList);
-    // Natural numeric sort: ch1 before ch2 before ch10
-    files.sort((a, b) => {
-      const numA = inferNumberAndTitle(a.name).number;
-      const numB = inferNumberAndTitle(b.name).number;
-      return numA - numB;
-    });
-
     setIsProcessing(true);
     setStatusMessage(null);
 
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const info = inferNumberAndTitle(file.name);
+    setCurrentProgress({
+      stage: 'Pre-flight Analysis',
+      current: 0,
+      total: files.length,
+      filename: 'Scanning title slides...',
+    });
 
+    try {
+      // 1. Quick client-side scan of slide 1 for each file (< 300ms total)
+      const preflightPayload = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
         setCurrentProgress({
-          stage: 'Chapters / Slides',
+          stage: 'Pre-flight Analysis',
           current: i + 1,
           total: files.length,
-          filename: file.name,
+          filename: `Scanning slide 1: ${f.name}...`,
         });
-
-        // 1. Extract text in browser
-        const pages = await extractPdfPagesInBrowser(file);
-
-        // 2. Upload PDF to Supabase Storage with accent-free slug
-        const storagePath = slugifyStorageKey(file.name, course.code, 'chapters');
-        const pdfUrl = await uploadCoursePdf(file, storagePath);
-
-        // 3. Call backend AI analyzer with Golden Synthesis Shot
-        const res = await fetch('/api/studio/chapter-analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            courseId: course.id,
-            chapterNumber: info.number,
-            code: info.code,
-            title: info.suggestedTitle,
-            pdfUrl,
-            pages,
-          }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(`Failed to analyze chapter "${file.name}": ${errData.error || res.statusText}`);
-        }
+        const firstSlideText = await extractFirstPageInBrowser(f);
+        preflightPayload.push({ filename: f.name, firstSlideText });
       }
 
-      setStatusMessage({
-        type: 'success',
-        text: `Successfully imported and distilled ${files.length} chapter(s)! You can now compile the Knowledge Base.`,
+      // 2. Call Meta AI Pre-flight to infer optimal sequence, modules, and titles
+      setCurrentProgress({
+        stage: 'Pre-flight Analysis',
+        current: files.length,
+        total: files.length,
+        filename: 'Analyzing curriculum progression with Meta AI...',
       });
-      await onCourseUpdated();
+
+      const preflightRes = await fetch('/api/studio/chapters-preflight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          files: preflightPayload,
+        }),
+      });
+
+      if (!preflightRes.ok) {
+        const errData = await preflightRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Pre-flight analysis failed');
+      }
+
+      const preflightData = await preflightRes.json();
+      const fileMap = new Map<string, File>();
+      files.forEach((f) => fileMap.set(f.name, f));
+
+      const staged: StagedChapterItem[] = (preflightData.chapters || []).map((ch: PreflightChapterItem) => ({
+        ...ch,
+        file: fileMap.get(ch.filename) || files[0],
+      }));
+
+      setStagedChapters(staged);
+      setShowStagingModal(true);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Batch chapter upload failed';
-      setStatusMessage({ type: 'error', text: msg });
+      console.error('[Pre-flight Error]:', err);
+      // Graceful fallback: Still open staging modal with filename heuristics so teacher can reorder manually
+      const fileMap = new Map<string, File>();
+      files.forEach((f) => fileMap.set(f.name, f));
+      const fallbackStaged: StagedChapterItem[] = files.map((f, idx) => {
+        const info = inferNumberAndTitle(f.name, idx + 1);
+        return {
+          filename: f.name,
+          order: idx + 1,
+          chapter_number: info.number,
+          module: 'Course',
+          title: info.suggestedTitle,
+          title_en: info.suggestedTitle,
+          code: info.code,
+          reasoning: 'Sequential file order.',
+          file: f,
+        };
+      });
+      setStagedChapters(fallbackStaged);
+      setShowStagingModal(true);
     } finally {
       setIsProcessing(false);
       setCurrentProgress(null);
       e.target.value = '';
+    }
+  };
+
+  // --------------------------------------------------------------------------
+  // IN-PLACE CHAPTER MANAGEMENT (REORDER & DELETE)
+  // --------------------------------------------------------------------------
+  const handleMoveExistingChapter = async (chapterId: string, direction: 'up' | 'down') => {
+    const sorted = [...chapters].sort((a, b) => a.chapter_number - b.chapter_number);
+    const idx = sorted.findIndex((c) => c.id === chapterId);
+    if (idx === -1) return;
+    if (direction === 'up' && idx === 0) return;
+    if (direction === 'down' && idx === sorted.length - 1) return;
+
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const currNum = sorted[idx].chapter_number;
+    const targetNum = sorted[targetIdx].chapter_number;
+
+    const updates = [
+      { id: sorted[idx].id, chapter_number: targetNum },
+      { id: sorted[targetIdx].id, chapter_number: currNum },
+    ];
+
+    try {
+      const res = await fetch('/api/studio/chapters-reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          chapters: updates,
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to reorder chapters');
+      await onCourseUpdated();
+    } catch (err) {
+      console.error('[Move Chapter Error]:', err);
+    }
+  };
+
+  const handleDeleteChapter = async (chapterId: string, chapterTitle: string) => {
+    if (!confirm(`Delete chapter "${chapterTitle}" from course?`)) return;
+
+    try {
+      const res = await fetch('/api/studio/chapter-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          chapterId,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to delete chapter');
+      }
+      await onCourseUpdated();
+    } catch (err) {
+      console.error('[Delete Chapter Error]:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete chapter');
     }
   };
 
@@ -270,7 +362,7 @@ export default function CourseStudioPanel({
     try {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const info = inferNumberAndTitle(file.name);
+        const info = inferNumberAndTitle(file.name, i + 1);
 
         setCurrentProgress({
           stage: 'Labs / TP',
@@ -854,28 +946,68 @@ export default function CourseStudioPanel({
 
             {/* LIST OF CURRENT CHAPTERS */}
             {chapters.length > 0 && (
-              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                {chapters.map((ch) => (
-                  <div
-                    key={ch.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="font-mono text-[10px] text-emerald-400">Ch.{ch.chapter_number}</span>
-                      <span className="text-slate-200 truncate">{getLocalizedChapterTitle(ch, lang)}</span>
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {[...chapters]
+                  .sort((a, b) => a.chapter_number - b.chapter_number)
+                  .map((ch, idx, arr) => (
+                    <div
+                      key={ch.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs hover:border-slate-800 transition"
+                    >
+                      <div className="flex items-center gap-2 truncate flex-1 min-w-0">
+                        {/* Reorder Buttons */}
+                        <div className="flex flex-col gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            disabled={isProcessing || idx === 0}
+                            onClick={() => handleMoveExistingChapter(ch.id, 'up')}
+                            className="p-0.5 text-slate-500 hover:text-emerald-400 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                            title="Move chapter up"
+                          >
+                            <ArrowUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isProcessing || idx === arr.length - 1}
+                            onClick={() => handleMoveExistingChapter(ch.id, 'down')}
+                            className="p-0.5 text-slate-500 hover:text-emerald-400 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                            title="Move chapter down"
+                          >
+                            <ArrowDown className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        <span className="font-mono text-[10px] text-emerald-400 shrink-0 font-bold">
+                          Ch.{ch.chapter_number}
+                        </span>
+                        <span className="text-slate-200 truncate font-medium">
+                          {getLocalizedChapterTitle(ch, lang)}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        {ch.pdf_url && (
+                          <a
+                            href={ch.pdf_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-cyan-400 hover:underline px-1 py-0.5"
+                          >
+                            PDF ↗
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          disabled={isProcessing}
+                          onClick={() => handleDeleteChapter(ch.id, getLocalizedChapterTitle(ch, lang))}
+                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded transition"
+                          title="Delete chapter from course"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-                    {ch.pdf_url && (
-                      <a
-                        href={ch.pdf_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] text-cyan-400 hover:underline shrink-0 ml-2"
-                      >
-                        PDF ↗
-                      </a>
-                    )}
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -1208,6 +1340,24 @@ export default function CourseStudioPanel({
             </Button>
           </div>
         </div>
+      )}
+
+      {/* MODAL 0: CHAPTER STAGING & REORDERING MODAL */}
+      {showStagingModal && course && (
+        <ChapterStagingModal
+          isOpen={showStagingModal}
+          onClose={() => setShowStagingModal(false)}
+          courseId={course.id}
+          courseCode={course.code}
+          initialItems={stagedChapters}
+          onDistillationComplete={async () => {
+            await onCourseUpdated();
+            setStatusMessage({
+              type: 'success',
+              text: `Successfully imported and distilled ${stagedChapters.length} chapter(s)! You can now compile the Knowledge Base.`,
+            });
+          }}
+        />
       )}
 
       {/* MODAL 1: COURSE COMPILATION SUMMARY */}

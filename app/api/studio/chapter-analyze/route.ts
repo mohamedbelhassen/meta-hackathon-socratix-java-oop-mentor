@@ -309,10 +309,15 @@ ${pagesTextSample}`;
       ? rawFrTitle
       : `Chapitre ${chapterNumber} : ${rawFrTitle}`;
 
+    const rawCode = (code || '').trim().toUpperCase();
+    const sanitizedCode = rawCode && rawCode !== 'CH1_MATERIAL' && !rawCode.endsWith('_MATERIAL')
+      ? rawCode
+      : `CH${chapterNumber}_${cleanEnTitle.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16)}`;
+
     const chapterRecord = {
       course_id: courseId,
       chapter_number: Number(chapterNumber),
-      code: code.trim().toUpperCase(),
+      code: sanitizedCode,
       title: cleanEnTitle,
       title_i18n: {
         en: cleanEnTitle,

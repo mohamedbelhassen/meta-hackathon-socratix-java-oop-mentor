@@ -418,10 +418,13 @@ ${pagesTextSample}`;
       descriptionI18n = { en: cleanDesc, fr: cleanDesc };
     }
 
+    const rawCode = (code || '').trim().toUpperCase();
+    const sanitizedCode = rawCode || `TP${labNumber}`;
+
     const labRecord = {
       course_id: courseId,
       lab_number: Number(labNumber),
-      code: code.trim().toUpperCase(),
+      code: sanitizedCode,
       title: cleanEnTitle,
       title_i18n: {
         en: cleanEnTitle,

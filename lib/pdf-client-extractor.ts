@@ -33,45 +33,94 @@ export function slugifyStorageKey(
 
 /**
  * Automatically infers chapter/lab number and human-readable title from file names.
- * Supports: 'ch1_introduction à java.pdf', 'ch3_les classes.pdf', 'TP1.pdf', 'TP10.pdf'
+ * Supports:
+ * - Prefix + Sub-chapter: '1_ch1_html.pdf', '3_ch1_css.pdf', '7_ch5_css.pdf'
+ * - Standard chapters: 'ch1_introduction à java.pdf', 'chapitre 3.pdf', 'chapter_4_classes.pdf'
+ * - Leading numbers: '01_html_basics.pdf', '2 - css_layout.pdf'
+ * - Labs & TPs: 'TP1.pdf', 'TP_1_mohamed_belhassen.pdf', 'TP_4_bis_...pdf', 'Lab_3.pdf'
  */
-export function inferNumberAndTitle(filename: string): InferredFileInfo {
+export function inferNumberAndTitle(filename: string, fallbackIndex = 1): InferredFileInfo {
   const base = filename.replace(/\.pdf$/i, '').trim();
 
-  // 1. Check for Chapter pattern: ch3_les classes, ch1_intro, etc.
-  const chapterMatch = base.match(/^ch(\d+)[_\s-]*(.*)$/i);
-  if (chapterMatch) {
-    const num = parseInt(chapterMatch[1], 10);
-    const rawTitle = chapterMatch[2] ? chapterMatch[2].replace(/[_\-]+/g, ' ').trim() : `Chapitre ${num}`;
-    const cleanTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
-    return {
-      type: 'chapter',
-      number: num,
-      code: `CH${num}_${cleanTitle.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16)}`,
-      suggestedTitle: cleanTitle.length > 2 ? cleanTitle : `Chapitre ${num}`,
-    };
-  }
-
-  // 2. Check for Lab pattern: TP1, TP10, TP_5, Lab_3, etc.
-  const labMatch = base.match(/^(?:tp|lab)[_\s-]*(\d+)[_\s-]*(.*)$/i);
+  // 1. Check for Lab pattern: TP1, TP10, TP_1_name, Lab_3, TP_4_bis, etc.
+  const labMatch = base.match(/^(?:tp|lab|td|activit[ée])[_\s-]*(\d+)[_\s-]*(.*)$/i);
   if (labMatch) {
     const num = parseInt(labMatch[1], 10);
     const rawTitle = labMatch[2] ? labMatch[2].replace(/[_\-]+/g, ' ').trim() : `TP ${num}`;
     const cleanTitle = rawTitle.length > 1 ? rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) : `TP ${num}`;
+    const isBis = base.toLowerCase().includes('bis');
     return {
       type: 'lab',
       number: num,
-      code: `TP${num}`,
+      code: `TP${num}${isBis ? '_BIS' : ''}`,
       suggestedTitle: cleanTitle.startsWith('TP') ? cleanTitle : `TP ${num} — ${cleanTitle}`,
     };
   }
 
-  // Fallback
+  // 2. Check for Prefix number followed by Chapter (e.g. '1_ch1_html', '3_ch1_css', '7_ch5_css')
+  const prefixChMatch = base.match(/^(\d+)[_\s.-]+(?:ch(?:ap(?:itre|ter)?)?)[_\s.-]*(\d*)[_\s.-]*(.*)$/i);
+  if (prefixChMatch) {
+    const globalNum = parseInt(prefixChMatch[1], 10);
+    const subNum = prefixChMatch[2] ? parseInt(prefixChMatch[2], 10) : null;
+    const remainder = prefixChMatch[3] ? prefixChMatch[3].replace(/[_\-]+/g, ' ').trim() : '';
+    const cleanRemainder = remainder ? remainder.charAt(0).toUpperCase() + remainder.slice(1) : '';
+    const subTag = subNum ? `CH${subNum}_` : '';
+    const codeTag = cleanRemainder
+      ? cleanRemainder.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16)
+      : `PART${subNum || globalNum}`;
+
+    return {
+      type: 'chapter',
+      number: globalNum,
+      code: `CH${globalNum}_${subTag}${codeTag}`,
+      suggestedTitle: cleanRemainder ? `Chapter ${globalNum} — ${cleanRemainder}` : `Chapter ${globalNum}`,
+    };
+  }
+
+  // 3. Check for Standard Chapter pattern: ch3_les classes, chapter_1, etc.
+  const chapterMatch = base.match(/^(?:ch|chap|chapitre|chapter)[_\s.-]*(\d+)[_\s.-]*(.*)$/i);
+  if (chapterMatch) {
+    const num = parseInt(chapterMatch[1], 10);
+    const rawTitle = chapterMatch[2] ? chapterMatch[2].replace(/[_\-]+/g, ' ').trim() : `Chapitre ${num}`;
+    const cleanTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+    const codeTag = cleanTitle.length > 2
+      ? cleanTitle.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16)
+      : 'PART';
+
+    return {
+      type: 'chapter',
+      number: num,
+      code: `CH${num}_${codeTag}`,
+      suggestedTitle: cleanTitle.length > 2 ? cleanTitle : `Chapitre ${num}`,
+    };
+  }
+
+  // 4. Check for Simple leading number: 01_intro, 2-variables, 3. flexbox
+  const leadingNumMatch = base.match(/^(\d+)[_\s.-]+(.*)$/);
+  if (leadingNumMatch) {
+    const num = parseInt(leadingNumMatch[1], 10);
+    const rawTitle = leadingNumMatch[2] ? leadingNumMatch[2].replace(/[_\-]+/g, ' ').trim() : `Chapitre ${num}`;
+    const cleanTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
+    const codeTag = cleanTitle.length > 2
+      ? cleanTitle.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16)
+      : 'PART';
+
+    return {
+      type: 'chapter',
+      number: num,
+      code: `CH${num}_${codeTag}`,
+      suggestedTitle: cleanTitle.length > 2 ? cleanTitle : `Chapitre ${num}`,
+    };
+  }
+
+  // 5. Fallback using fallbackIndex to guarantee strict uniqueness
+  const num = fallbackIndex || 1;
+  const slug = base.toUpperCase().replace(/[^A-Z0-9]+/g, '_').slice(0, 16) || 'PART';
   return {
     type: 'chapter',
-    number: 1,
-    code: 'CH1_MATERIAL',
-    suggestedTitle: base,
+    number: num,
+    code: `CH${num}_${slug}`,
+    suggestedTitle: base.length > 1 ? base.charAt(0).toUpperCase() + base.slice(1) : `Chapter ${num}`,
   };
 }
 
@@ -143,6 +192,37 @@ export async function extractPdfPagesInBrowser(file: File): Promise<ExtractedPag
   }
 
   return pages;
+}
+
+/**
+ * Ultra-fast client-side extraction of just the first slide/page (< 50ms)
+ * for AI curriculum pre-flight analysis and optimal chapter ordering.
+ */
+export async function extractFirstPageInBrowser(file: File): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+
+  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdfDoc = await loadingTask.promise;
+
+  try {
+    if (pdfDoc.numPages === 0) return '';
+    const page = await pdfDoc.getPage(1);
+    const textContent = await page.getTextContent();
+    const pageText = formatExtractedTextContent(textContent.items);
+    page.cleanup();
+    return pageText;
+  } catch (err) {
+    console.warn('[extractFirstPageInBrowser] Failed to extract page 1:', err);
+    return '';
+  } finally {
+    await pdfDoc.cleanup();
+    await loadingTask.destroy();
+  }
 }
 
 /**
