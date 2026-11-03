@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Course, CourseChapter, Lab } from '@/types/socratix';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -175,6 +175,18 @@ export default function CourseStudioPanel({
   const [lang, setLang] = useState<'en' | 'fr'>('en');
   const [forceRedistillChapters, setForceRedistillChapters] = useState(false);
 
+  // Smooth scroll reference to keep active progress banners in view on laptops/desktops
+  const progressBannerRef = useRef<HTMLDivElement>(null);
+
+  const scrollToProgress = () => {
+    setTimeout(() => {
+      progressBannerRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 80);
+  };
+
   if (!course) {
     return (
       <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
@@ -232,6 +244,7 @@ export default function CourseStudioPanel({
       error: null,
     };
     setActiveChapterDistillation(initialDistillationState);
+    scrollToProgress();
 
     const timer = setInterval(() => {
       setActiveChapterDistillation((prev) =>
@@ -318,6 +331,7 @@ export default function CourseStudioPanel({
       error: null,
     };
     setActiveLabDistillation(initialDistillationState);
+    scrollToProgress();
 
     const timer = setInterval(() => {
       setActiveLabDistillation((prev) =>
@@ -847,6 +861,7 @@ export default function CourseStudioPanel({
       });
       setCompilationPhase(0);
       setCompilationElapsed(0);
+      scrollToProgress();
 
       // Realtime elapsed counter
       const elapsedInterval = setInterval(() => {
@@ -1072,6 +1087,7 @@ export default function CourseStudioPanel({
       </div>
 
       {/* STATUS & PROGRESS BANNERS */}
+      <div ref={progressBannerRef} className="scroll-mt-28 space-y-4">
       {/* IN-PAGE BATCH DISTILLATION: CHAPTERS */}
       {activeChapterDistillation && (
         <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
@@ -1671,6 +1687,7 @@ export default function CourseStudioPanel({
           <p className="text-[11px] text-slate-400 truncate">Current File: {currentProgress.filename}</p>
         </div>
       ) : null}
+      </div>
 
       {statusMessage && (
         <div
