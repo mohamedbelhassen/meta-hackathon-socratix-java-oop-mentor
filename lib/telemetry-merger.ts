@@ -86,7 +86,72 @@ export function mergeMicroCompetenciesState(
 
     if (score === 100) {
       entry.status = 'MASTERED';
-      entry.summary = `Demonstrated across all ${totalCount} inspected location(s).`;
+      const remediatedCount = occurrences.filter((o) => o.remediated).length;
+      if (remediatedCount > 0) {
+        entry.summary = `Acquis après remédiation (${remediatedCount} difficulté(s) surmontée(s) sur ${totalCount} emplacement(s) inspecté(s)).`;
+      } else {
+        entry.summary = `Demonstrated across all ${totalCount} inspected location(s).`;
+      }
+    } else if (score > 0 && score < 100) {
+      entry.status = 'IN_PROGRESS';
+      const failing = occurrences.filter((o) => o.status === 'FAIL');
+      entry.summary = `Partial mastery (${passCount}/${totalCount}): Needs review in ${failing.map((f) => f.location).join(', ')}.`;
+    } else {
+      entry.status = 'STRUGGLING';
+      entry.summary = `Struggling across ${totalCount} location(s): ${occurrences.map((o) => o.location).join(', ')}.`;
+    }
+  }
+
+  return updatedState;
+}
+
+/**
+ * Reconciles student micro-competencies with completed activities and global lab progress.
+ * If an activity (or the entire lab) has been validated (100%), any hurdles previously
+ * encountered during formative trials are marked as remediated ('PASS', remediated: true),
+ * transitioning the competency to MASTERED with "Acquis (après remédiation)".
+ */
+export function reconcileMicroCompetenciesWithProgress(
+  existingState: MicroCompetenciesStateMap = {},
+  activitiesProgress: Record<string, ActivityProgress> = {},
+  progressPercent: number = 0
+): MicroCompetenciesStateMap {
+  const updatedState: MicroCompetenciesStateMap = JSON.parse(
+    JSON.stringify(existingState || {})
+  );
+
+  const isLabFullyCompleted = progressPercent === 100;
+
+  for (const conceptKey of Object.keys(updatedState)) {
+    const entry = updatedState[conceptKey];
+    const occurrences = entry.occurrences || [];
+    if (occurrences.length === 0) continue;
+
+    for (const occ of occurrences) {
+      const actProgress = occ.activity_id ? activitiesProgress[occ.activity_id] : null;
+      const isActCompleted = actProgress?.status === 'COMPLETED' || (actProgress?.percent ?? 0) === 100;
+
+      // If the activity or entire lab was successfully completed, prior hurdles are resolved
+      if ((isLabFullyCompleted || isActCompleted) && occ.status === 'FAIL') {
+        occ.status = 'PASS';
+        occ.remediated = true;
+        occ.last_signal = 'POSITIVE';
+      }
+    }
+
+    const totalCount = occurrences.length;
+    const passCount = occurrences.filter((o) => o.status === 'PASS').length;
+    const remediatedCount = occurrences.filter((o) => o.remediated).length;
+    const score = totalCount > 0 ? Math.round((passCount / totalCount) * 100) : 0;
+    entry.score = score;
+
+    if (score === 100) {
+      entry.status = 'MASTERED';
+      if (remediatedCount > 0) {
+        entry.summary = `Acquis après remédiation (${remediatedCount} difficulté(s) surmontée(s) sur ${totalCount} emplacement(s) inspecté(s)).`;
+      } else {
+        entry.summary = `Demonstrated across all ${totalCount} inspected location(s).`;
+      }
     } else if (score > 0 && score < 100) {
       entry.status = 'IN_PROGRESS';
       const failing = occurrences.filter((o) => o.status === 'FAIL');

@@ -17,6 +17,7 @@ import { getBrowserSupabase } from '@/lib/supabase';
 import { formatLabOptionLabel } from '@/lib/utils';
 import SmartSlideViewerModal from './SmartSlideViewerModal';
 import { formatSlideCitationLabel } from '@/lib/pdf-cleaner';
+import { reconcileMicroCompetenciesWithProgress } from '@/lib/telemetry-merger';
 import {
   AlertTriangle,
   ArrowRight,
@@ -75,6 +76,7 @@ export default function TeacherLiveSessionsTab({
       location: string;
       status: 'PASS' | 'FAIL';
       note: string;
+      remediated?: boolean;
     }>;
   } | null>(null);
 
@@ -507,7 +509,11 @@ export default function TeacherLiveSessionsTab({
                     </tr>
                   ) : (
                     filteredSessions.map((session) => {
-                      const microState = session.micro_competencies_state || {};
+                      const microState = reconcileMicroCompetenciesWithProgress(
+                        session.micro_competencies_state || {},
+                        session.activities_progress || {},
+                        session.progress_percent || 0
+                      );
                       const isBlocked = session.status === 'BLOCKED';
                       const isCompleted = session.status === 'COMPLETED';
 
@@ -579,6 +585,8 @@ export default function TeacherLiveSessionsTab({
                                 const passCount = entry?.occurrences?.filter((o) => o.status === 'PASS').length ?? 0;
                                 const totalCount = entry?.occurrences?.length ?? 0;
 
+                                const hasRemediation = entry?.occurrences?.some((o) => o.remediated);
+
                                 let badgeStyle = 'bg-slate-800 text-slate-400 border-slate-700';
                                 if (status === 'MASTERED') badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25';
                                 else if (status === 'IN_PROGRESS') badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25';
@@ -597,12 +605,15 @@ export default function TeacherLiveSessionsTab({
                                       })
                                     }
                                     className={`text-[10px] px-2 py-0.5 rounded-md border font-mono transition-colors flex items-center gap-1 ${badgeStyle}`}
-                                    title="Click to view code occurrence drill-down"
+                                    title={hasRemediation ? `${conceptKey}: Acquis (après remédiation) • Cliquez pour inspecter` : 'Click to view code occurrence drill-down'}
                                   >
                                     <span>{conceptKey}</span>
                                     {totalCount > 0 && (
-                                      <span className="font-semibold">
+                                      <span className="font-semibold flex items-center gap-0.5">
                                         ({passCount}/{totalCount})
+                                        {hasRemediation && (
+                                          <Sparkles className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                        )}
                                       </span>
                                     )}
                                   </button>
@@ -676,8 +687,8 @@ export default function TeacherLiveSessionsTab({
       {/* ==================================================================== */}
       {drillDownData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/60">
+          <div className="w-full max-w-xl max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/60 shrink-0">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-400" />
                 <h3 className="font-semibold text-slate-200 text-sm">
@@ -694,12 +705,14 @@ export default function TeacherLiveSessionsTab({
               </Button>
             </div>
 
-            <div className="p-4 space-y-3">
-              <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
+              <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs shrink-0">
                 <span className="text-slate-400">Score & Summary:</span>
-                <span className="font-semibold text-emerald-400">{drillDownData.score}%</span>
+                <span className={`font-semibold ${drillDownData.score === 100 ? 'text-emerald-400' : drillDownData.score > 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+                  {drillDownData.score}%
+                </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed">{drillDownData.summary}</p>
+              <p className="text-xs text-slate-300 leading-relaxed shrink-0">{drillDownData.summary}</p>
 
               <div className="pt-2">
                 <div className="text-[10px] uppercase font-semibold text-slate-400 mb-2">
@@ -723,9 +736,16 @@ export default function TeacherLiveSessionsTab({
                         ) : (
                           <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                         )}
-                        <div className="space-y-0.5">
-                          <div className="font-mono font-semibold text-white">
-                            {occ.location}
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-semibold text-white">
+                              {occ.location}
+                            </span>
+                            {occ.remediated && (
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-sans font-medium">
+                                Acquis (après remédiation)
+                              </span>
+                            )}
                           </div>
                           <div className="text-[11px] opacity-90">{occ.note}</div>
                         </div>

@@ -5,6 +5,7 @@ import { Course, Lab, StudentLabSession } from '@/types/socratix';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatLabOptionLabel } from '@/lib/utils';
+import { reconcileMicroCompetenciesWithProgress } from '@/lib/telemetry-merger';
 import {
   BarChart3,
   Layers,
@@ -126,7 +127,12 @@ export default function TeacherAnalyticsTab({
       let strugglingCount = 0;
 
       for (const s of activeSessions) {
-        const entry = s.micro_competencies_state?.[concept];
+        const state = reconcileMicroCompetenciesWithProgress(
+          s.micro_competencies_state || {},
+          s.activities_progress || {},
+          s.progress_percent || 0
+        );
+        const entry = state?.[concept];
         if (entry && entry.signal_count > 0) {
           scoreSum += entry.score;
           scoredStudents += 1;
@@ -152,7 +158,11 @@ export default function TeacherAnalyticsTab({
     const map = new Map<string, { totalScore: number; count: number; mastered: number; struggling: number }>();
 
     for (const s of activeSessions) {
-      const state = s.micro_competencies_state || {};
+      const state = reconcileMicroCompetenciesWithProgress(
+        s.micro_competencies_state || {},
+        s.activities_progress || {},
+        s.progress_percent || 0
+      );
       for (const [key, entry] of Object.entries(state)) {
         if (entry && entry.signal_count > 0) {
           const prev = map.get(key) || { totalScore: 0, count: 0, mastered: 0, struggling: 0 };

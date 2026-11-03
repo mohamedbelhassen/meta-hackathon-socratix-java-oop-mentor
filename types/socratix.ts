@@ -142,6 +142,7 @@ export interface CompetencyOccurrence {
   status: 'PASS' | 'FAIL';
   last_signal: 'POSITIVE' | 'NEGATIVE';
   note: string;
+  remediated?: boolean;
 }
 
 export interface MicroCompetencyEntry {

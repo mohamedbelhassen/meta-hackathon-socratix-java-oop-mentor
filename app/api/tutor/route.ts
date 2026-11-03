@@ -15,6 +15,7 @@ import {
   computeActivitiesAndLabProgress,
   computeSessionStatus,
   mergeMicroCompetenciesState,
+  reconcileMicroCompetenciesWithProgress,
   RawConceptSignal,
 } from '@/lib/telemetry-merger';
 import { getCachedCourseBundle } from '@/lib/course-cache';
@@ -322,7 +323,7 @@ ${studentInputPrompt}
 
     // Merge multi-occurrence micro-competencies non-destructively
     const incomingSignals: RawConceptSignal[] = parsed.concept_signals || [];
-    const updatedMicroCompetencies = mergeMicroCompetenciesState(
+    let updatedMicroCompetencies = mergeMicroCompetenciesState(
       existingSession?.micro_competencies_state || {},
       incomingSignals
     );
@@ -333,6 +334,13 @@ ${studentInputPrompt}
       lab,
       existingSession?.completed_milestone_ids || [],
       newlyCompleted
+    );
+
+    // Reconcile formative trials with final mastery: if activity or lab is completed, resolve hurdles
+    updatedMicroCompetencies = reconcileMicroCompetenciesWithProgress(
+      updatedMicroCompetencies,
+      progressData.activities_progress,
+      progressData.progress_percent
     );
 
     // Compute deterministic milestone and activity completion flags strictly for THIS turn
