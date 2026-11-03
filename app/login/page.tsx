@@ -40,7 +40,7 @@ export default function LoginPage() {
         }
 
         const baseUrl = getAppBaseUrl();
-        const redirectUrl = `${baseUrl}/auth/callback?next=${role === 'teacher' ? '/teacher' : '/student'}`;
+        const redirectUrl = `${baseUrl}/auth/callback?next=/`;
 
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -74,10 +74,10 @@ export default function LoginPage() {
 
           setMessage({
             type: 'success',
-            text: 'Account created! Redirecting to your dashboard...',
+            text: 'Account created! Redirecting to home...',
           });
           setTimeout(() => {
-            router.push(role === 'teacher' ? '/teacher' : '/student');
+            router.push('/');
           }, 1000);
           return;
         }

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const baseUrl = getAppBaseUrl();
-    const nextPath = role === 'teacher' ? '/teacher' : '/student';
+    const nextPath = '/';
     const redirectTo = `${baseUrl}/auth/callback?next=${nextPath}`;
 
     // 2. Generate Supabase Admin link without triggering Supabase built-in mailer

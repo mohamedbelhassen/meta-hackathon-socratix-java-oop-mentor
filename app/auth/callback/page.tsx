@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { getBrowserSupabase } from '@/lib/supabase';
-import { CheckCircle2, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ArrowRight, Loader2, AlertCircle, Home, School, GraduationCap } from 'lucide-react';
 import type { EmailOtpType } from '@supabase/supabase-js';
 
 export default function AuthCallbackPage() {
@@ -13,7 +13,7 @@ export default function AuthCallbackPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [userName, setUserName] = useState('');
   const [targetRole, setTargetRole] = useState<'teacher' | 'student'>('student');
-  const [redirectPath, setRedirectPath] = useState<string>('/student');
+  const [redirectPath, setRedirectPath] = useState<string>('/');
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
@@ -24,16 +24,8 @@ export default function AuthCallbackPage() {
       accessToken: string,
       customNext?: string | null
     ) => {
-      const role = (user.user_metadata?.role === 'teacher' ? 'teacher' : 'student') as 'teacher' | 'student';
-      const displayName = (user.user_metadata?.display_name as string) || user.email?.split('@')[0] || 'User';
-
-      setUserName(displayName);
-      setTargetRole(role);
-
-      const resolvedPath = customNext || (role === 'teacher' ? '/teacher' : '/student');
-      setRedirectPath(resolvedPath);
-
-      // Auto-sync profile to public.profiles via server API
+      // 1. Auto-sync profile to public.profiles via server API first
+      const defaultName = (user.user_metadata?.display_name as string) || user.email?.split('@')[0] || 'User';
       try {
         await fetch('/api/auth/sync-profile', {
           method: 'POST',
@@ -42,13 +34,29 @@ export default function AuthCallbackPage() {
             Authorization: `Bearer ${accessToken}`,
           },
           body: JSON.stringify({
-            display_name: displayName,
+            display_name: defaultName,
           }),
         });
       } catch (syncErr) {
         console.warn('[Auth Callback] Profile sync warning:', syncErr);
       }
 
+      // 2. Fetch ground-truth profile from DB to accurately reflect teacher vs student role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, display_name')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const resolvedRole = (profile?.role || user.user_metadata?.role || 'student') as 'teacher' | 'student';
+      const resolvedDisplayName = profile?.display_name || defaultName;
+
+      setUserName(resolvedDisplayName);
+      setTargetRole(resolvedRole);
+
+      // 3. User requested home page redirection by default to freely choose their space
+      const destination = customNext && customNext !== '/student' && customNext !== '/teacher' ? customNext : '/';
+      setRedirectPath(destination);
       setStatus('success');
     };
 
@@ -176,28 +184,62 @@ export default function AuthCallbackPage() {
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                Compte Activé • {targetRole === 'teacher' ? 'Enseignant' : 'Étudiant'}
+              <span
+                className={`text-[11px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
+                  targetRole === 'teacher'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                }`}
+              >
+                Compte Activé • {targetRole === 'teacher' ? 'Enseignant / Mentor' : 'Étudiant'}
               </span>
               <h1 className="text-2xl font-extrabold text-white">Bienvenue sur Socratix 🦉</h1>
               <p className="text-sm text-slate-300">
                 Votre adresse email a été confirmée avec succès,{' '}
-                <strong className="text-emerald-400">{userName}</strong>.
+                <strong className={targetRole === 'teacher' ? 'text-amber-400' : 'text-emerald-400'}>{userName}</strong>.
               </p>
             </div>
 
             <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-slate-400">
-              Redirection automatique vers votre espace dans{' '}
+              Redirection automatique vers l&apos;accueil dans{' '}
               <span className="font-bold text-emerald-400">{countdown}s</span>...
             </div>
 
-            <Link
-              href={redirectPath}
-              className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-950/50"
-            >
-              <span>{targetRole === 'teacher' ? 'Ouvrir le Teacher ERP Hub' : 'Ouvrir le Workspace'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <div className="space-y-2 pt-1">
+              <Link
+                href="/"
+                className="inline-flex w-full items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-500 transition shadow-lg shadow-emerald-950/50"
+              >
+                <Home className="w-4 h-4" />
+                <span>Accéder à la page d&apos;accueil</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <Link
+                  href="/teacher"
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                    targetRole === 'teacher'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  <School className="w-3.5 h-3.5" />
+                  <span>Teacher Hub</span>
+                </Link>
+                <Link
+                  href="/student"
+                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-xs font-semibold border transition ${
+                    targetRole === 'student'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                      : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                  }`}
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Student Workspace</span>
+                </Link>
+              </div>
+            </div>
           </div>
         )}
 
