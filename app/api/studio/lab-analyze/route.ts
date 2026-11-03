@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { courseId, labNumber, code, title, description, pdfUrl, pages } = body;
+    const { courseId, labNumber, code, title, description, pdfUrl, pages, cleanExistingSessions } = body;
 
     if (!courseId || !labNumber || !code || !title || !pages || !Array.isArray(pages)) {
       return NextResponse.json({ error: 'Missing required parameters for lab analysis.' }, { status: 400 });
@@ -493,12 +493,30 @@ ${pagesTextSample}`;
 
     if (saveError) throw saveError;
 
+    // Cleanly purge obsolete student lab sessions for this lab if requested
+    let purgedSessionsCount = 0;
+    if (cleanExistingSessions && savedLab?.id) {
+      const { data: deletedSessions, error: purgeError } = await supabase
+        .from('student_lab_sessions')
+        .delete()
+        .eq('lab_id', savedLab.id)
+        .select('id');
+
+      if (purgeError) {
+        console.warn(`[Lab Analyze] Failed to purge student sessions for lab ${savedLab.id}:`, purgeError);
+      } else {
+        purgedSessionsCount = deletedSessions?.length || 0;
+        console.log(`[Lab Analyze] Cleanly purged ${purgedSessionsCount} obsolete student sessions for lab ${savedLab.id}`);
+      }
+    }
+
     // Invalidate course bundle cache (PERF-07)
     invalidateCourseCache(courseId, savedLab?.id);
 
     return NextResponse.json({
       success: true,
       lab: savedLab,
+      purgedSessionsCount,
     });
   } catch (err: unknown) {
     console.error('[Lab Analyze Error]:', err);

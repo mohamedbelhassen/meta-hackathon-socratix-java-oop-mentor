@@ -4,6 +4,8 @@ import React, { useState, useRef } from 'react';
 import { Course, CourseChapter, Lab } from '@/types/socratix';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { getBrowserSupabase } from '@/lib/supabase';
 import {
   extractPdfPagesFromUrl,
   extractPdfPagesInBrowser,
@@ -27,6 +29,7 @@ import {
   Plus,
   Lock,
   AlertTriangle,
+  ShieldAlert,
   Clock,
   RotateCcw,
   Trash2,
@@ -177,6 +180,14 @@ export default function CourseStudioPanel({
   // Studio UI language toggle & chapter re-distillation toggle
   const [lang, setLang] = useState<'en' | 'fr'>('en');
   const [forceRedistillChapters, setForceRedistillChapters] = useState(false);
+
+  // Targeted re-analyze & danger zone purge modals
+  const [targetedLabToReanalyze, setTargetedLabToReanalyze] = useState<Lab | null>(null);
+  const [targetedLabSessionCount, setTargetedLabSessionCount] = useState<number>(0);
+  const [isQueryingTargetedLab, setIsQueryingTargetedLab] = useState(false);
+  const [showGlobalReanalyzeModal, setShowGlobalReanalyzeModal] = useState(false);
+  const [globalReanalyzeSessionCount, setGlobalReanalyzeSessionCount] = useState<number>(0);
+  const [purgeConfirmInput, setPurgeConfirmInput] = useState('');
 
   // Smooth scroll reference to keep active progress banners in view on laptops/desktops
   const progressBannerRef = useRef<HTMLDivElement>(null);
@@ -834,6 +845,107 @@ export default function CourseStudioPanel({
   };
 
   // --------------------------------------------------------------------------
+  // TARGETED RE-ANALYZE FOR A SINGLE LAB (WITH STUDENT SESSIONS PURGE GUARD)
+  // --------------------------------------------------------------------------
+  const handleRequestTargetedLabReanalyze = async (lb: Lab) => {
+    setIsQueryingTargetedLab(true);
+    try {
+      const supabase = getBrowserSupabase();
+      const { count } = await supabase
+        .from('student_lab_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('lab_id', lb.id);
+
+      setTargetedLabSessionCount(count || 0);
+      setTargetedLabToReanalyze(lb);
+    } catch (err) {
+      console.error('Failed to query session count:', err);
+      setTargetedLabSessionCount(0);
+      setTargetedLabToReanalyze(lb);
+    } finally {
+      setIsQueryingTargetedLab(false);
+    }
+  };
+
+  const handleConfirmTargetedLabReanalyze = async () => {
+    if (!targetedLabToReanalyze || !targetedLabToReanalyze.pdf_url || !course) return;
+
+    const lb = targetedLabToReanalyze;
+    if (!lb.pdf_url) return;
+    const sessionCount = targetedLabSessionCount;
+    setTargetedLabToReanalyze(null);
+
+    setIsProcessing(true);
+    setStatusMessage(null);
+
+    setCurrentProgress({
+      stage: 'Re-analyzing Labs',
+      current: 1,
+      total: 1,
+      filename: `TP ${lb.lab_number} (${lb.code})`,
+    });
+
+    try {
+      const pages = await extractPdfPagesFromUrl(lb.pdf_url);
+
+      const res = await fetch('/api/studio/lab-analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: course.id,
+          labNumber: lb.lab_number,
+          code: lb.code,
+          title: lb.title,
+          pdfUrl: lb.pdf_url,
+          pages,
+          cleanExistingSessions: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || `Failed to re-analyze TP ${lb.lab_number}`);
+      }
+
+      await onCourseUpdated();
+      setStatusMessage({
+        type: 'success',
+        text: `TP ${lb.code || `TP ${lb.lab_number}`} successfully re-analyzed with Meta AI. ${sessionCount} obsolete student session(s) cleanly purged.`,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Re-analyzing lab failed';
+      setStatusMessage({ type: 'error', text: msg });
+    } finally {
+      setIsProcessing(false);
+      setCurrentProgress(null);
+    }
+  };
+
+  const handleOpenGlobalReanalyzeModal = async () => {
+    if (!course) return;
+    try {
+      const supabase = getBrowserSupabase();
+      const { count } = await supabase
+        .from('student_lab_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('course_id', course.id);
+
+      setGlobalReanalyzeSessionCount(count || 0);
+    } catch (err) {
+      console.error('Failed to query global session count:', err);
+      setGlobalReanalyzeSessionCount(0);
+    }
+    setPurgeConfirmInput('');
+    setShowGlobalReanalyzeModal(true);
+  };
+
+  const handleConfirmGlobalReanalyze = async () => {
+    if (purgeConfirmInput.trim().toUpperCase() !== 'PURGE') return;
+    setShowGlobalReanalyzeModal(false);
+    await handleReanalyzeAllLabs();
+  };
+
+  // --------------------------------------------------------------------------
   // RE-ANALYZE ALL LABS DIRECTLY FROM SUPABASE STORAGE (1-CLICK FOR JUDGES)
   // --------------------------------------------------------------------------
   const handleReanalyzeAllLabs = async () => {
@@ -870,6 +982,7 @@ export default function CourseStudioPanel({
             title: lb.title,
             pdfUrl: lb.pdf_url,
             pages,
+            cleanExistingSessions: true,
           }),
         });
 
@@ -883,7 +996,7 @@ export default function CourseStudioPanel({
       setShowLabsIngestionModal(true);
       setStatusMessage({
         type: 'success',
-        text: `All ${sortedLabs.length} lab(s) successfully re-analyzed with full PDF text, 100% bilingual EN/FR activities and demo presets!`,
+        text: `All ${sortedLabs.length} lab(s) successfully re-analyzed with Meta AI. Obsolete student sessions across the course were cleanly purged!`,
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Re-analyzing labs failed';
@@ -2236,6 +2349,16 @@ export default function CourseStudioPanel({
                         <Eye className="w-3 h-3" />
                         <span>Inspect</span>
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRequestTargetedLabReanalyze(lb)}
+                        disabled={isProcessing || isQueryingTargetedLab}
+                        className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 bg-amber-950/30 border border-amber-500/30 px-2 py-0.5 rounded-md hover:bg-amber-900/40 transition font-medium disabled:opacity-50"
+                        title="Re-analyze this TP with Meta AI (destructive confirmation required)"
+                      >
+                        <Zap className="w-3 h-3 text-amber-400" />
+                        <span>Re-analyze</span>
+                      </button>
                       <span className="text-[10px] text-slate-500">
                         {lb.activities?.length || 0} act.
                       </span>
@@ -2264,38 +2387,17 @@ export default function CourseStudioPanel({
             )}
           </div>
 
-          {/* RE-ANALYZE / VIEW LABS DECOMPOSITION BUTTONS */}
+          {/* VIEW LABS DECOMPOSITION BRIEFING */}
           <div className="pt-3 border-t border-slate-800 space-y-2">
             {labs.length > 0 ? (
-              <div className="space-y-2">
-                <Button
-                  onClick={() => setShowLabsIngestionModal(true)}
-                  disabled={isProcessing}
-                  className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
-                >
-                  <Layers className="w-3.5 h-3.5 text-cyan-200" />
-                  <span>View TP Decomposition &amp; Presets Briefing ({labs.length} TP)</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={handleReanalyzeAllLabs}
-                  disabled={isProcessing || !hasTaxonomy}
-                  className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
-                >
-                  {isReanalyzingLabs && currentProgress ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
-                      <span>Re-analyzing Labs with Meta AI ({currentProgress.current}/{currentProgress.total})...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-3 h-3 text-cyan-400" />
-                      <span>⚡ Re-analyze All Labs with Meta AI</span>
-                    </>
-                  )}
-                </Button>
-              </div>
+              <Button
+                onClick={() => setShowLabsIngestionModal(true)}
+                disabled={isProcessing}
+                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                <Layers className="w-3.5 h-3.5 text-cyan-200" />
+                <span>View TP Decomposition &amp; Presets Briefing ({labs.length} TP)</span>
+              </Button>
             ) : (
               <Button
                 disabled
@@ -2308,20 +2410,63 @@ export default function CourseStudioPanel({
 
             <div className="text-[10px] text-slate-400 flex items-center justify-between">
               <span>Automatic natural sorting: TP1, TP2, ...</span>
-              <span className="text-cyan-400 font-mono">1-Click Remote PDF Re-analysis</span>
+              <span className="text-slate-500">Targeted re-analysis available per TP</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* DANGER ZONE (SUGGESTION A) */}
-      {onDeleteCourse && (
-        <div className="bg-slate-900/60 border border-rose-900/40 rounded-2xl p-5 space-y-3 shadow-lg">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-slate-900/60 border border-rose-900/40 rounded-2xl p-5 space-y-4 shadow-lg">
+        <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider border-b border-rose-950/80 pb-2">
+          <AlertTriangle className="w-4 h-4 text-rose-400" />
+          <span>Danger Zone &bull; Destructive Actions</span>
+        </div>
+
+        {/* Action 1: Re-analyze all labs with purge */}
+        {labs.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-slate-800/80 pb-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Danger Zone</span>
+              <div className="flex items-center gap-2 font-semibold text-xs text-rose-300">
+                <Zap className="w-3.5 h-3.5 text-rose-400" />
+                <span>Re-analyze All Labs with Meta AI (Bulk Purge)</span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Regenerate all activities, milestones and presets across all {labs.length} TP.
+              </p>
+              <p className="text-[11px] text-rose-400/90 font-medium">
+                ⚠️ All active student lab sessions across the entire course will be permanently wiped. Protected by confirmation keyword (&ldquo;PURGE&rdquo;).
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenGlobalReanalyzeModal}
+              disabled={isProcessing}
+              className="bg-rose-950/40 border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 hover:border-rose-600 text-xs font-semibold h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
+            >
+              {isReanalyzingLabs && currentProgress ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                  <span>Re-analyzing ({currentProgress.current}/{currentProgress.total})...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5 text-rose-300" />
+                  <span>Re-analyze All Labs</span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* Action 2: Delete Course */}
+        {onDeleteCourse && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 font-semibold text-xs text-rose-300">
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                <span>Permanently Delete this Course</span>
               </div>
               <p className="text-xs text-slate-300">
                 Permanently delete <span className="font-semibold text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
@@ -2348,8 +2493,8 @@ export default function CourseStudioPanel({
               <span>Delete this Course</span>
             </Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* PROPOSITION 1: LIVE AI PRE-FLIGHT TELEMETRY MODAL */}
       {isPreflighting && (
@@ -2517,7 +2662,146 @@ export default function CourseStudioPanel({
           onClose={() => setSelectedLabForInspection(null)}
           lab={selectedLabForInspection}
           initialLang={lang}
+          onReanalyzeLab={(lb) => {
+            setSelectedLabForInspection(null);
+            handleRequestTargetedLabReanalyze(lb);
+          }}
         />
+      )}
+
+      {/* TARGETED LAB RE-ANALYZE CONFIRMATION MODAL */}
+      {targetedLabToReanalyze && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
+                <ShieldAlert className="w-5 h-5" />
+                <span>Confirmer la Ré-analyse Ciblée du {targetedLabToReanalyze.code || `TP ${targetedLabToReanalyze.lab_number}`}</span>
+              </div>
+              <button
+                onClick={() => setTargetedLabToReanalyze(null)}
+                className="text-slate-400 hover:text-white p-1 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-slate-300 leading-relaxed">
+              <p>
+                Vous allez relancer l&apos;extraction et la décomposition Meta AI (muse-spark-1.3) pour le sujet :
+                <strong className="block text-white mt-1 text-sm">{targetedLabToReanalyze.title}</strong>
+              </p>
+
+              <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-xl space-y-2 text-rose-200">
+                <div className="flex items-center gap-2 font-semibold text-rose-300 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>Impact sur les sessions étudiantes :</span>
+                </div>
+                <p>
+                  Les activités, jalons et presets de ce TP seront <strong>régénérés à neuf</strong>.
+                </p>
+                <p className="font-semibold text-rose-100">
+                  💥 Pour éviter toute incohérence de jalons, les <span className="underline font-bold text-white text-sm">{targetedLabSessionCount} session(s) étudiante(s)</span> actuellement enregistrées sur ce TP seront DÉFINITIVEMENT PURGÉES.
+                </p>
+                <p className="text-[11px] text-rose-300/80">
+                  Les étudiants qui ont commencé ou terminé ce TP devront le reprendre à zéro sur la nouvelle version. Les autres TP du cours restent intacts.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-2.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setTargetedLabToReanalyze(null)}
+                className="text-slate-400 hover:text-white text-xs"
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleConfirmTargetedLabReanalyze}
+                className="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold gap-1.5 shadow-md"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Purger {targetedLabSessionCount} session(s) &amp; Ré-analyser</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GLOBAL RE-ANALYZE DANGER ZONE MODAL */}
+      {showGlobalReanalyzeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-lg bg-slate-950 border border-rose-600/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-rose-900/60 bg-rose-950/40 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
+                <ShieldAlert className="w-5 h-5 text-rose-400 animate-pulse" />
+                <span>DANGER ZONE : Ré-analyse Globale de Tous les TP</span>
+              </div>
+              <button
+                onClick={() => setShowGlobalReanalyzeModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs text-slate-300 leading-relaxed">
+              <p>
+                Cette action va ré-analyser l&apos;intégralité des <strong className="text-white">{labs.length} TP</strong> du cours <strong className="text-white font-mono">{course.code}</strong> via Meta AI.
+              </p>
+
+              <div className="p-3.5 bg-rose-950/60 border border-rose-600/60 rounded-xl space-y-2 text-rose-200">
+                <div className="flex items-center gap-2 font-bold text-rose-300 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>DESTRUCTION MASSIVE DES SESSIONS ÉTUDIANTES :</span>
+                </div>
+                <p>
+                  Toutes les activités, jalons et presets de tous les TP seront écrasés par une nouvelle inférence.
+                </p>
+                <p className="font-semibold text-rose-100">
+                  💥 L&apos;ensemble des <span className="underline font-bold text-white text-sm">{globalReanalyzeSessionCount} session(s) étudiante(s)</span> du cours entier (tous TP confondus) seront IRRÉMÉDIABLEMENT DÉTRUITES.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 pt-2">
+                <label className="text-[11px] font-semibold text-slate-300">
+                  Pour confirmer cette purge totale et lancer la ré-analyse, tapez <span className="font-mono font-bold text-rose-400">&ldquo;PURGE&rdquo;</span> ci-dessous :
+                </label>
+                <Input
+                  type="text"
+                  value={purgeConfirmInput}
+                  onChange={(e) => setPurgeConfirmInput(e.target.value)}
+                  placeholder="Tapez PURGE pour confirmer"
+                  className="font-mono text-center tracking-widest text-rose-300 bg-slate-900 border-rose-500/50 focus:border-rose-400 text-xs h-9 uppercase"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-end gap-2.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowGlobalReanalyzeModal(false)}
+                className="text-slate-400 hover:text-white text-xs"
+              >
+                Annuler
+              </Button>
+              <Button
+                size="sm"
+                disabled={purgeConfirmInput.trim().toUpperCase() !== 'PURGE' || isProcessing}
+                onClick={handleConfirmGlobalReanalyze}
+                className="bg-rose-600 hover:bg-rose-500 disabled:opacity-30 disabled:cursor-not-allowed text-white text-xs font-semibold gap-1.5 shadow-md"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Purger {globalReanalyzeSessionCount} session(s) &amp; Ré-analyser Tout</span>
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -16,6 +16,7 @@ import {
   Sparkles,
   Bookmark,
   FileText,
+  Zap,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface LabDetailModalProps {
   onClose: () => void;
   lab: Lab | null;
   initialLang?: 'en' | 'fr';
+  onReanalyzeLab?: (lab: Lab) => void;
 }
 
 export default function LabDetailModal({
@@ -38,6 +40,7 @@ export default function LabDetailModal({
   onClose,
   lab,
   initialLang = 'en',
+  onReanalyzeLab,
 }: LabDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'activities' | 'concepts' | 'presets' | 'raw_text'>('activities');
   const [selectedPresetIdx, setSelectedPresetIdx] = useState(0);
@@ -208,13 +211,27 @@ export default function LabDetailModal({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            title={i18n.closeTooltip}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onReanalyzeLab && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onReanalyzeLab(lab)}
+                className="bg-amber-950/30 border-amber-500/40 text-amber-300 hover:text-white hover:bg-amber-600 hover:border-amber-600 text-xs font-semibold h-8 px-3 gap-1.5 transition"
+                title="Re-analyze this TP with Meta AI (destructive confirmation required)"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Re-analyze TP</span>
+              </Button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              title={i18n.closeTooltip}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* NAVIGATION TABS */}
