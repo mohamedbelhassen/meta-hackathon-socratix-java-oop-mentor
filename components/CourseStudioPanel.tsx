@@ -1148,17 +1148,17 @@ export default function CourseStudioPanel({
                 <button
                   onClick={() => setLang('en')}
                   className={`px-1.5 py-0.5 rounded transition ${
-                    lang === 'en' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    lang === 'en' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                   }`}
                   title="Display in English for International Jury"
                 >
                   EN
                 </button>
-                <span className="text-slate-600">|</span>
+                <span className="text-slate-400 dark:text-slate-600">|</span>
                 <button
                   onClick={() => setLang('fr')}
                   className={`px-1.5 py-0.5 rounded transition ${
-                    lang === 'fr' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    lang === 'fr' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
                   }`}
                   title="Afficher en Français"
                 >
@@ -1166,10 +1166,10 @@ export default function CourseStudioPanel({
                 </button>
               </div>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Languages: <span className="text-slate-200 uppercase font-mono">{course.content_language}</span> (Slides) ➔{' '}
-              <span className="text-slate-200 uppercase font-mono">{course.tutor_language}</span> (Tutor) • Extensions:{' '}
-              <span className="text-slate-200 font-mono">{course.file_extensions?.join(', ')}</span>
+            <p className="text-xs text-slate-700 dark:text-slate-400 mt-0.5">
+              Languages: <span className="text-slate-900 dark:text-slate-200 uppercase font-bold font-mono">{course.content_language}</span> (Slides) ➔{' '}
+              <span className="text-slate-900 dark:text-slate-200 uppercase font-bold font-mono">{course.tutor_language}</span> (Tutor) • Extensions:{' '}
+              <span className="text-slate-900 dark:text-slate-200 font-bold font-mono">{course.file_extensions?.join(', ')}</span>
             </p>
           </div>
 
@@ -1179,10 +1179,10 @@ export default function CourseStudioPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowCompilationModal(true)}
-                className="text-xs h-8 bg-emerald-950/40 border-emerald-500/40 text-emerald-300 hover:text-white"
+                className="text-xs h-8 bg-emerald-100 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:text-white font-semibold"
                 title="View Curriculum Taxonomy & AI Mentor Prompt"
               >
-                <Sparkles className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                <Sparkles className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
                 Curriculum Synthesis 🧠
               </Button>
             )}
@@ -1191,10 +1191,10 @@ export default function CourseStudioPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowLabsIngestionModal(true)}
-                className="text-xs h-8 bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:text-white"
+                className="text-xs h-8 bg-cyan-100 dark:bg-cyan-950/40 border-cyan-300 dark:border-cyan-500/40 text-cyan-800 dark:text-cyan-300 hover:bg-cyan-200 dark:hover:text-white font-semibold"
                 title="View Decomposed Labs, Milestones, and Demo Presets"
               >
-                <Layers className="w-3.5 h-3.5 mr-1 text-cyan-400" />
+                <Layers className="w-3.5 h-3.5 mr-1 text-cyan-600 dark:text-cyan-400" />
                 Labs Briefing 📋
               </Button>
             )}
@@ -1203,9 +1203,9 @@ export default function CourseStudioPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => setInspectingPrompt(!inspectingPrompt)}
-                className="text-xs h-8 bg-slate-950 border-slate-800 text-slate-300 hover:text-white"
+                className="text-xs h-8 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white font-semibold shadow-sm"
               >
-                <Code2 className="w-3.5 h-3.5 mr-1 text-emerald-400" />
+                <Code2 className="w-3.5 h-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
                 {inspectingPrompt ? 'Hide Prompt' : 'View Mentor Prompt'}
               </Button>
             )}
@@ -1214,9 +1214,9 @@ export default function CourseStudioPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => setInspectingKB(!inspectingKB)}
-                className="text-xs h-8 bg-slate-950 border-slate-800 text-slate-300 hover:text-white"
+                className="text-xs h-8 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white font-semibold shadow-sm"
               >
-                <FileText className="w-3.5 h-3.5 mr-1 text-cyan-400" />
+                <FileText className="w-3.5 h-3.5 mr-1 text-cyan-600 dark:text-cyan-400" />
                 {inspectingKB ? 'Hide KB' : 'View Compiled KB'}
               </Button>
             )}
@@ -1225,7 +1225,7 @@ export default function CourseStudioPanel({
                 variant="outline"
                 size="sm"
                 onClick={onDeleteCourse}
-                className="text-xs h-8 bg-rose-950/20 border-rose-500/30 text-rose-400 hover:text-rose-200 hover:bg-rose-950/50 hover:border-rose-500/60 transition gap-1"
+                className="text-xs h-8 bg-rose-100 dark:bg-rose-950/20 border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-400 hover:bg-rose-200 dark:hover:text-rose-200 font-semibold transition gap-1"
                 title={`Delete course ${course.code} (Protected by Jury PIN 2026)`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -1236,23 +1236,23 @@ export default function CourseStudioPanel({
         </div>
 
         {/* PROGRESS STEPPER */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-800 text-xs">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 font-medium">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span>1. Course Config</span>
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-medium ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
               chapters.length > 0
-                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                : 'bg-slate-950 border-slate-800 text-slate-400'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
             }`}
           >
             {chapters.length > 0 ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[10px]">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
                 2
               </div>
             )}
@@ -1260,16 +1260,16 @@ export default function CourseStudioPanel({
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-medium ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
               hasTaxonomy && hasCompiledPrompt
-                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                : 'bg-slate-950 border-slate-800 text-slate-400'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
             }`}
           >
             {hasTaxonomy ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[10px]">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
                 3
               </div>
             )}
@@ -1277,16 +1277,16 @@ export default function CourseStudioPanel({
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-medium ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
               labs.length > 0
-                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-300'
-                : 'bg-slate-950 border-slate-800 text-slate-400'
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
             }`}
           >
             {labs.length > 0 ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-600 flex items-center justify-center text-[10px]">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
                 4
               </div>
             )}
@@ -2015,13 +2015,13 @@ export default function CourseStudioPanel({
                 </Badge>
               </div>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Drag & drop your official chapter slide decks (e.g. from <code className="text-slate-300 font-mono">_dev/java_course/course_chapters/</code>).
+            <p className="text-xs text-slate-700 dark:text-slate-400 leading-relaxed">
+              Drag & drop your official chapter slide decks (e.g. from <code className="text-slate-800 dark:text-slate-300 font-bold font-mono">_dev/java_course/course_chapters/</code>).
               Extracted client-side with exact slide anchoring.
             </p>
 
             {/* BATCH CHAPTERS INPUT */}
-            <div className="relative border-2 border-dashed border-slate-800 hover:border-emerald-500/50 rounded-xl p-4 text-center cursor-pointer transition bg-slate-950/40">
+            <div className="relative border-2 border-dashed border-slate-300 dark:border-slate-800 hover:border-emerald-500 rounded-xl p-4 text-center cursor-pointer transition bg-slate-50 dark:bg-slate-950/40">
               <input
                 type="file"
                 multiple
@@ -2030,11 +2030,11 @@ export default function CourseStudioPanel({
                 onChange={handleBatchChaptersUpload}
                 className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
-              <Upload className="w-5 h-5 text-emerald-400 mx-auto mb-1.5" />
-              <p className="text-xs font-semibold text-slate-200">
+              <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto mb-1.5" />
+              <p className="text-xs font-bold text-slate-900 dark:text-slate-200">
                 {isUploadingChapters ? 'Processing...' : 'Upload Chapter PDFs (Batch Supported)'}
               </p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Select ch1..ch6 all at once</p>
+              <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5">Select ch1..ch6 all at once</p>
             </div>
 
             {/* LIST OF CURRENT CHAPTERS */}
@@ -2045,7 +2045,7 @@ export default function CourseStudioPanel({
                   .map((ch, idx, arr) => (
                     <div
                       key={ch.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs hover:border-slate-800 transition"
+                      className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-xs hover:border-slate-300 dark:hover:border-slate-800 transition"
                     >
                       <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                         {/* Reorder Buttons */}
@@ -2054,7 +2054,7 @@ export default function CourseStudioPanel({
                             type="button"
                             disabled={isProcessing || idx === 0}
                             onClick={() => handleMoveExistingChapter(ch.id, 'up')}
-                            className="p-0.5 text-slate-500 hover:text-emerald-400 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                            className="p-0.5 text-slate-500 hover:text-emerald-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
                             title="Move chapter up"
                           >
                             <ArrowUp className="w-3 h-3" />
@@ -2063,17 +2063,17 @@ export default function CourseStudioPanel({
                             type="button"
                             disabled={isProcessing || idx === arr.length - 1}
                             onClick={() => handleMoveExistingChapter(ch.id, 'down')}
-                            className="p-0.5 text-slate-500 hover:text-emerald-400 disabled:opacity-20 disabled:hover:text-slate-500 transition"
+                            className="p-0.5 text-slate-500 hover:text-emerald-500 disabled:opacity-20 disabled:hover:text-slate-500 transition"
                             title="Move chapter down"
                           >
                             <ArrowDown className="w-3 h-3" />
                           </button>
                         </div>
 
-                        <span className="font-mono text-[10px] text-emerald-400 shrink-0 font-bold">
+                        <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 shrink-0 font-bold">
                           Ch.{ch.chapter_number}
                         </span>
-                        <span className="text-slate-200 truncate font-medium">
+                        <span className="text-slate-900 dark:text-slate-200 truncate font-semibold">
                           {getLocalizedChapterTitle(ch, lang)}
                         </span>
                       </div>
@@ -2084,7 +2084,7 @@ export default function CourseStudioPanel({
                             href={ch.pdf_url}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[10px] text-cyan-400 hover:underline px-1 py-0.5"
+                            className="text-[10px] text-cyan-700 dark:text-cyan-400 font-semibold hover:underline px-1 py-0.5"
                           >
                             PDF ↗
                           </a>
@@ -2093,7 +2093,7 @@ export default function CourseStudioPanel({
                           type="button"
                           disabled={isProcessing}
                           onClick={() => handleDeleteChapter(ch.id, getLocalizedChapterTitle(ch, lang))}
-                          className="p-1 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded transition"
+                          className="p-1 text-slate-500 hover:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/30 rounded transition"
                           title="Delete chapter from course"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -2265,14 +2265,14 @@ export default function CourseStudioPanel({
                 </Button>
               </div>
             ) : (
-              <div className="p-2.5 bg-emerald-950/30 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-300">
+              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span className="font-medium text-[11px]">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="font-semibold text-[11px]">
                     Knowledge Base &amp; Taxonomy compiled. Ready for Lab PDFs!
                   </span>
                 </div>
-                <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-400 font-mono">
+                <Badge variant="outline" className="text-[9px] border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 font-semibold font-mono">
                   Step 3 Ready
                 </Badge>
               </div>
@@ -2282,8 +2282,8 @@ export default function CourseStudioPanel({
             <div
               className={`relative border-2 border-dashed rounded-xl p-4 text-center transition ${
                 !hasTaxonomy
-                  ? 'border-slate-800 bg-slate-950/30 opacity-70 cursor-not-allowed'
-                  : 'border-slate-850 hover:border-cyan-500/50 bg-slate-950/40 cursor-pointer'
+                  ? 'border-slate-300 dark:border-slate-800 bg-slate-100 dark:bg-slate-950/30 opacity-70 cursor-not-allowed'
+                  : 'border-slate-300 dark:border-slate-850 hover:border-cyan-500 bg-slate-50 dark:bg-slate-950/40 cursor-pointer'
               }`}
             >
               <input
@@ -2296,21 +2296,21 @@ export default function CourseStudioPanel({
               />
               {!hasTaxonomy ? (
                 <>
-                  <Lock className="w-5 h-5 text-amber-400/80 mx-auto mb-1.5" />
-                  <p className="text-xs font-semibold text-slate-300">
+                  <Lock className="w-5 h-5 text-amber-500 dark:text-amber-400/80 mx-auto mb-1.5" />
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-300">
                     Upload Locked &mdash; Compile Course First
                   </p>
-                  <p className="text-[10px] text-amber-400/80 mt-0.5">
+                  <p className="text-[10px] text-amber-700 dark:text-amber-400/80 mt-0.5 font-medium">
                     Click &ldquo;Compile Knowledge Base &amp; Prompt&rdquo; above to unlock lab ingestion
                   </p>
                 </>
               ) : (
                 <>
-                  <Upload className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
-                  <p className="text-xs font-semibold text-slate-200">
+                  <Upload className="w-5 h-5 text-cyan-600 dark:text-cyan-400 mx-auto mb-1.5" />
+                  <p className="text-xs font-bold text-slate-900 dark:text-slate-200">
                     {isUploadingLabs ? 'Processing...' : 'Upload Lab PDFs (batch supported)'}
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Select one or multiple TP files at once</p>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5 font-medium">Select one or multiple TP files at once</p>
                 </>
               )}
             </div>
@@ -2321,7 +2321,7 @@ export default function CourseStudioPanel({
                 {[...labs].sort((a, b) => a.lab_number - b.lab_number).map((lb, idx, arr) => (
                   <div
                     key={lb.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-850 text-xs hover:border-slate-750 transition"
+                    className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 text-xs hover:border-slate-300 dark:hover:border-slate-750 transition"
                   >
                     <div className="flex items-center gap-2 truncate">
                       {/* Reorder Buttons */}
@@ -2330,7 +2330,7 @@ export default function CourseStudioPanel({
                           type="button"
                           disabled={idx === 0}
                           onClick={() => handleMoveExistingLab(lb.id, 'up')}
-                          className="text-slate-500 hover:text-cyan-400 disabled:opacity-20 transition"
+                          className="text-slate-500 hover:text-cyan-500 disabled:opacity-20 transition"
                           title="Move lab up"
                         >
                           <ArrowUp className="w-2.5 h-2.5" />
@@ -2339,19 +2339,19 @@ export default function CourseStudioPanel({
                           type="button"
                           disabled={idx === arr.length - 1}
                           onClick={() => handleMoveExistingLab(lb.id, 'down')}
-                          className="text-slate-500 hover:text-cyan-400 disabled:opacity-20 transition"
+                          className="text-slate-500 hover:text-cyan-500 disabled:opacity-20 transition"
                           title="Move lab down"
                         >
                           <ArrowDown className="w-2.5 h-2.5" />
                         </button>
                       </div>
-                      <span className="font-mono text-[10px] text-cyan-400 font-semibold">{lb.code || `TP ${lb.lab_number}`}</span>
-                      <span className="text-slate-200 truncate">{getLocalizedLabTitle(lb, lang)}</span>
+                      <span className="font-mono text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">{lb.code || `TP ${lb.lab_number}`}</span>
+                      <span className="text-slate-900 dark:text-slate-200 truncate font-semibold">{getLocalizedLabTitle(lb, lang)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       <button
                         onClick={() => setSelectedLabForInspection(lb)}
-                        className="inline-flex items-center gap-1 text-[10px] text-cyan-400 hover:text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded-md hover:bg-cyan-900/40 transition font-medium"
+                        className="inline-flex items-center gap-1 text-[10px] text-cyan-800 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-500/30 px-2 py-0.5 rounded-md hover:bg-cyan-200 dark:hover:bg-cyan-900/40 transition font-semibold"
                         title="Inspect activities, milestones and presets"
                       >
                         <Eye className="w-3 h-3" />
@@ -2437,24 +2437,25 @@ export default function CourseStudioPanel({
       </div>
 
       {/* DANGER ZONE (SUGGESTION A) */}
-      <div className="bg-slate-900/60 border border-rose-900/40 rounded-2xl p-5 space-y-4 shadow-lg">
-        <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs uppercase tracking-wider border-b border-rose-950/80 pb-2">
-          <AlertTriangle className="w-4 h-4 text-rose-400" />
+      {/* 4. DANGER ZONE */}
+      <div className="bg-rose-50/90 dark:bg-slate-900/60 border-2 border-rose-300 dark:border-rose-900/60 rounded-2xl p-5 space-y-4 shadow-md">
+        <div className="flex items-center gap-2 text-rose-800 dark:text-rose-400 font-bold text-xs uppercase tracking-wider border-b border-rose-200 dark:border-rose-950/80 pb-2.5">
+          <AlertTriangle className="w-4 h-4 text-rose-700 dark:text-rose-400" />
           <span>Danger Zone &bull; Destructive Actions</span>
         </div>
 
         {/* Action 1: Re-analyze all labs with purge */}
         {labs.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-slate-800/80 pb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-b border-rose-200 dark:border-slate-800/80 pb-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 font-semibold text-xs text-rose-300">
-                <Zap className="w-3.5 h-3.5 text-rose-400" />
+              <div className="flex items-center gap-2 font-bold text-xs text-rose-900 dark:text-rose-300">
+                <Zap className="w-3.5 h-3.5 text-rose-700 dark:text-rose-400" />
                 <span>Re-analyze All Labs with Meta AI (Bulk Purge)</span>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="text-xs text-slate-700 dark:text-slate-300">
                 Regenerate all activities, milestones and presets across all {labs.length} TP.
               </p>
-              <p className="text-[11px] text-rose-400/90 font-medium">
+              <p className="text-[11px] text-rose-800 dark:text-rose-400 font-semibold">
                 ⚠️ All active student lab sessions across the entire course will be permanently wiped. Protected by confirmation keyword (&ldquo;PURGE&rdquo;).
               </p>
             </div>
@@ -2463,16 +2464,16 @@ export default function CourseStudioPanel({
               size="sm"
               onClick={handleOpenGlobalReanalyzeModal}
               disabled={isProcessing}
-              className="bg-rose-950/40 border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 hover:border-rose-600 text-xs font-semibold h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
             >
               {isReanalyzingAllLabs && currentProgress ? (
                 <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-rose-400" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                   <span>Re-analyzing ({currentProgress.current}/{currentProgress.total})...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="w-3.5 h-3.5 text-rose-300" />
+                  <Zap className="w-3.5 h-3.5 text-white" />
                   <span>Re-analyze All Labs</span>
                 </>
               )}
@@ -2484,17 +2485,17 @@ export default function CourseStudioPanel({
         {onDeleteCourse && (
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
             <div className="space-y-1">
-              <div className="flex items-center gap-2 font-semibold text-xs text-rose-300">
-                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <div className="flex items-center gap-2 font-bold text-xs text-rose-900 dark:text-rose-300">
+                <Trash2 className="w-3.5 h-3.5 text-rose-700 dark:text-rose-400" />
                 <span>Permanently Delete this Course</span>
               </div>
-              <p className="text-xs text-slate-300">
-                Permanently delete <span className="font-semibold text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
+              <p className="text-xs text-slate-700 dark:text-slate-300">
+                Permanently delete <span className="font-bold text-slate-900 dark:text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
               </p>
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-slate-600 dark:text-slate-500 font-medium">
                 {isJurySandboxEnabled() ? (
                   <>
-                    Protected by Hackathon Jury PIN (<code className="text-amber-400 font-mono">{process.env.NEXT_PUBLIC_JURY_PIN || '2026'}</code>) or Teacher authorization.
+                    Protected by Hackathon Jury PIN (<code className="text-amber-800 dark:text-amber-400 font-bold font-mono">{process.env.NEXT_PUBLIC_JURY_PIN || '2026'}</code>) or Teacher authorization.
                   </>
                 ) : (
                   <>
@@ -2507,7 +2508,7 @@ export default function CourseStudioPanel({
               variant="outline"
               size="sm"
               onClick={onDeleteCourse}
-              className="bg-rose-950/40 border-rose-500/40 text-rose-300 hover:text-white hover:bg-rose-600 hover:border-rose-600 text-xs font-semibold h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
+              className="bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs h-9 px-4 shrink-0 shadow-md transition-all gap-1.5"
             >
               <Trash2 className="w-4 h-4" />
               <span>Delete this Course</span>

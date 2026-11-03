@@ -13,6 +13,7 @@ import {
   Sparkles,
   Terminal,
 } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function NotFound() {
   const router = useRouter();
@@ -107,8 +108,9 @@ export default function NotFound() {
           </span>
         </Link>
 
-        {/* Header Right: Language Switcher & Quick Back */}
-        <div className="flex items-center gap-3">
+        {/* Header Right: Theme Switcher, Language Switcher & Quick Back */}
+        <div className="flex items-center gap-2.5">
+          <ThemeToggle size="sm" />
           <div className="inline-flex rounded-lg border border-slate-800 bg-slate-900/90 p-0.5 shadow-sm">
             <button
               onClick={() => setLang('fr')}

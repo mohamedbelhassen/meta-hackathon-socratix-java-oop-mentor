@@ -25,11 +25,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("dark font-sans", geistSans.variable, geistMono.variable)} style={{ colorScheme: 'dark' }}>
-      <body className="antialiased bg-slate-950 text-slate-100">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("dark font-sans", geistSans.variable, geistMono.variable)}
+      style={{ colorScheme: 'dark' }}
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('socratix_theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');document.documentElement.style.colorScheme='light';}else{document.documentElement.classList.add('dark');document.documentElement.classList.remove('light');document.documentElement.style.colorScheme='dark';}}catch(e){}})();`,
+          }}
+        />
+      </head>
+      <body className="antialiased bg-slate-950 text-slate-100 min-h-screen">
         {children}
       </body>
     </html>
   );
 }
-

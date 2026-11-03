@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import java from 'react-syntax-highlighter/dist/esm/languages/prism/java';
 import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javascript';
@@ -14,7 +14,7 @@ import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx';
 import jsx from 'react-syntax-highlighter/dist/esm/languages/prism/jsx';
 import c from 'react-syntax-highlighter/dist/esm/languages/prism/c';
 import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 SyntaxHighlighter.registerLanguage('java', java);
 SyntaxHighlighter.registerLanguage('javascript', javascript);
@@ -46,6 +46,18 @@ export function CodeBlockHighlighter({
   fontSize = '12px',
   customStyle,
 }: CodeBlockHighlighterProps) {
+  const [isDark, setIsDark] = useState(true);
+
+  useEffect(() => {
+    const checkTheme = () => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    };
+    checkTheme();
+
+    window.addEventListener('socratix-theme-change', checkTheme);
+    return () => window.removeEventListener('socratix-theme-change', checkTheme);
+  }, []);
+
   const normalizedLang = language.toLowerCase().replace(/^\./, '');
   const langMap: Record<string, string> = {
     js: 'javascript',
@@ -75,7 +87,7 @@ export function CodeBlockHighlighter({
   return (
     <SyntaxHighlighter
       language={safeLang}
-      style={vscDarkPlus}
+      style={isDark ? vscDarkPlus : oneLight}
       showLineNumbers={showLineNumbers}
       customStyle={{
         background: 'transparent',
@@ -91,5 +103,5 @@ export function CodeBlockHighlighter({
   );
 }
 
-export { SyntaxHighlighter, vscDarkPlus };
+export { SyntaxHighlighter, vscDarkPlus, oneLight };
 export default CodeBlockHighlighter;

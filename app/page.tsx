@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Sparkles, GraduationCap, BarChart3, ArrowRight, LogIn } from 'lucide-react';
 import AuthHashListener from '@/components/AuthHashListener';
+import ThemeToggle from '@/components/ThemeToggle';
 import { getGithubRepoUrl } from '@/lib/utils';
 
 export default function HomePage() {
@@ -9,8 +10,9 @@ export default function HomePage() {
       {/* Toast / Banner on Email Confirmation Redirect */}
       <AuthHashListener />
 
-      {/* Top Bar with Login / Sign In */}
-      <header className="absolute top-6 right-6 flex items-center gap-3">
+      {/* Top Bar with Login / Sign In & Theme Switcher */}
+      <header className="absolute top-6 right-6 flex items-center gap-2.5 z-20">
+        <ThemeToggle size="md" />
         <Link
           href="/login"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-300 bg-slate-900 border border-slate-800 hover:border-emerald-500/40 hover:text-white transition shadow-sm"

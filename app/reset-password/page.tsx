@@ -7,6 +7,7 @@ import { getBrowserSupabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, CheckCircle2, AlertCircle, ArrowRight, Loader2, KeyRound } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -103,7 +104,10 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans relative">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle size="md" />
+      </div>
       <div className="max-w-md w-full space-y-6">
         {/* LOGO & HERO */}
         <div className="text-center space-y-2">

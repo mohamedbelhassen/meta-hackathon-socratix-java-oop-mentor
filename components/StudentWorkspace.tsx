@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import { CodeBlockHighlighter } from './CodeBlockHighlighter';
+import ThemeToggle from './ThemeToggle';
 import { getBrowserSupabase } from '@/lib/supabase';
 import {
   Course,
@@ -1248,16 +1249,19 @@ export default function StudentWorkspace() {
                 </Link>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsResetModalOpen(true)}
-              className="h-6 text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-1.5 gap-1"
-              title="Reset current student session"
-            >
-              <RotateCcw className="w-2.5 h-2.5" />
-              Reset
-            </Button>
+            <div className="flex items-center gap-1">
+              <ThemeToggle size="sm" className="h-6 w-6" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsResetModalOpen(true)}
+                className="h-6 text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-1.5 gap-1"
+                title="Reset current student session"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                Reset
+              </Button>
+            </div>
           </div>
 
           {/* Course & Lab Pickers */}
@@ -1806,11 +1810,12 @@ export default function StudentWorkspace() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-2.5 text-xs">
             <span className="text-slate-400">Target:</span>
             <span className="font-mono text-emerald-400 font-medium">
               {activeStudent.name} ({seatLabel})
             </span>
+            <ThemeToggle size="sm" />
           </div>
         </div>
 
@@ -1944,17 +1949,17 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Chat Input & Action Bar */}
-        <div className="p-2 sm:p-2.5 border-t border-slate-800 bg-slate-900/40">
-          <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 sm:gap-2">
+        <div className="p-3 sm:p-3.5 border-t border-slate-800 bg-slate-900/40">
+          <form onSubmit={handleSendMessage} className="flex items-center gap-2 sm:gap-2.5">
             {/* 1. Check Code Button */}
             <Button
               type="button"
               onClick={handleCheckCode}
               disabled={isAnalyzing}
-              className="h-8.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-emerald-950/20 shrink-0 transition-all"
+              className="h-10 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-semibold text-xs sm:text-sm px-3.5 sm:px-4.5 rounded-xl gap-2 shadow-md shadow-emerald-950/20 shrink-0 transition-all active:scale-95"
               title="Evaluate current workspace code against active milestones"
             >
-              <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
               <span>Check</span>
             </Button>
 
@@ -1963,10 +1968,10 @@ export default function StudentWorkspace() {
               type="button"
               onClick={handleAskForHint}
               disabled={isAnalyzing}
-              className="h-8.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-amber-950/20 shrink-0 transition-all"
+              className="h-10 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs sm:text-sm px-3.5 sm:px-4.5 rounded-xl gap-2 shadow-md shadow-amber-950/20 shrink-0 transition-all active:scale-95"
               title="Get an instant Socratic hint for your active milestone"
             >
-              <Lightbulb className="w-3.5 h-3.5 text-slate-950 fill-slate-950" />
+              <Lightbulb className="w-4 h-4 text-slate-950 fill-slate-950 shrink-0" />
               <span>Hint</span>
             </Button>
 
@@ -1975,10 +1980,10 @@ export default function StudentWorkspace() {
               type="button"
               onClick={handleExplainConcept}
               disabled={isAnalyzing}
-              className="h-8.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs px-2.5 sm:px-3 rounded-lg gap-1.5 shadow-md shadow-indigo-950/20 shrink-0 transition-all"
+              className="h-10 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-semibold text-xs sm:text-sm px-3.5 sm:px-4.5 rounded-xl gap-2 shadow-md shadow-indigo-950/20 shrink-0 transition-all active:scale-95"
               title="Explain theoretical lecture concepts and relevant slides for this activity"
             >
-              <BookOpen className="w-3.5 h-3.5 text-white" />
+              <BookOpen className="w-4 h-4 text-white shrink-0" />
               <span>Concept</span>
             </Button>
 
@@ -1991,15 +1996,15 @@ export default function StudentWorkspace() {
                   : 'Ask Socratix a question...'
               }
               disabled={isAnalyzing}
-              className="flex-1 bg-slate-900 border-slate-800 text-xs h-8.5 rounded-lg focus-visible:ring-emerald-500"
+              className="flex-1 bg-slate-900 border-slate-800 text-xs sm:text-sm h-10 px-3.5 rounded-xl focus-visible:ring-emerald-500 shadow-sm"
             />
 
             <Button
               type="submit"
               disabled={isAnalyzing || !input.trim()}
-              className="h-8.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 sm:px-4 rounded-lg gap-1.5 shadow-md shadow-emerald-950/20"
+              className="h-10 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 rounded-xl gap-2 shadow-md shadow-emerald-950/20 shrink-0 transition-all active:scale-95"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4 shrink-0" />
               <span>Send</span>
             </Button>
           </form>

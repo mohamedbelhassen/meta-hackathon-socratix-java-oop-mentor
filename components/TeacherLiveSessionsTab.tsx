@@ -458,25 +458,25 @@ export default function TeacherLiveSessionsTab({
           {/* 2b. CLASSROOM BOTTLENECK DETECTOR ALERT */}
           {/* ==================================================================== */}
           {bottleneckAlert && (
-            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-start gap-3.5 animate-in fade-in slide-in-from-top-2">
-              <div className="p-2 bg-rose-500/20 text-rose-400 rounded-xl mt-0.5">
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-500/40 rounded-2xl flex items-start gap-3.5 shadow-sm animate-in fade-in slide-in-from-top-2">
+              <div className="p-2 bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 rounded-xl mt-0.5 shrink-0">
                 <AlertTriangle className="w-5 h-5 animate-pulse" />
               </div>
               <div className="flex-1 text-xs">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-rose-300 text-sm">Classroom Bottleneck Detected</span>
-                  <Badge className="bg-rose-500/20 text-rose-300 border-rose-500/30 text-[10px]">
+                  <span className="font-black text-rose-900 dark:text-rose-300 text-sm">Classroom Bottleneck Detected</span>
+                  <Badge className="bg-rose-200/90 dark:bg-rose-500/20 text-rose-900 dark:text-rose-300 border border-rose-300 dark:border-rose-500/30 text-[10px] font-bold">
                     {bottleneckAlert.students.length} Students Stuck
                   </Badge>
                 </div>
-                <p className="text-slate-300 mt-1 leading-relaxed">
-                  <span className="font-semibold text-white">
+                <p className="text-slate-800 dark:text-slate-300 mt-1.5 leading-relaxed">
+                  <span className="font-bold text-slate-900 dark:text-white underline decoration-rose-400">
                     {bottleneckAlert.students
                       .map((s) => `${s.profiles?.display_name || 'Student'} (${s.seat_label})`)
                       .join(', ')}
                   </span>{' '}
                   are simultaneously blocked on{' '}
-                  <span className="font-semibold text-rose-300">
+                  <span className="font-bold text-rose-800 dark:text-rose-300 bg-rose-100 dark:bg-rose-900/60 px-1.5 py-0.5 rounded border border-rose-300 dark:border-rose-800">
                     Milestone &ldquo;{bottleneckAlert.milestoneTitle}&rdquo;
                   </span>
                   . Consider projecting the associated lecture slide to unlock the whole room!
@@ -492,7 +492,7 @@ export default function TeacherLiveSessionsTab({
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] uppercase font-semibold text-slate-400">
+                  <tr className="bg-slate-100 dark:bg-slate-950/80 border-b border-slate-300 dark:border-slate-800 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 tracking-wider">
                     <th className="py-2.5 px-3.5">Student & Workstation</th>
                     <th className="py-2.5 px-3.5">Lab & Activity Progress</th>
                     <th className="py-2.5 px-3.5">Covered Micro-Competencies (Drill-Down)</th>
@@ -540,19 +540,19 @@ export default function TeacherLiveSessionsTab({
                           {/* Col 1: Student & Workstation */}
                           <td className="py-2.5 px-3.5">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-300 text-[11px]">
+                              <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-800 dark:text-slate-300 text-[11px]">
                                 {session.profiles?.display_name?.[0] || 'S'}
                               </div>
                               <div>
-                                <div className="flex items-center gap-1.5 font-medium text-slate-200 text-xs">
+                                <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-slate-200 text-xs">
                                   <span>{session.profiles?.display_name || 'Anonymous Student'}</span>
                                   {session.profiles?.is_guest && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 border-amber-500/40 text-amber-400">
+                                    <Badge variant="outline" className="text-[9px] px-1.5 py-0 bg-amber-100 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/40 text-amber-900 dark:text-amber-400 font-semibold">
                                       Guest
                                     </Badge>
                                   )}
                                 </div>
-                                <div className="flex items-center gap-1 text-[10px] text-slate-400 font-mono mt-0.5">
+                                <div className="flex items-center gap-1 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium mt-0.5">
                                   <Monitor className="w-2.5 h-2.5 text-slate-500" />
                                   <span>{session.seat_label || 'PC --'}</span>
                                 </div>
@@ -566,20 +566,20 @@ export default function TeacherLiveSessionsTab({
                               type="button"
                               onClick={() => setSelectedSessionForMilestones(session)}
                               title="Click to view detailed milestones breakdown across all activities"
-                              className="w-full text-left space-y-1 p-1 -m-1 rounded-lg hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
+                              className="w-full text-left space-y-1 p-1 -m-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
                             >
                               <div className="flex justify-between items-center text-[10px]">
-                                <span className="text-slate-400 group-hover:text-cyan-300 transition-colors flex items-center gap-1">
+                                <span className="text-slate-700 dark:text-slate-400 font-medium group-hover:text-cyan-700 dark:group-hover:text-cyan-300 transition-colors flex items-center gap-1">
                                   <span>Total Progress</span>
-                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 text-cyan-400 font-normal transition-opacity">
+                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 text-cyan-600 dark:text-cyan-400 font-normal transition-opacity">
                                     &bull; Details &rarr;
                                   </span>
                                 </span>
-                                <span className="font-semibold text-emerald-400">
+                                <span className="font-bold text-emerald-700 dark:text-emerald-400">
                                   {session.progress_percent}%
                                 </span>
                               </div>
-                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
+                              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
                                 <div
                                   className={`h-full transition-all duration-300 ${
                                     isCompleted
@@ -591,10 +591,10 @@ export default function TeacherLiveSessionsTab({
                                   style={{ width: `${session.progress_percent}%` }}
                                 />
                               </div>
-                              <div className="text-[10px] text-slate-400 truncate group-hover:text-slate-200 transition-colors">
-                                <span className="text-slate-300 font-medium">{activityLabel}</span>
+                              <div className="text-[10px] truncate transition-colors">
+                                <span className="text-slate-800 dark:text-slate-300 font-semibold">{activityLabel}</span>
                                 {milestoneLabel && (
-                                  <span className="text-slate-400"> &bull; {milestoneLabel}</span>
+                                  <span className="text-slate-600 dark:text-slate-400 font-medium"> &bull; {milestoneLabel}</span>
                                 )}
                               </div>
                             </button>
@@ -612,10 +612,10 @@ export default function TeacherLiveSessionsTab({
 
                                 const hasRemediation = entry?.occurrences?.some((o) => o.remediated);
 
-                                let badgeStyle = 'bg-slate-800 text-slate-400 border-slate-700';
-                                if (status === 'MASTERED') badgeStyle = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/25';
-                                else if (status === 'IN_PROGRESS') badgeStyle = 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25';
-                                else if (status === 'STRUGGLING') badgeStyle = 'bg-rose-500/15 text-rose-300 border-rose-500/40 hover:bg-rose-500/25';
+                                let badgeStyle = 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:bg-slate-200';
+                                if (status === 'MASTERED') badgeStyle = 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40 hover:bg-emerald-200 font-semibold';
+                                else if (status === 'IN_PROGRESS') badgeStyle = 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/40 hover:bg-amber-200 font-semibold';
+                                else if (status === 'STRUGGLING') badgeStyle = 'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-500/40 hover:bg-rose-200 font-semibold';
 
                                 return (
                                   <button
@@ -637,7 +637,7 @@ export default function TeacherLiveSessionsTab({
                                       <span className="font-semibold flex items-center gap-0.5">
                                         ({passCount}/{totalCount})
                                         {hasRemediation && (
-                                          <Sparkles className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                          <Sparkles className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                         )}
                                       </span>
                                     )}
@@ -650,21 +650,21 @@ export default function TeacherLiveSessionsTab({
                           {/* Col 4: Status */}
                           <td className="py-2.5 px-3.5">
                             {isBlocked ? (
-                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-500/15 border border-rose-500/30 text-rose-400 text-[11px] font-semibold animate-pulse">
-                                <AlertTriangle className="w-3 h-3" />
+                              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rose-100 dark:bg-rose-500/15 border border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-400 text-[11px] font-bold animate-pulse">
+                                <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400" />
                                 <span>BLOCKED</span>
-                                <span className="text-[9px] bg-rose-950/60 px-1 rounded text-rose-300">
+                                <span className="text-[9px] bg-rose-200 dark:bg-rose-950/60 px-1 rounded text-rose-900 dark:text-rose-300 font-mono">
                                   {session.consecutive_errors}
                                 </span>
                               </div>
                             ) : isCompleted ? (
-                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
-                                <CheckCircle2 className="w-3 h-3" />
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-500/15 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-400 text-[11px] font-bold">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                                 <span>COMPLETED</span>
                               </div>
                             ) : (
-                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-semibold">
-                                <Clock className="w-3 h-3" />
+                              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-500/15 border border-amber-300 dark:border-amber-500/30 text-amber-900 dark:text-amber-400 text-[11px] font-bold">
+                                <Clock className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                                 <span>IN PROGRESS</span>
                               </div>
                             )}
@@ -677,7 +677,7 @@ export default function TeacherLiveSessionsTab({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenInspector(session)}
-                                className="h-7 text-xs border-slate-700 hover:bg-slate-800 text-slate-300 gap-1"
+                                className="h-7.5 text-xs font-semibold border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-500 shadow-sm gap-1.5 px-2.5"
                               >
                                 <Code2 className="w-3 h-3" />
                                 Inspect
@@ -712,18 +712,18 @@ export default function TeacherLiveSessionsTab({
       {/* ==================================================================== */}
       {drillDownData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-xl max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-950/60 shrink-0">
+          <div className="w-full max-w-xl max-h-[85vh] bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
               <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-400" />
-                <h3 className="font-semibold text-slate-200 text-sm">
+                <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
                   {drillDownData.conceptKey} &bull; {drillDownData.studentName}
                 </h3>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-400 hover:text-white"
+                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                 onClick={() => setDrillDownData(null)}
               >
                 <X className="w-4 h-4" />
@@ -731,16 +731,16 @@ export default function TeacherLiveSessionsTab({
             </div>
 
             <div className="p-4 space-y-3 overflow-y-auto flex-1 min-h-0">
-              <div className="p-3 bg-slate-950/60 border border-slate-800/80 rounded-xl flex items-center justify-between text-xs shrink-0">
-                <span className="text-slate-400">Score & Summary:</span>
-                <span className={`font-semibold ${drillDownData.score === 100 ? 'text-emerald-400' : drillDownData.score > 0 ? 'text-amber-400' : 'text-rose-400'}`}>
+              <div className="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl flex items-center justify-between text-xs shrink-0">
+                <span className="text-slate-700 dark:text-slate-400 font-semibold">Score & Summary:</span>
+                <span className={`font-bold ${drillDownData.score === 100 ? 'text-emerald-700 dark:text-emerald-400' : drillDownData.score > 0 ? 'text-amber-700 dark:text-amber-400' : 'text-rose-700 dark:text-rose-400'}`}>
                   {drillDownData.score}%
                 </span>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed shrink-0">{drillDownData.summary}</p>
+              <p className="text-xs text-slate-800 dark:text-slate-300 leading-relaxed font-medium shrink-0">{drillDownData.summary}</p>
 
               <div className="pt-2">
-                <div className="text-[10px] uppercase font-semibold text-slate-400 mb-2">
+                <div className="text-[10px] uppercase font-bold text-slate-700 dark:text-slate-400 mb-2">
                   Inspected Code Locations ({drillDownData.occurrences.length})
                 </div>
                 {drillDownData.occurrences.length === 0 ? (
@@ -750,29 +750,29 @@ export default function TeacherLiveSessionsTab({
                     {drillDownData.occurrences.map((occ, idx) => (
                       <div
                         key={idx}
-                        className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+                        className={`p-2.5 rounded-xl border text-xs flex items-start gap-2.5 shadow-sm ${
                           occ.status === 'PASS'
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-200'
-                            : 'bg-rose-500/10 border-rose-500/30 text-rose-200'
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+                            : 'bg-rose-50 dark:bg-rose-500/10 border-rose-300 dark:border-rose-500/30 text-rose-950 dark:text-rose-200'
                         }`}
                       >
                         {occ.status === 'PASS' ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         ) : (
-                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                          <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                         )}
                         <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-semibold text-white">
+                            <span className="font-mono font-bold text-slate-900 dark:text-white">
                               {occ.location}
                             </span>
                             {occ.remediated && (
-                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded font-sans font-medium">
+                              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40 px-1.5 py-0.5 rounded font-sans font-semibold">
                                 Acquis (après remédiation)
                               </span>
                             )}
                           </div>
-                          <div className="text-[11px] opacity-90">{occ.note}</div>
+                          <div className="text-[11px] text-slate-700 dark:text-slate-300 leading-snug">{occ.note}</div>
                         </div>
                       </div>
                     ))}

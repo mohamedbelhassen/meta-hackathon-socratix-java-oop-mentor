@@ -14,8 +14,13 @@
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
   }
+
+  /* ========================================================================== */
+  /* LIGHT MODE (DEFAULT / :root)                                              */
+  /* Clean, crisp, high-contrast canvas & surfaces tailored for video recording */
+  /* ========================================================================== */
   :root {
-    --background: oklch(1 0 0);
+    --background: oklch(0.985 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
@@ -33,11 +38,11 @@
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
     --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
     --radius: 0.625rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
@@ -47,7 +52,79 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+
+    /* LIGHT MODE SLATE (Crisp Canvas, Pure White Cards, Deep Readable Text) */
+    --color-slate-50: 15 23 42;       /* Inverted for high contrast on light */
+    --color-slate-100: 15 23 42;      /* Deep navy/black #0f172a for primary titles */
+    --color-slate-200: 30 41 59;      /* Slate-800 #1e293b for subheadings & active text */
+    --color-slate-300: 51 65 85;      /* Slate-700 #334155 for body text (8.3:1 contrast) */
+    --color-slate-400: 71 85 105;     /* Slate-600 #475569 for secondary/muted text (5.7:1) */
+    --color-slate-500: 100 116 139;   /* Slate-500 #64748b */
+    --color-slate-600: 148 163 184;   /* Slate-400 #94a3b8 */
+    --color-slate-700: 203 213 225;   /* Slate-300 #cbd5e1 for subtle borders */
+    --color-slate-750: 226 232 240;   /* Slate-200 #e2e8f0 */
+    --color-slate-800: 226 232 240;   /* Slate-200 #e2e8f0 for borders & dividers */
+    --color-slate-850: 241 245 249;   /* Slate-100 #f1f5f9 for inner subtle containers */
+    --color-slate-900: 255 255 255;   /* Pure White #ffffff for cards, sidebars, modals */
+    --color-slate-950: 248 250 252;   /* Slate-50 #f8fafc for main page canvas */
+
+    /* LIGHT MODE EMERALD (Mint Backgrounds, Crisp Forest Green Text) */
+    --color-emerald-50: 6 78 59;
+    --color-emerald-100: 6 95 70;
+    --color-emerald-200: 4 120 87;
+    --color-emerald-300: 5 150 105;
+    --color-emerald-400: 5 150 105;   /* Emerald-600 #059669 for punchy readable green text */
+    --color-emerald-500: 16 185 129;
+    --color-emerald-600: 5 150 105;
+    --color-emerald-700: 167 243 208;
+    --color-emerald-800: 167 243 208; /* Emerald-200 #a7f3d0 for clean light green borders */
+    --color-emerald-900: 209 250 229; /* Emerald-100 #d1fae5 */
+    --color-emerald-950: 236 253 245; /* Emerald-50 #ecfdf5 for light green badge/card bg */
+
+    /* LIGHT MODE CYAN */
+    --color-cyan-50: 22 78 99;
+    --color-cyan-100: 21 94 117;
+    --color-cyan-200: 14 116 144;
+    --color-cyan-300: 8 145 178;
+    --color-cyan-400: 8 145 178;     /* Cyan-600 #0891b2 */
+    --color-cyan-500: 6 182 212;
+    --color-cyan-600: 8 145 178;
+    --color-cyan-700: 165 243 252;
+    --color-cyan-800: 165 243 252;   /* Cyan-200 */
+    --color-cyan-900: 207 250 254;   /* Cyan-100 */
+    --color-cyan-950: 236 254 255;   /* Cyan-50 */
+
+    /* LIGHT MODE AMBER */
+    --color-amber-50: 120 53 15;
+    --color-amber-100: 146 64 14;
+    --color-amber-200: 180 83 9;
+    --color-amber-300: 217 119 6;
+    --color-amber-400: 217 119 6;     /* Amber-600 #d97706 */
+    --color-amber-500: 245 158 11;
+    --color-amber-600: 217 119 6;
+    --color-amber-700: 253 230 138;
+    --color-amber-800: 253 230 138;   /* Amber-200 */
+    --color-amber-900: 254 243 199;   /* Amber-100 */
+    --color-amber-950: 255 251 235;   /* Amber-50 */
+
+    /* LIGHT MODE ROSE */
+    --color-rose-50: 136 19 55;
+    --color-rose-100: 159 18 57;
+    --color-rose-200: 190 18 60;
+    --color-rose-300: 225 29 72;
+    --color-rose-400: 225 29 72;      /* Rose-600 #e11d48 */
+    --color-rose-500: 244 63 94;
+    --color-rose-600: 225 29 72;
+    --color-rose-700: 254 205 211;
+    --color-rose-800: 254 205 211;    /* Rose-200 */
+    --color-rose-900: 255 228 230;    /* Rose-100 */
+    --color-rose-950: 255 241 242;    /* Rose-50 */
   }
+
+  /* ========================================================================== */
+  /* DARK MODE (.dark)                                                         */
+  /* Original high-tech immersive IDE aesthetics                               */
+  /* ========================================================================== */
   .dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
@@ -80,16 +157,85 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+
+    /* DARK MODE SLATE (Original Default) */
+    --color-slate-50: 248 250 252;
+    --color-slate-100: 241 245 249;
+    --color-slate-200: 226 232 240;
+    --color-slate-300: 203 213 225;
+    --color-slate-400: 148 163 184;
+    --color-slate-500: 100 116 139;
+    --color-slate-600: 71 85 105;
+    --color-slate-700: 51 65 85;
+    --color-slate-750: 40 53 72;
+    --color-slate-800: 30 41 59;
+    --color-slate-850: 22 32 49;
+    --color-slate-900: 15 23 42;
+    --color-slate-950: 2 6 23;
+
+    /* DARK MODE EMERALD */
+    --color-emerald-50: 236 253 245;
+    --color-emerald-100: 209 250 229;
+    --color-emerald-200: 167 243 208;
+    --color-emerald-300: 110 231 183;
+    --color-emerald-400: 52 211 153;
+    --color-emerald-500: 16 185 129;
+    --color-emerald-600: 5 150 105;
+    --color-emerald-700: 4 120 87;
+    --color-emerald-800: 6 95 70;
+    --color-emerald-900: 6 78 59;
+    --color-emerald-950: 2 44 34;
+
+    /* DARK MODE CYAN */
+    --color-cyan-50: 236 254 255;
+    --color-cyan-100: 207 250 254;
+    --color-cyan-200: 165 243 252;
+    --color-cyan-300: 103 232 249;
+    --color-cyan-400: 45 212 191;
+    --color-cyan-500: 6 182 212;
+    --color-cyan-600: 8 145 178;
+    --color-cyan-700: 14 116 144;
+    --color-cyan-800: 21 94 117;
+    --color-cyan-900: 22 78 99;
+    --color-cyan-950: 8 51 68;
+
+    /* DARK MODE AMBER */
+    --color-amber-50: 255 251 235;
+    --color-amber-100: 254 243 199;
+    --color-amber-200: 253 230 138;
+    --color-amber-300: 252 211 77;
+    --color-amber-400: 251 191 36;
+    --color-amber-500: 245 158 11;
+    --color-amber-600: 217 119 6;
+    --color-amber-700: 180 83 9;
+    --color-amber-800: 146 64 14;
+    --color-amber-900: 120 53 15;
+    --color-amber-950: 69 26 3;
+
+    /* DARK MODE ROSE */
+    --color-rose-50: 255 241 242;
+    --color-rose-100: 255 228 230;
+    --color-rose-200: 254 205 211;
+    --color-rose-300: 253 164 175;
+    --color-rose-400: 251 113 133;
+    --color-rose-500: 244 63 94;
+    --color-rose-600: 225 29 72;
+    --color-rose-700: 190 18 60;
+    --color-rose-800: 159 18 57;
+    --color-rose-900: 136 19 55;
+    --color-rose-950: 76 5 25;
   }
+
   * {
     border-color: var(--border);
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground transition-colors duration-200;
   }
+
   html {
     @apply font-sans;
-    color-scheme: dark;
   }
 
   /* Responsive Compact Density for Laptops & 125%/150% Windows Scaling */
@@ -99,7 +245,7 @@
     }
   }
 
-  /* Custom dark scrollbars matching IDE aesthetics */
+  /* Custom adaptive scrollbars */
   * {
     scrollbar-width: thin;
     scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
@@ -121,5 +267,37 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: rgba(100, 116, 139, 0.7);
+  }
+
+  /* Light mode heading & typography adaptation */
+  html:not(.dark) h1.text-white,
+  html:not(.dark) h2.text-white,
+  html:not(.dark) h3.text-white,
+  html:not(.dark) h4.text-white {
+    color: rgb(var(--color-slate-100));
+  }
+
+  html:not(.dark) .group:hover .group-hover\:text-white {
+    color: rgb(var(--color-slate-100));
+  }
+
+  /* Light mode markdown typography */
+  html:not(.dark) .prose-invert {
+    --tw-prose-body: #334155;
+    --tw-prose-headings: #0f172a;
+    --tw-prose-lead: #475569;
+    --tw-prose-links: #059669;
+    --tw-prose-bold: #0f172a;
+    --tw-prose-counters: #64748b;
+    --tw-prose-bullets: #94a3b8;
+    --tw-prose-hr: #e2e8f0;
+    --tw-prose-quotes: #1e293b;
+    --tw-prose-quote-borders: #cbd5e1;
+    --tw-prose-captions: #64748b;
+    --tw-prose-code: #0f172a;
+    --tw-prose-pre-code: #0f172a;
+    --tw-prose-pre-bg: #f8fafc;
+    --tw-prose-th-borders: #e2e8f0;
+    --tw-prose-td-borders: #e2e8f0;
   }
 }

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Sparkles, GraduationCap, School, Mail, RefreshCw, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
 import { getAppBaseUrl } from '@/lib/url-utils';
 import { isJurySandboxEnabled } from '@/lib/utils';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -224,7 +225,10 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans">
+    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6 font-sans relative">
+      <div className="absolute top-6 right-6">
+        <ThemeToggle size="md" />
+      </div>
       <div className="max-w-md w-full space-y-6">
         {/* LOGO & HERO */}
         <div className="text-center space-y-2">
