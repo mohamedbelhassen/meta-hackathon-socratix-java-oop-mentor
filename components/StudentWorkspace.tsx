@@ -8,6 +8,7 @@ import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 import { getBrowserSupabase } from '@/lib/supabase';
 import {
   Course,
+  CourseChapter,
   Lab,
   LabActivity,
   DemoPreset,
@@ -22,6 +23,7 @@ import {
   FolderOpen,
   Send,
   FileCode,
+  FileText,
   Sparkles,
   BookOpen,
   RotateCcw,
@@ -46,6 +48,8 @@ import {
 
 const MilestoneCelebrationModal = dynamic(() => import('./MilestoneCelebrationModal'), { ssr: false });
 const SmartSlideViewerModal = dynamic(() => import('./SmartSlideViewerModal'), { ssr: false });
+const PdfViewerModal = dynamic(() => import('./PdfViewerModal'), { ssr: false });
+const CourseSyllabusModal = dynamic(() => import('./CourseSyllabusModal'), { ssr: false });
 import { cleanInstructionsMarkdown, formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import { formatLabOptionLabel, isJurySandboxEnabled } from '@/lib/utils';
 import {
@@ -209,9 +213,14 @@ export default function StudentWorkspace() {
   // Course & Lab Hierarchy
   const [courses, setCourses] = useState<Course[]>([]);
   const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+  const [chapters, setChapters] = useState<CourseChapter[]>([]);
   const [labs, setLabs] = useState<Lab[]>([]);
   const [activeLab, setActiveLab] = useState<Lab | null>(null);
   const [activeActivity, setActiveActivity] = useState<LabActivity | null>(null);
+
+  // In-Situ PDF & Syllabus Reader State
+  const [activePdfModal, setActivePdfModal] = useState<{ url: string; title: string } | null>(null);
+  const [isSyllabusModalOpen, setIsSyllabusModalOpen] = useState(false);
 
   // Student Persona & Physical Workstation (Point #6: Auth & Registered Students)
   const [registeredStudents, setRegisteredStudents] = useState<StudentPersona[]>([]);
@@ -504,12 +513,12 @@ export default function StudentWorkspace() {
     };
   }, []);
 
-  // 2. Fetch Labs for Active Course
+  // 2. Fetch Labs & Chapters for Active Course
   useEffect(() => {
     if (!activeCourse) return;
 
     const supabase = getBrowserSupabase();
-    async function fetchCourseLabs() {
+    async function fetchCourseData() {
       const { data, error } = await supabase
         .from('labs')
         .select('*')
@@ -522,8 +531,18 @@ export default function StudentWorkspace() {
         const initialLab = data.find((l: Lab) => l.id === savedCtx?.labId) || data[0] || null;
         setActiveLab(initialLab);
       }
+
+      const { data: chData, error: chError } = await supabase
+        .from('course_chapters')
+        .select('id, course_id, chapter_number, code, title, title_i18n, pdf_url, pages_json')
+        .eq('course_id', activeCourse!.id)
+        .order('chapter_number', { ascending: true });
+
+      if (!chError && chData) {
+        setChapters(chData as unknown as CourseChapter[]);
+      }
     }
-    fetchCourseLabs();
+    fetchCourseData();
   }, [activeCourse]);
 
   // 3. Update Active Activity & Preset when Active Lab Changes
@@ -1292,6 +1311,31 @@ export default function StudentWorkspace() {
             </div>
           </div>
 
+          {/* Quick Syllabus & Materials Launcher */}
+          {activeCourse && (
+            <div className="pt-0.5">
+              <button
+                type="button"
+                onClick={() => setIsSyllabusModalOpen(true)}
+                className="w-full py-1.5 px-3 rounded-lg text-xs font-medium bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 hover:border-emerald-500/50 flex items-center justify-between transition group shadow-sm"
+                title="Browse course syllabus, lecture slides and chapter PDFs"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <BookOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <span className="truncate">Course Slides & Chapters</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 text-[10px] font-mono">
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    {chapters.length} chap.
+                  </span>
+                  <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    {labs.length} TP
+                  </span>
+                </div>
+              </button>
+            </div>
+          )}
+
           {/* Persona & Seat Selector */}
           <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80">
             <div>
@@ -1454,14 +1498,27 @@ export default function StudentWorkspace() {
                   Activity {activeActivity.order}: {activeActivity.title}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsBriefExpanded(!isBriefExpanded)}
-                className="text-slate-400 hover:text-slate-200 text-xs shrink-0 p-1 hover:bg-slate-800/80 rounded transition-colors"
-                title={isBriefExpanded ? "Hide activity brief & milestones" : "Show activity brief & milestones"}
-              >
-                {isBriefExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {activeLab?.pdf_url && (
+                  <button
+                    type="button"
+                    onClick={() => setActivePdfModal({ url: activeLab.pdf_url!, title: `${activeLab.code || 'Lab'} — Official Subject Sheet` })}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 rounded-md hover:bg-cyan-900/50 transition shadow-sm"
+                    title="Read original full Lab Subject PDF"
+                  >
+                    <FileText className="w-3 h-3 text-cyan-400" />
+                    <span>Lab PDF ↗</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsBriefExpanded(!isBriefExpanded)}
+                  className="text-slate-400 hover:text-slate-200 text-xs shrink-0 p-1 hover:bg-slate-800/80 rounded transition-colors"
+                  title={isBriefExpanded ? "Hide activity brief & milestones" : "Show activity brief & milestones"}
+                >
+                  {isBriefExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
 
             {/* Dual Progress Gauges */}
@@ -2004,6 +2061,27 @@ export default function StudentWorkspace() {
           </div>
         </div>
       )}
+
+      {/* In-Situ PDF Document Viewer Modal */}
+      <PdfViewerModal
+        isOpen={Boolean(activePdfModal)}
+        onClose={() => setActivePdfModal(null)}
+        pdfUrl={activePdfModal?.url || null}
+        title={activePdfModal?.title || 'Document PDF'}
+      />
+
+      {/* In-Situ Course Syllabus & Chapters Library Modal */}
+      <CourseSyllabusModal
+        isOpen={isSyllabusModalOpen}
+        onClose={() => setIsSyllabusModalOpen(false)}
+        course={activeCourse}
+        chapters={chapters}
+        labs={labs}
+        onOpenPdf={(pdfUrl, title) => {
+          setIsSyllabusModalOpen(false);
+          setActivePdfModal({ url: pdfUrl, title });
+        }}
+      />
     </div>
   );
 }
