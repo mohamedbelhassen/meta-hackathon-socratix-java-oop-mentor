@@ -32,3 +32,22 @@ export function formatLabOptionLabel(code?: string, title?: string): string {
   return `${trimmedCode} — ${trimmedTitle}`;
 }
 
+/**
+ * Checks if the Hackathon Jury sandbox / bypass mode is enabled.
+ * Default is true for Hackathon evaluation. Set NEXT_PUBLIC_ENABLE_JURY_SANDBOX="false"
+ * in production or during classroom teaching to enforce strict authentication and hide demo PINs.
+ */
+export function isJurySandboxEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_JURY_SANDBOX !== 'false';
+}
+
+/**
+ * Returns the configured GitHub repository URL with fallback.
+ */
+export function getGithubRepoUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_GITHUB_REPO_URL ||
+    'https://github.com/mohamedbelhassen/meta-hackathon-socratix-java-oop-mentor'
+  );
+}
+

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Course } from '@/types/socratix';
+import { isJurySandboxEnabled } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -228,17 +229,19 @@ export default function DeleteCourseModal({
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                 <Lock className="w-3.5 h-3.5 text-slate-400" />
-                Enter Jury PIN to Confirm
+                {isJurySandboxEnabled() ? 'Enter Jury PIN to Confirm' : 'Enter Authorization PIN to Confirm'}
               </label>
-              <button
-                type="button"
-                onClick={handleFillDemoPin}
-                className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline underline-offset-2"
-                title={`Fill default PIN ${defaultDemoPin}`}
-              >
-                <Sparkles className="w-3 h-3" />
-                <span>Fill Jury PIN ({defaultDemoPin})</span>
-              </button>
+              {isJurySandboxEnabled() && (
+                <button
+                  type="button"
+                  onClick={handleFillDemoPin}
+                  className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline underline-offset-2"
+                  title={`Fill default PIN ${defaultDemoPin}`}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Fill Jury PIN ({defaultDemoPin})</span>
+                </button>
+              )}
             </div>
 
             <div
@@ -249,7 +252,7 @@ export default function DeleteCourseModal({
               <input
                 ref={pinInputRef}
                 type={showPin ? 'text' : 'password'}
-                placeholder={`Enter Jury PIN (e.g. ${defaultDemoPin})`}
+                placeholder={isJurySandboxEnabled() ? `Enter Jury PIN (e.g. ${defaultDemoPin})` : 'Enter Authorization PIN'}
                 value={pin}
                 onChange={(e) => {
                   setPin(e.target.value);
@@ -281,7 +284,15 @@ export default function DeleteCourseModal({
             )}
 
             <p className="text-[10px] text-slate-500">
-              Configured Hackathon Jury PIN is <code className="text-slate-300 font-mono">{defaultDemoPin}</code>.
+              {isJurySandboxEnabled() ? (
+                <>
+                  Configured Hackathon Jury PIN is <code className="text-slate-300 font-mono">{defaultDemoPin}</code>.
+                </>
+              ) : (
+                <>
+                  Authorized teachers only. This action is permanently audited and cannot be undone.
+                </>
+              )}
             </p>
           </div>
 

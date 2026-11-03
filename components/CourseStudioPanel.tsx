@@ -41,6 +41,7 @@ import { PreflightChapterItem } from '@/app/api/studio/chapters-preflight/route'
 import LabStagingModal, { StagedLabItem } from '@/components/LabStagingModal';
 import { PreflightLabItem } from '@/app/api/studio/labs-preflight/route';
 import { getLocalizedChapterTitle, getLocalizedLabTitle } from '@/lib/bilingual-helper';
+import { isJurySandboxEnabled } from '@/lib/utils';
 
 interface CompilationPhase {
   step: number;
@@ -2066,9 +2067,9 @@ export default function CourseStudioPanel({
                 <>
                   <Upload className="w-5 h-5 text-cyan-400 mx-auto mb-1.5" />
                   <p className="text-xs font-semibold text-slate-200">
-                    {isUploadingLabs ? 'Processing...' : 'Upload Lab PDFs (TP1..TP12)'}
+                    {isUploadingLabs ? 'Processing...' : 'Upload Lab PDFs (batch supported)'}
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Select all 12 TP files at once</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Select one or multiple TP files at once</p>
                 </>
               )}
             </div>
@@ -2206,7 +2207,15 @@ export default function CourseStudioPanel({
                 Permanently delete <span className="font-semibold text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
               </p>
               <p className="text-[11px] text-slate-500">
-                Protected by Hackathon Jury PIN (<code className="text-amber-400 font-mono">{process.env.NEXT_PUBLIC_JURY_PIN || '2026'}</code>) or Teacher authorization.
+                {isJurySandboxEnabled() ? (
+                  <>
+                    Protected by Hackathon Jury PIN (<code className="text-amber-400 font-mono">{process.env.NEXT_PUBLIC_JURY_PIN || '2026'}</code>) or Teacher authorization.
+                  </>
+                ) : (
+                  <>
+                    Protected by Teacher authorization PIN.
+                  </>
+                )}
               </p>
             </div>
             <Button
@@ -2225,7 +2234,7 @@ export default function CourseStudioPanel({
       {/* PROPOSITION 1: LIVE AI PRE-FLIGHT TELEMETRY MODAL */}
       {isPreflighting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-xl bg-slate-950 border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden font-mono text-xs">
+          <div className="w-full max-w-3xl bg-slate-950 border border-emerald-500/40 rounded-2xl shadow-2xl overflow-hidden font-mono text-xs">
             {/* Terminal Title Bar */}
             <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
               <div className="flex items-center gap-2">
@@ -2245,7 +2254,7 @@ export default function CourseStudioPanel({
             </div>
 
             {/* Terminal Logs Body */}
-            <div className="p-4 space-y-2 max-h-72 overflow-y-auto text-[11px] bg-slate-950 text-slate-300">
+            <div className="p-5 space-y-2.5 max-h-[500px] min-h-[300px] overflow-y-auto text-[11px] bg-slate-950 text-slate-300 leading-relaxed">
               {preflightLogs.map((log, idx) => (
                 <div key={idx} className="flex items-start gap-2 animate-in fade-in duration-150">
                   <span className="text-emerald-500 select-none">➜</span>
@@ -2290,7 +2299,7 @@ export default function CourseStudioPanel({
       {/* PROPOSITION 1B: LIVE AI LABS PRE-FLIGHT TELEMETRY MODAL */}
       {isLabsPreflighting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-xl bg-slate-950 border border-cyan-500/40 rounded-2xl shadow-2xl overflow-hidden font-mono text-xs">
+          <div className="w-full max-w-3xl bg-slate-950 border border-cyan-500/40 rounded-2xl shadow-2xl overflow-hidden font-mono text-xs">
             {/* Terminal Title Bar */}
             <div className="flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800">
               <div className="flex items-center gap-2">
@@ -2310,7 +2319,7 @@ export default function CourseStudioPanel({
             </div>
 
             {/* Terminal Logs Body */}
-            <div className="p-4 space-y-2 max-h-72 overflow-y-auto text-[11px] bg-slate-950 text-slate-300">
+            <div className="p-5 space-y-2.5 max-h-[500px] min-h-[300px] overflow-y-auto text-[11px] bg-slate-950 text-slate-300 leading-relaxed">
               {labsPreflightLogs.map((log, idx) => (
                 <div key={idx} className="flex items-start gap-2 animate-in fade-in duration-150">
                   <span className="text-cyan-500 select-none">➜</span>

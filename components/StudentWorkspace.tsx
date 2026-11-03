@@ -47,7 +47,7 @@ import {
 const MilestoneCelebrationModal = dynamic(() => import('./MilestoneCelebrationModal'), { ssr: false });
 const SmartSlideViewerModal = dynamic(() => import('./SmartSlideViewerModal'), { ssr: false });
 import { cleanInstructionsMarkdown, formatSlideCitationLabel } from '@/lib/pdf-cleaner';
-import { formatLabOptionLabel } from '@/lib/utils';
+import { formatLabOptionLabel, isJurySandboxEnabled } from '@/lib/utils';
 import {
   saveActiveContext,
   loadActiveContext,
@@ -483,10 +483,12 @@ export default function StudentWorkspace() {
     const isFirstAct = !act || !activeLab.activities?.length || act.id === activeLab.activities[0]?.id;
     const isEvaluationOrTeacher = Boolean(
       authUser?.role === 'teacher' ||
-      activeStudent.is_guest === true ||
-      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
-      activeStudent.role?.toLowerCase().includes('judge') ||
-      activeStudent.role?.toLowerCase().includes('sandbox')
+      (isJurySandboxEnabled() && (
+        activeStudent.is_guest === true ||
+        activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+        activeStudent.role?.toLowerCase().includes('judge') ||
+        activeStudent.role?.toLowerCase().includes('sandbox')
+      ))
     );
     const actPresets = labPresets
       .filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct))
@@ -1094,10 +1096,12 @@ export default function StudentWorkspace() {
 
   const isEvaluationOrTeacherMode = Boolean(
     authUser?.role === 'teacher' ||
-    activeStudent.is_guest === true ||
-    activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
-    activeStudent.role?.toLowerCase().includes('judge') ||
-    activeStudent.role?.toLowerCase().includes('sandbox')
+    (isJurySandboxEnabled() && (
+      activeStudent.is_guest === true ||
+      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+      activeStudent.role?.toLowerCase().includes('judge') ||
+      activeStudent.role?.toLowerCase().includes('sandbox')
+    ))
   );
 
   // Filter presets strictly for the active activity and hide solutions from regular students
@@ -1264,7 +1268,7 @@ export default function StudentWorkspace() {
                 ) : (
                   <span className="text-[9px] text-emerald-400/90 font-medium flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    Jury Sandbox
+                    {isJurySandboxEnabled() ? 'Jury Sandbox' : 'Guest Workstation'}
                   </span>
                 )}
               </div>
@@ -1302,13 +1306,21 @@ export default function StudentWorkspace() {
                   }}
                   className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-sans"
                 >
-                  <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
-                    {DEMO_PERSONAS.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
-                        {p.name} ({p.role})
-                      </option>
-                    ))}
-                  </optgroup>
+                  {(isJurySandboxEnabled() || authUser?.role === 'teacher') && (
+                    <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
+                      {DEMO_PERSONAS.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
+                          {p.name} ({p.role})
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+
+                  {!isJurySandboxEnabled() && !authUser && (
+                    <option value="" disabled className="bg-slate-900 text-amber-400 italic">
+                      Please sign in with student email
+                    </option>
+                  )}
 
                   {authUser?.role === 'teacher' && (
                     <optgroup label="👤 Enrolled Students (Class Roster)" className="bg-slate-950 text-slate-300 font-semibold">

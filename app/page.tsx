@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Sparkles, GraduationCap, BarChart3, ArrowRight, LogIn } from 'lucide-react';
 import AuthHashListener from '@/components/AuthHashListener';
+import { getGithubRepoUrl } from '@/lib/utils';
 
 export default function HomePage() {
   return (
@@ -98,7 +99,7 @@ export default function HomePage() {
             <span className="text-slate-300 font-medium">Mohamed Belhassen</span>.
           </div>
           <a
-            href="https://github.com/mohamedbelhassen/meta-hackathon-socratix-java-oop-mentor"
+            href={getGithubRepoUrl()}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/70 border border-slate-800 text-slate-300 hover:text-white hover:border-emerald-500/40 hover:bg-slate-900 transition shadow-sm font-medium"

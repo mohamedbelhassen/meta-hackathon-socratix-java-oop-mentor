@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sparkles, GraduationCap, School, Mail, RefreshCw, KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
 import { getAppBaseUrl } from '@/lib/url-utils';
+import { isJurySandboxEnabled } from '@/lib/utils';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -77,7 +78,9 @@ export default function LoginPage() {
         if (role === 'teacher' && !teacherPin.trim()) {
           setMessage({
             type: 'error',
-            text: 'A Teacher Secret PIN is required to register as teacher. (Demo Jury: 2026)',
+            text: isJurySandboxEnabled()
+              ? 'A Teacher Secret PIN is required to register as teacher. (Demo Jury: 2026)'
+              : 'A Teacher Secret PIN is required to register as teacher.',
           });
           setLoading(false);
           return;
@@ -277,31 +280,33 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 1-CLICK JURY SANDBOX SHORTCUT */}
-        <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-3 shadow-lg">
-          <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-300">
-            <Sparkles className="w-4 h-4 text-emerald-400" /> Hackathon Jury / Demo Access
+        {/* 1-CLICK JURY SANDBOX SHORTCUT (Hidden in Production / Classroom Mode) */}
+        {isJurySandboxEnabled() && (
+          <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-2xl p-4 text-center space-y-3 shadow-lg">
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-300">
+              <Sparkles className="w-4 h-4 text-emerald-400" /> Hackathon Jury / Demo Access
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              No password or registration required! Explore all features, live telemetry, and AI Socratic mentoring directly.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => router.push('/student')}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs h-9"
+              >
+                <GraduationCap className="w-3.5 h-3.5 mr-1.5" /> Student Sandbox
+              </Button>
+              <Button
+                type="button"
+                onClick={() => router.push('/teacher')}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 font-medium text-xs h-9"
+              >
+                <School className="w-3.5 h-3.5 mr-1.5" /> Teacher Hub
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-slate-300 leading-relaxed">
-            No password or registration required! Explore all features, live telemetry, and AI Socratic mentoring directly.
-          </p>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={() => router.push('/student')}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs h-9"
-            >
-              <GraduationCap className="w-3.5 h-3.5 mr-1.5" /> Student Sandbox
-            </Button>
-            <Button
-              type="button"
-              onClick={() => router.push('/teacher')}
-              className="flex-1 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 font-medium text-xs h-9"
-            >
-              <School className="w-3.5 h-3.5 mr-1.5" /> Teacher Hub
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* SUPABASE AUTH FORM */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
@@ -426,25 +431,35 @@ export default function LoginPage() {
                     <div className="space-y-1.5 rounded-lg border border-amber-500/30 bg-amber-950/20 p-2.5">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-medium text-amber-300">Teacher Secret PIN</label>
-                        <button
-                          type="button"
-                          onClick={() => setTeacherPin('2026')}
-                          className="text-[10px] font-mono text-amber-400 hover:text-amber-200 underline cursor-pointer"
-                          title="Auto-fill Demo Jury PIN"
-                        >
-                          Demo Jury: 2026 (Auto-fill)
-                        </button>
+                        {isJurySandboxEnabled() && (
+                          <button
+                            type="button"
+                            onClick={() => setTeacherPin('2026')}
+                            className="text-[10px] font-mono text-amber-400 hover:text-amber-200 underline cursor-pointer"
+                            title="Auto-fill Demo Jury PIN"
+                          >
+                            Demo Jury: 2026 (Auto-fill)
+                          </button>
+                        )}
                       </div>
                       <Input
                         type="password"
                         required
                         value={teacherPin}
                         onChange={(e) => setTeacherPin(e.target.value)}
-                        placeholder="Enter PIN (Demo: 2026)"
+                        placeholder={isJurySandboxEnabled() ? "Enter PIN (Demo: 2026)" : "Enter Teacher Secret PIN"}
                         className="bg-slate-950 border-amber-500/40 text-slate-100 text-xs h-9 focus-visible:ring-amber-500"
                       />
                       <p className="text-[10px] text-slate-400 leading-tight">
-                        To prevent unauthorized self-elevation, teacher registration requires a PIN. For hackathon evaluators, use <strong className="text-amber-300">2026</strong>.
+                        {isJurySandboxEnabled() ? (
+                          <>
+                            To prevent unauthorized self-elevation, teacher registration requires a PIN. For hackathon evaluators, use <strong className="text-amber-300">2026</strong>.
+                          </>
+                        ) : (
+                          <>
+                            Teacher registration requires an administrator authorization PIN to verify faculty credentials.
+                          </>
+                        )}
                       </p>
                     </div>
                   )}
