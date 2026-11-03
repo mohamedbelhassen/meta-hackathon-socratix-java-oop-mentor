@@ -86,82 +86,41 @@ export default function LoginPage() {
           return;
         }
 
-        const baseUrl = getAppBaseUrl();
-        const redirectUrl = `${baseUrl}/auth/callback?next=/`;
         const cleanDisplayName = displayName.trim() || email.split('@')[0];
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: cleanDisplayName,
-              full_name: cleanDisplayName,
-              display_name: cleanDisplayName,
-              role,
-              teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
-            },
-            emailRedirectTo: redirectUrl,
-          },
+        // Route registration through server API with Admin Auth + Brevo transactional delivery
+        // This completely eliminates Supabase client-side SMTP failures ("Error sending confirmation email")
+        const regRes = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            password,
+            displayName: cleanDisplayName,
+            role,
+            teacherPin: role === 'teacher' ? teacherPin.trim() : undefined,
+          }),
         });
-        if (error) throw error;
 
-        // Auto-sync profile if user and session token are returned immediately (e.g. if Confirm Email is off)
-        if (data?.user && data?.session?.access_token) {
-          await fetch('/api/auth/sync-profile', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${data.session.access_token}`,
-            },
-            body: JSON.stringify({
-              display_name: cleanDisplayName,
-              role,
-              teacher_pin: role === 'teacher' ? teacherPin.trim() : undefined,
-              is_new_signup: true,
-            }),
-          }).catch(console.error);
+        const regData = await regRes.json().catch(() => ({}));
 
+        if (!regRes.ok || regData.error) {
           setMessage({
-            type: 'success',
-            text: 'Account created! Redirecting to home...',
+            type: 'error',
+            text: regData.error || 'Failed to complete registration. Please try again.',
           });
-          setTimeout(() => {
-            router.push('/');
-          }, 1000);
+          setLoading(false);
           return;
         }
 
-        // If session is null (Supabase requires email confirmation), trigger Brevo gateway as reliable delivery
-        try {
-          const sendRes = await fetch('/api/auth/send-verification', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email,
-              displayName: cleanDisplayName,
-              role,
-              isNewRegistration: true,
-            }),
-          });
-          const sendJson = await sendRes.json();
-          if (sendRes.ok && sendJson.success) {
-            setMessage({
-              type: 'success',
-              text: 'Account created! A confirmation email has been dispatched via Brevo. Please check your inbox (and spam folder) to activate your account.',
-            });
-          } else {
-            setMessage({
-              type: 'success',
-              text: 'Account created! Please check your email to confirm your registration.',
-            });
-          }
-        } catch {
-          setMessage({
-            type: 'success',
-            text: 'Account created! Please check your email to confirm your registration.',
-          });
-        }
+        setMessage({
+          type: 'success',
+          text:
+            regData.message ||
+            'Account created! A confirmation email has been dispatched via Brevo. Please check your inbox (and spam folder) to activate your account.',
+        });
+        setLoading(false);
+        return;
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -531,20 +490,6 @@ export default function LoginPage() {
               </button>
             </div>
           )}
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span className="flex items-center gap-1 text-slate-400">
-              <Mail className="w-3 h-3 text-slate-400" /> Need verification link?
-            </span>
-            <button
-              type="button"
-              disabled={resending}
-              onClick={handleResendVerification}
-              className="text-emerald-400 hover:text-emerald-300 hover:underline disabled:opacity-50 flex items-center gap-1 font-medium"
-            >
-              <RefreshCw className={`w-3 h-3 ${resending ? 'animate-spin' : ''}`} />
-              {resending ? 'Sending...' : 'Resend via Brevo'}
-            </button>
-          </div>
         </div>
 
         <div className="text-center">
