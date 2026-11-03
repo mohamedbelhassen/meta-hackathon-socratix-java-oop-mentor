@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase-admin';
 import { Lab } from '@/types/socratix';
 
-const DEMO_PERSONAS = [
-  { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', seat: 'PC 01' },
-  { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', seat: 'PC 02' },
-  { id: '55555555-5555-5555-5555-555555555555', name: 'Ines', seat: 'PC 05' },
-  { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', seat: 'PC 12' },
-];
+interface Persona {
+  id: string;
+  name: string;
+  seat: string;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,64 +22,140 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Fetch the target lab
-    const { data: labData, error: labError } = await supabase
-      .from('labs')
-      .select('*')
-      .eq('id', labId)
-      .single();
+    // 1. Fetch guest personas from the database dynamically
+    const { data: dbGuests } = await supabase
+      .from('profiles')
+      .select('id, display_name, email, is_guest')
+      .eq('is_guest', true)
+      .eq('role', 'student')
+      .order('display_name', { ascending: true });
 
-    if (labError || !labData) {
+    // Fallback personas if DB has no guest profiles
+    const FALLBACK_PERSONAS: Persona[] = [
+      { id: '22222222-2222-2222-2222-222222222222', name: 'Alice', seat: 'PC 01' },
+      { id: '33333333-3333-3333-3333-333333333333', name: 'Bob', seat: 'PC 02' },
+      { id: '55555555-5555-5555-5555-555555555555', name: 'Ines', seat: 'PC 05' },
+      { id: '44444444-4444-4444-4444-444444444444', name: 'Guest Explorer', seat: 'PC 12' },
+    ];
+
+    const seatMap: Record<string, string> = {
+      Alice: 'PC 01',
+      Bob: 'PC 02',
+      Ines: 'PC 05',
+      'Guest Explorer': 'PC 12',
+    };
+
+    const personas: Persona[] = (dbGuests && dbGuests.length > 0)
+      ? dbGuests.map((g, idx) => ({
+          id: g.id,
+          name: g.display_name || `Student ${idx + 1}`,
+          seat: seatMap[g.display_name || ''] || `PC ${String(idx + 1).padStart(2, '0')}`,
+        }))
+      : FALLBACK_PERSONAS;
+
+    // 2. Fetch the target course & lab dynamically from DB
+    const [labRes, courseRes, chaptersRes] = await Promise.all([
+      supabase.from('labs').select('*').eq('id', labId).single(),
+      supabase.from('courses').select('id, code, title, file_extensions, content_language, tutor_language').eq('id', courseId).single(),
+      supabase.from('course_chapters').select('id, code, title, chapter_number, pdf_url').eq('course_id', courseId).order('chapter_number', { ascending: true }),
+    ]);
+
+    if (labRes.error || !labRes.data) {
       return NextResponse.json({ error: 'Target lab not found.' }, { status: 404 });
     }
 
-    const lab = labData as Lab;
+    const lab = labRes.data as Lab;
+    const courseData = courseRes.data;
+    const chapters = chaptersRes.data || [];
+
     const activities = lab.activities || [];
     const firstAct = activities[0];
     const firstActId = firstAct?.id || 'act_1';
     const m1Id = firstAct?.milestones?.[0]?.id || 'm1_1';
     const m2Id = firstAct?.milestones?.[1]?.id || 'm1_2';
 
-    const coveredConcepts = lab.covered_micro_concepts || ['VISIBILITY_ENCAPSULATION', 'DEFENSIVE_SETTERS'];
-    const concept1 = coveredConcepts[0] || 'VISIBILITY_ENCAPSULATION';
-    const concept2 = coveredConcepts[1] || 'DEFENSIVE_SETTERS';
+    const coveredConcepts = (lab.covered_micro_concepts && lab.covered_micro_concepts.length > 0)
+      ? lab.covered_micro_concepts
+      : ['CORE_SYNTAX', 'INPUT_VALIDATION'];
+    const concept1 = coveredConcepts[0] || 'CORE_SYNTAX';
+    const concept2 = coveredConcepts[1] || 'INPUT_VALIDATION';
 
-    // Fetch chapter 3 (or the closest chapter) to resolve real pdf_url for the sample course reference
-    const { data: ch3Chapter } = await supabase
-      .from('course_chapters')
-      .select('pdf_url, chapter_number, code')
-      .eq('course_id', courseId)
-      .eq('code', 'CH3_CLASSES')
-      .maybeSingle();
+    // 3. Resolve chapter slide reference dynamically
+    const targetChapter = chapters[0] || null;
+    const resolvedPdfUrl = targetChapter?.pdf_url || null;
+    const chapterLabel = targetChapter
+      ? `Chapter ${targetChapter.chapter_number}: ${targetChapter.title}`
+      : 'Course Curriculum';
+    const chapterCode = targetChapter?.code || 'CHAPTER_1';
 
-    let resolvedPdfUrl = ch3Chapter?.pdf_url || null;
-    if (!resolvedPdfUrl) {
-      const { data: anyChapter } = await supabase
-        .from('course_chapters')
-        .select('pdf_url')
-        .eq('course_id', courseId)
-        .not('pdf_url', 'is', null)
-        .limit(1)
-        .maybeSingle();
-      resolvedPdfUrl = anyChapter?.pdf_url || null;
+    // 4. Determine file names and realistic snippets dynamically based on course / lab
+    const courseExts = courseData?.file_extensions || ['.java'];
+    let primaryFile = 'Main.java';
+    let fileSnippet = 'public class Main {\n  // Implementation code\n}';
+    let failedSnippet = 'public class Main {\n  // Missing check\n}';
+
+    const firstTargetFile = firstAct?.target_files?.[0];
+    const firstPresetFile = lab.demo_presets?.[0]?.files?.[0]?.name;
+
+    if (firstTargetFile) {
+      primaryFile = firstTargetFile;
+    } else if (firstPresetFile) {
+      primaryFile = firstPresetFile;
+    } else {
+      const firstExt = courseExts[0]?.toLowerCase().replace(/^\./, '') || 'java';
+      if (firstExt === 'html' || firstExt === 'htm') {
+        primaryFile = 'index.html';
+        fileSnippet = '<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>App</title>\n  <link rel="stylesheet" href="styles.css">\n</head>\n<body>\n  <main class="container">\n    <h1>Hello Socratix</h1>\n  </main>\n</body>\n</html>';
+        failedSnippet = '<!DOCTYPE html>\n<html>\n<head></head>\n<body>\n  <!-- Missing required structure -->\n';
+      } else if (firstExt === 'css') {
+        primaryFile = 'styles.css';
+        fileSnippet = '.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  padding: 1rem;\n}';
+        failedSnippet = '.container {\n  width: -100px;\n}';
+      } else if (firstExt === 'kt' || firstExt === 'kts') {
+        primaryFile = 'Main.kt';
+        fileSnippet = 'class Solution {\n    fun execute(): String = "Validated"\n}';
+        failedSnippet = 'class Solution {\n    fun execute(): String = TODO("Unimplemented")\n}';
+      } else if (firstExt === 'tsx' || firstExt === 'jsx') {
+        primaryFile = 'App.tsx';
+        fileSnippet = 'import React from "react";\nimport { View, Text } from "react-native";\n\nexport default function App() {\n  return (\n    <View>\n      <Text>Socratix Mobile</Text>\n    </View>\n  );\n}';
+        failedSnippet = 'import React from "react";\n\nexport default function App() {\n  return <View>Unclosed\n}';
+      } else if (firstExt === 'js' || firstExt === 'ts') {
+        primaryFile = 'app.js';
+        fileSnippet = 'function calculateTotal(items) {\n  return items.reduce((sum, item) => sum + item.price, 0);\n}';
+        failedSnippet = 'function calculateTotal(items) {\n  return items.price;\n}';
+      } else if (firstExt === 'py') {
+        primaryFile = 'main.py';
+        fileSnippet = 'def process_records(items):\n    return [item.strip() for item in items if item]\n';
+        failedSnippet = 'def process_records(items):\n    return items[999]\n';
+      } else if (firstExt === 'c' || firstExt === 'h') {
+        primaryFile = 'main.c';
+        fileSnippet = '#include <stdio.h>\n\nint main(void) {\n    printf("Socratix C Lab\\n");\n    return 0;\n}';
+        failedSnippet = '#include <stdio.h>\n\nint main(void) {\n    int *ptr = NULL;\n    *ptr = 42;\n    return 0;\n}';
+      }
     }
 
     const nowIso = new Date().toISOString();
 
-    // Delete existing demo sessions for these 4 personas on this lab
-    const demoIds = DEMO_PERSONAS.map((p) => p.id);
+    // 5. Delete existing demo sessions for these personas on this lab
+    const demoIds = personas.map((p) => p.id);
     await supabase
       .from('student_lab_sessions')
       .delete()
       .in('student_id', demoIds)
       .eq('lab_id', labId);
 
-    // 1. Alice: COMPLETED (100%)
+    // 6. Build realistic classroom cohort (1 COMPLETED, 2 BLOCKED to trigger Bottleneck Alert, 1 IN_PROGRESS)
+    const p1 = personas[0] || FALLBACK_PERSONAS[0];
+    const p2 = personas[1] || FALLBACK_PERSONAS[1];
+    const p3 = personas[2] || FALLBACK_PERSONAS[2];
+    const p4 = personas[3] || FALLBACK_PERSONAS[3];
+
+    // Alice / Student 1: COMPLETED (100%)
     const aliceSession = {
       course_id: courseId,
       lab_id: labId,
-      student_id: DEMO_PERSONAS[0].id,
-      seat_label: DEMO_PERSONAS[0].seat,
+      student_id: p1.id,
+      seat_label: p1.seat,
       status: 'COMPLETED',
       current_activity_id: firstActId,
       current_milestone_id: m2Id,
@@ -101,23 +176,15 @@ export async function POST(req: NextRequest) {
           status: 'MASTERED',
           score: 100,
           signal_count: 2,
-          summary: 'Mastered across all 2 inspected locations.',
+          summary: `Mastered all criteria for ${concept1}.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:price',
+              file: primaryFile,
+              location: `${primaryFile}:spec`,
               status: 'PASS',
               last_signal: 'POSITIVE',
-              note: 'Private field encapsulation correctly implemented.',
-            },
-            {
-              activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:name',
-              status: 'PASS',
-              last_signal: 'POSITIVE',
-              note: 'Private field encapsulation correctly implemented.',
+              note: 'Requirements verified cleanly.',
             },
           ],
         },
@@ -125,36 +192,36 @@ export async function POST(req: NextRequest) {
           status: 'MASTERED',
           score: 100,
           signal_count: 2,
-          summary: 'Mastered across all 2 inspected locations.',
+          summary: `Mastered all criteria for ${concept2}.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:setPrice',
+              file: primaryFile,
+              location: `${primaryFile}:validate`,
               status: 'PASS',
               last_signal: 'POSITIVE',
-              note: 'Defensive check throws IllegalArgumentException on negative price.',
+              note: 'Validation check properly guards invariants.',
             },
           ],
         },
       },
-      last_diagnostic_note: 'All criteria satisfied with high code quality.',
+      last_diagnostic_note: 'All milestone contracts verified with high code quality.',
       completion_report: {
-        congratulations: 'Superb work Alice! You have mastered encapsulation and defensive invariants.',
+        congratulations: `Superb work ${p1.name}! You have mastered all requirements for ${lab.title}.`,
         mastered_concepts: [concept1, concept2],
-        friction_points: ['Minor syntax check initially'],
-        revision_recommendations: ['Review Chapter 4 inheritance for next lab'],
+        friction_points: ['Initial syntax check resolved'],
+        revision_recommendations: [`Review ${chapterLabel} for next chapter consolidation`],
       },
       started_at: nowIso,
       updated_at: nowIso,
     };
 
-    // 2. Bob: BLOCKED on m2Id (PC 02)
+    // Bob / Student 2: BLOCKED on m2Id (PC 02)
     const bobSession = {
       course_id: courseId,
       lab_id: labId,
-      student_id: DEMO_PERSONAS[1].id,
-      seat_label: DEMO_PERSONAS[1].seat,
+      student_id: p2.id,
+      seat_label: p2.seat,
       status: 'BLOCKED',
       current_activity_id: firstActId,
       current_milestone_id: m2Id,
@@ -175,23 +242,15 @@ export async function POST(req: NextRequest) {
           status: 'MASTERED',
           score: 100,
           signal_count: 2,
-          summary: 'Demonstrated across 2 inspected locations.',
+          summary: `Satisfied in ${primaryFile}.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:price',
+              file: primaryFile,
+              location: `${primaryFile}:structure`,
               status: 'PASS',
               last_signal: 'POSITIVE',
-              note: 'Private modifier present.',
-            },
-            {
-              activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:name',
-              status: 'PASS',
-              last_signal: 'POSITIVE',
-              note: 'Private modifier present.',
+              note: 'Structure verified.',
             },
           ],
         },
@@ -199,39 +258,31 @@ export async function POST(req: NextRequest) {
           status: 'IN_PROGRESS',
           score: 50,
           signal_count: 2,
-          summary: 'Partial (1/2): Passed in Item.java:setPrice, needs attention in Item.java:setQuantity.',
+          summary: `Partial progress in ${primaryFile}. Needs attention on validation logic.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:setPrice',
-              status: 'PASS',
-              last_signal: 'POSITIVE',
-              note: 'Guard condition verifies price >= 0.',
-            },
-            {
-              activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:setQuantity',
+              file: primaryFile,
+              location: `${primaryFile}:guard`,
               status: 'FAIL',
               last_signal: 'NEGATIVE',
-              note: 'Negative quantities accepted without defensive validation.',
+              note: 'Unhandled boundary condition in validation logic.',
             },
           ],
         },
       },
-      last_diagnostic_note: 'Negative quantities accepted in setQuantity without validation.',
+      last_diagnostic_note: `Unhandled boundary condition in ${primaryFile}.`,
       last_stuck_at: nowIso,
       started_at: nowIso,
       updated_at: nowIso,
     };
 
-    // 3. Ines: BLOCKED on m2Id (PC 05) - Triggers classroom bottleneck alert!
+    // Ines / Student 3: BLOCKED on m2Id (PC 05) - Triggers Classroom Bottleneck Alert
     const inesSession = {
       course_id: courseId,
       lab_id: labId,
-      student_id: DEMO_PERSONAS[2].id,
-      seat_label: DEMO_PERSONAS[2].seat,
+      student_id: p3.id,
+      seat_label: p3.seat,
       status: 'BLOCKED',
       current_activity_id: firstActId,
       current_milestone_id: m2Id,
@@ -252,15 +303,15 @@ export async function POST(req: NextRequest) {
           status: 'MASTERED',
           score: 100,
           signal_count: 1,
-          summary: 'Private modifier present.',
+          summary: 'Structure verified.',
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:price',
+              file: primaryFile,
+              location: `${primaryFile}:main`,
               status: 'PASS',
               last_signal: 'POSITIVE',
-              note: 'Encapsulation verified.',
+              note: 'Main contract verified.',
             },
           ],
         },
@@ -268,31 +319,31 @@ export async function POST(req: NextRequest) {
           status: 'STRUGGLING',
           score: 0,
           signal_count: 1,
-          summary: 'Struggling with defensive setter invariants.',
+          summary: `Struggling with ${concept2} requirements.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:setPrice',
+              file: primaryFile,
+              location: `${primaryFile}:check`,
               status: 'FAIL',
               last_signal: 'NEGATIVE',
-              note: 'Missing defensive guard against negative numbers.',
+              note: 'Missing defensive guard against edge cases.',
             },
           ],
         },
       },
-      last_diagnostic_note: 'Missing validation guard in setter.',
+      last_diagnostic_note: `Missing defensive guard against edge cases in ${primaryFile}.`,
       last_stuck_at: nowIso,
       started_at: nowIso,
       updated_at: nowIso,
     };
 
-    // 4. Guest Explorer: IN_PROGRESS (PC 12)
+    // Guest Explorer / Student 4: IN_PROGRESS (PC 12)
     const guestSession = {
       course_id: courseId,
       lab_id: labId,
-      student_id: DEMO_PERSONAS[3].id,
-      seat_label: DEMO_PERSONAS[3].seat,
+      student_id: p4.id,
+      seat_label: p4.seat,
       status: 'IN_PROGRESS',
       current_activity_id: firstActId,
       current_milestone_id: m1Id,
@@ -313,15 +364,15 @@ export async function POST(req: NextRequest) {
           status: 'IN_PROGRESS',
           score: 50,
           signal_count: 1,
-          summary: 'One field lacks private modifier.',
+          summary: `Initial pass on ${concept1}.`,
           occurrences: [
             {
               activity_id: firstActId,
-              file: 'Item.java',
-              location: 'Item.java:price',
-              status: 'FAIL',
-              last_signal: 'NEGATIVE',
-              note: 'Missing private modifier.',
+              file: primaryFile,
+              location: `${primaryFile}:setup`,
+              status: 'PASS',
+              last_signal: 'POSITIVE',
+              note: 'Workspace setup initiated.',
             },
           ],
         },
@@ -331,6 +382,7 @@ export async function POST(req: NextRequest) {
       updated_at: nowIso,
     };
 
+    // 7. Insert all sessions into Supabase
     const { data: inserted, error: insertError } = await supabase
       .from('student_lab_sessions')
       .insert([aliceSession, bobSession, inesSession, guestSession])
@@ -341,45 +393,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to insert demo sessions.' }, { status: 500 });
     }
 
-    // Add sample chat messages for Bob
-    const bobInserted = inserted?.find((s) => s.student_id === DEMO_PERSONAS[1].id);
+    // 8. Add sample chat messages tailored to the course
+    const bobInserted = inserted?.find((s) => s.student_id === p2.id);
     if (bobInserted) {
       await supabase.from('chat_messages').insert([
         {
           student_lab_session_id: bobInserted.id,
           role: 'user',
-          content: 'Why does my test fail when I pass a negative price or quantity?',
+          content: `I am encountering a bug in ${primaryFile} during Milestone 2. Could you give me a hint?`,
           code_snapshot: [
             {
-              name: 'Item.java',
-              content: 'public class Item {\n  private double price;\n  public void setPrice(double p) { this.price = p; }\n}',
+              name: primaryFile,
+              content: failedSnippet,
             },
           ],
         },
         {
           student_lab_session_id: bobInserted.id,
           role: 'assistant',
-          content: 'Look at your `setPrice` and `setQuantity` methods. Do they prevent an external caller from storing negative numbers? Remember the Oven invariant from Chapter 3 (Slide 42)!',
+          content: `Look at the boundary conditions in \`${primaryFile}\`. Does your current logic handle edge cases properly? Check the reference from ${chapterLabel}!`,
           course_reference: {
-            label: 'Chapter 3 (Slide 42): Encapsulation and Invariants',
-            chapter_code: 'CH3_CLASSES',
-            page_number: 42,
+            label: `${chapterLabel} (Slide Reference)`,
+            chapter_code: chapterCode,
+            page_number: 1,
             pdf_url: resolvedPdfUrl,
-            en_note: 'Allowing direct unchecked assignments breaks object invariants.',
+            en_note: `Review requirements for ${concept2} in ${primaryFile}.`,
             slide_markdown: {
-              fr: '**Encapsulation et Invariants** (Slide 42) :\nUn objet doit préserver son état interne. Rendre les champs `private` et contrôler les modifications dans les mutateurs (setters).',
-              en: '**Encapsulation and Invariants** (Slide 42):\nAn object must safeguard its internal state. Make fields `private` and enforce validation checks inside setters.',
+              en: `**${concept2} Guideline**:\nEnsure all invariants and input constraints are properly verified.`,
+              fr: `**Règle pour ${concept2}** :\nAssurez-vous que toutes les contraintes sont vérifiées avant validation.`,
             },
           },
           code_snapshot: [],
-          latency_ms: 840,
+          latency_ms: 720,
         },
       ]);
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Demo class populated with 4 realistic sessions on the selected lab.',
+      message: `Demo class populated with ${inserted?.length || 4} dynamic sessions for ${lab.title}.`,
       sessions: inserted,
     });
   } catch (error) {

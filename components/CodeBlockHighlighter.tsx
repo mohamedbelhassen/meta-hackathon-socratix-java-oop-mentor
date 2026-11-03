@@ -7,6 +7,13 @@ import javascript from 'react-syntax-highlighter/dist/esm/languages/prism/javasc
 import typescript from 'react-syntax-highlighter/dist/esm/languages/prism/typescript';
 import python from 'react-syntax-highlighter/dist/esm/languages/prism/python';
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json';
+import css from 'react-syntax-highlighter/dist/esm/languages/prism/css';
+import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup';
+import kotlin from 'react-syntax-highlighter/dist/esm/languages/prism/kotlin';
+import tsx from 'react-syntax-highlighter/dist/esm/languages/prism/tsx';
+import jsx from 'react-syntax-highlighter/dist/esm/languages/prism/jsx';
+import c from 'react-syntax-highlighter/dist/esm/languages/prism/c';
+import cpp from 'react-syntax-highlighter/dist/esm/languages/prism/cpp';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
 SyntaxHighlighter.registerLanguage('java', java);
@@ -14,6 +21,14 @@ SyntaxHighlighter.registerLanguage('javascript', javascript);
 SyntaxHighlighter.registerLanguage('typescript', typescript);
 SyntaxHighlighter.registerLanguage('python', python);
 SyntaxHighlighter.registerLanguage('json', json);
+SyntaxHighlighter.registerLanguage('css', css);
+SyntaxHighlighter.registerLanguage('html', markup);
+SyntaxHighlighter.registerLanguage('markup', markup);
+SyntaxHighlighter.registerLanguage('kotlin', kotlin);
+SyntaxHighlighter.registerLanguage('tsx', tsx);
+SyntaxHighlighter.registerLanguage('jsx', jsx);
+SyntaxHighlighter.registerLanguage('c', c);
+SyntaxHighlighter.registerLanguage('cpp', cpp);
 
 export interface CodeBlockHighlighterProps {
   language?: string;
@@ -32,9 +47,30 @@ export function CodeBlockHighlighter({
   customStyle,
 }: CodeBlockHighlighterProps) {
   const normalizedLang = language.toLowerCase().replace(/^\./, '');
-  const safeLang = ['java', 'javascript', 'typescript', 'python', 'json'].includes(normalizedLang)
-    ? normalizedLang
-    : 'java';
+  const langMap: Record<string, string> = {
+    js: 'javascript',
+    javascript: 'javascript',
+    ts: 'typescript',
+    typescript: 'typescript',
+    tsx: 'tsx',
+    jsx: 'jsx',
+    py: 'python',
+    python: 'python',
+    java: 'java',
+    json: 'json',
+    css: 'css',
+    html: 'html',
+    htm: 'html',
+    markup: 'html',
+    kt: 'kotlin',
+    kts: 'kotlin',
+    kotlin: 'kotlin',
+    c: 'c',
+    h: 'c',
+    cpp: 'cpp',
+    hpp: 'cpp',
+  };
+  const safeLang = langMap[normalizedLang] || 'java';
 
   return (
     <SyntaxHighlighter

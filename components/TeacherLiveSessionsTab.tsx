@@ -671,7 +671,7 @@ export default function TeacherLiveSessionsTab({
                       <div key={idx} className="mb-4">
                         <div className="text-[11px] font-mono text-emerald-400 mb-1 px-1">{file.name}</div>
                         <CodeBlockHighlighter
-                          language="java"
+                          language={file.name.split('.').pop()?.toLowerCase() || 'java'}
                           code={file.content || '// Empty'}
                           fontSize="11px"
                           showLineNumbers

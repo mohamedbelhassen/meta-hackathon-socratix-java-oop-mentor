@@ -37,6 +37,75 @@ export default function CreateCourseModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const PRESET_CONFIGS = [
+    {
+      name: 'Web Dev',
+      exts: '.html, .htm, .css, .js',
+      code: 'WEB_DEV',
+      title: 'Modern Web Development (HTML5, CSS3 & JavaScript)',
+      badgeColor: 'border-amber-500/30 text-amber-300 bg-amber-500/10',
+    },
+    {
+      name: 'Kotlin',
+      exts: '.kt, .kts',
+      code: 'KOTLIN_DEV',
+      title: 'Kotlin Programming & Android Fundamentals',
+      badgeColor: 'border-purple-500/30 text-purple-300 bg-purple-500/10',
+    },
+    {
+      name: 'React Native',
+      exts: '.tsx, .jsx, .ts, .js, .json',
+      code: 'REACT_NATIVE',
+      title: 'Cross-Platform Mobile Apps with React Native & Expo',
+      badgeColor: 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10',
+    },
+    {
+      name: 'Java',
+      exts: '.java',
+      code: 'JAVA_OOP',
+      title: 'Object-Oriented Programming in Java',
+      badgeColor: 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10',
+    },
+    {
+      name: 'Python',
+      exts: '.py',
+      code: 'PYTHON_AI',
+      title: 'Python for Data Science & AI',
+      badgeColor: 'border-blue-500/30 text-blue-300 bg-blue-500/10',
+    },
+    {
+      name: 'TypeScript',
+      exts: '.ts, .tsx, .js',
+      code: 'FULLSTACK_TS',
+      title: 'Full-Stack TypeScript & Node.js',
+      badgeColor: 'border-sky-500/30 text-sky-300 bg-sky-500/10',
+    },
+    {
+      name: 'C',
+      exts: '.c, .h',
+      code: 'C_SYSTEMS',
+      title: 'Systems Programming in C',
+      badgeColor: 'border-slate-500/30 text-slate-300 bg-slate-500/10',
+    },
+    {
+      name: 'C++',
+      exts: '.cpp, .hpp',
+      code: 'CPP_ALGO',
+      title: 'Modern C++ & Algorithms',
+      badgeColor: 'border-indigo-500/30 text-indigo-300 bg-indigo-500/10',
+    },
+  ];
+
+  const handleApplyPreset = (preset: typeof PRESET_CONFIGS[0]) => {
+    setFileExtensions(preset.exts);
+    if (!code.trim()) {
+      setCode(preset.code);
+    }
+    if (!title.trim()) {
+      setTitle(preset.title);
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -231,44 +300,35 @@ export default function CreateCourseModal({
             </div>
           </div>
 
-          {/* Quick Extension Chips */}
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            <span className="text-[10px] text-slate-400 font-medium mr-1">Quick Presets:</span>
-            <button
-              type="button"
-              onClick={() => setFileExtensions('.c, .h')}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition border border-slate-700"
-            >
-              C (.c, .h)
-            </button>
-            <button
-              type="button"
-              onClick={() => setFileExtensions('.cpp, .hpp')}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition border border-slate-700"
-            >
-              C++ (.cpp, .hpp)
-            </button>
-            <button
-              type="button"
-              onClick={() => setFileExtensions('.java')}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition border border-slate-700"
-            >
-              Java (.java)
-            </button>
-            <button
-              type="button"
-              onClick={() => setFileExtensions('.py')}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition border border-slate-700"
-            >
-              Python (.py)
-            </button>
-            <button
-              type="button"
-              onClick={() => setFileExtensions('.ts, .tsx, .js')}
-              className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono transition border border-slate-700"
-            >
-              TypeScript (.ts, .tsx)
-            </button>
+          {/* Quick Extension Chips & Presets */}
+          <div className="space-y-1.5 pt-0.5">
+            <div className="flex items-center justify-between text-[10px] text-slate-400">
+              <span className="font-semibold text-slate-300 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-emerald-400" /> Curriculum Presets (Click to Auto-Configure):
+              </span>
+              <span className="text-slate-500">Includes Web, Kotlin, React Native</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {PRESET_CONFIGS.map((preset) => {
+                const isSelected = fileExtensions === preset.exts;
+                return (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => handleApplyPreset(preset)}
+                    className={`text-[10px] px-2.5 py-1 rounded-lg font-mono transition border flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-950/40'
+                        : `bg-slate-800/80 hover:bg-slate-700 text-slate-300 ${preset.badgeColor}`
+                    }`}
+                    title={`Click to apply ${preset.name} preset (${preset.exts})`}
+                  >
+                    <span className="font-sans font-bold">{preset.name}</span>
+                    <span className="text-[9px] opacity-75">({preset.exts.split(',')[0]}...)</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Stuck Threshold & Dual Criteria */}

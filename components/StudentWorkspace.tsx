@@ -233,10 +233,18 @@ export default function StudentWorkspace() {
 
   // Helper: Get syntax highlighting language
   const getSyntaxLanguage = (filename: string): string => {
-    if (filename.endsWith('.java')) return 'java';
-    if (filename.endsWith('.js') || filename.endsWith('.jsx')) return 'javascript';
-    if (filename.endsWith('.ts') || filename.endsWith('.tsx')) return 'typescript';
-    if (filename.endsWith('.json')) return 'json';
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.java')) return 'java';
+    if (lower.endsWith('.js') || lower.endsWith('.jsx')) return 'javascript';
+    if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return 'typescript';
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
+    if (lower.endsWith('.css')) return 'css';
+    if (lower.endsWith('.kt') || lower.endsWith('.kts')) return 'kotlin';
+    if (lower.endsWith('.py')) return 'python';
+    if (lower.endsWith('.json')) return 'json';
+    if (lower.endsWith('.c') || lower.endsWith('.h')) return 'c';
+    if (lower.endsWith('.cpp') || lower.endsWith('.hpp')) return 'cpp';
+    if (lower.endsWith('.md')) return 'markdown';
     return 'text';
   };
 

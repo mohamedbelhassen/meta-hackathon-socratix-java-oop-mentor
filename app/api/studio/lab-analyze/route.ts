@@ -290,6 +290,7 @@ ${pagesTextSample}`;
           json_schema: jsonSchema,
         },
         temperature: 0.1,
+        reasoning_effort: 'low',
         prompt_cache_key: `studio-lab-analyze-${courseId}`,
         prompt_cache_retention: '24h',
       }),
@@ -453,6 +454,7 @@ ${pagesTextSample}`;
     });
   } catch (err: unknown) {
     console.error('[Lab Analyze Error]:', err);
-    return NextResponse.json({ error: 'Lab analysis failed. Please verify your PDF format or try again.' }, { status: 500 });
+    const errMsg = err instanceof Error ? err.message : 'Lab analysis failed. Please verify your PDF format or try again.';
+    return NextResponse.json({ error: errMsg }, { status: 500 });
   }
 }

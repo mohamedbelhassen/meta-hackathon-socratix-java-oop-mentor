@@ -162,10 +162,14 @@ export function buildAdaptivePageBatches(
 
 /**
  * Deterministically formats raw extracted slide/page text into clean, readable Markdown
- * with proper section headers, bullet lists, and syntax-highlighted Java code blocks.
+ * with proper section headers, bullet lists, and syntax-highlighted code blocks.
  * Serves as an instantaneous 0-token fallback whenever AI markdown is pending.
  */
-export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: string): string {
+export function formatRawSlideTextToMarkdown(
+  rawText: string,
+  fallbackTitle?: string,
+  fileExtensions?: string[]
+): string {
   if (!rawText || !rawText.trim()) {
     return fallbackTitle ? `### ${fallbackTitle}\n\n*Contenu textuel non disponible.*` : '*Contenu textuel non disponible.*';
   }
@@ -183,8 +187,20 @@ export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: st
     filteredLines.push(rawLines[i]);
   }
 
-  // 2. Classify lines as either Text/Header, Bullet, or Java Code
-  const JAVA_INDICATORS = /\b(?:public|private|protected|static|final|class|interface|enum|extends|implements|void|int|double|boolean|String|new|return|throws|throw|try|catch|finally|import|package|System\.out\.println)\b/;
+  // Determine base code language from fileExtensions
+  let codeLang = 'java';
+  if (Array.isArray(fileExtensions) && fileExtensions.length > 0) {
+    const exts = fileExtensions.map((e) => e.toLowerCase());
+    if (exts.some((e) => e.includes('html') || e.includes('htm'))) codeLang = 'html';
+    else if (exts.some((e) => e.includes('css'))) codeLang = 'css';
+    else if (exts.some((e) => e.includes('kt'))) codeLang = 'kotlin';
+    else if (exts.some((e) => e.includes('tsx') || e.includes('jsx') || e.includes('ts') || e.includes('js'))) codeLang = 'typescript';
+    else if (exts.some((e) => e.includes('py'))) codeLang = 'python';
+    else if (exts.some((e) => e.includes('.c') || e.includes('.h'))) codeLang = 'c';
+  }
+
+  // 2. Classify lines as either Text/Header, Bullet, or Code
+  const CODE_INDICATORS = /\b(?:public|private|protected|static|final|class|interface|enum|extends|implements|void|int|double|boolean|String|new|return|throws|throw|try|catch|finally|import|package|System\.out\.println|fun|val|var|const|let|function|def|doctype|html|head|body|div|span|h1|h2|p|ul|li|table|tr|td|style|script)\b/i;
 
   const formattedBlocks: string[] = [];
   let inCodeBlock = false;
@@ -192,7 +208,14 @@ export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: st
 
   const flushCode = () => {
     if (codeBuffer.length > 0) {
-      formattedBlocks.push('```java\n' + codeBuffer.join('\n') + '\n```');
+      const joined = codeBuffer.join('\n');
+      let blockLang = codeLang;
+      if (/<(?:!DOCTYPE|html|head|body|div|p|span|table|form|input|button)/i.test(joined)) {
+        blockLang = 'html';
+      } else if (/[a-z-]+\s*:\s*[^;]+;/i.test(joined) && !joined.includes('(')) {
+        blockLang = 'css';
+      }
+      formattedBlocks.push(`\`\`\`${blockLang}\n` + joined + '\n```');
       codeBuffer = [];
       inCodeBlock = false;
     }
@@ -214,10 +237,10 @@ export function formatRawSlideTextToMarkdown(rawText: string, fallbackTitle?: st
     }
 
     // Check if line looks like code
-    const isComment = /^(?:\/\*|\*|\/\/)/.test(line);
-    const hasBraces = /[{};]/.test(line);
-    const hasJavaKeywords = JAVA_INDICATORS.test(line);
-    const isCodeLike = isComment || hasBraces || (hasJavaKeywords && (line.includes('(') || line.includes('{') || line.includes(';')));
+    const isComment = /^(?:\/\*|\*|\/\/|<!--)/.test(line);
+    const hasBraces = /[{};<>]/.test(line);
+    const hasCodeKeywords = CODE_INDICATORS.test(line);
+    const isCodeLike = isComment || (hasBraces && (line.includes('</') || line.includes('{') || line.includes(';'))) || (hasCodeKeywords && (line.includes('(') || line.includes('{') || line.includes(';') || line.includes('<')));
 
     if (isCodeLike) {
       inCodeBlock = true;
