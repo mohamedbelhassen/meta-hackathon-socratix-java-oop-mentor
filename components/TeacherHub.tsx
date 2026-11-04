@@ -224,7 +224,7 @@ export default function TeacherHub() {
               🦉 Socratix ERP
             </span>
             <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-transparent text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
-              Teacher Hub v2
+              Teacher Hub
             </Badge>
 
             {/* Course Selector & Actions */}
