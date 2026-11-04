@@ -14,6 +14,7 @@ import {
   X,
   ArrowRight,
   Sparkles,
+  ChevronDown,
 } from 'lucide-react';
 
 interface TeacherCoverageTabProps {
@@ -216,61 +217,61 @@ export default function TeacherCoverageTab({
       {/* 1. TOP DESIGN-TIME KPI BANNER (Curriculum Alignment Score) */}
       {/* ==================================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
             <span>Coverage Score</span>
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <Sparkles className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold text-emerald-400 font-mono">
+          <div className="text-2xl font-black text-[#059669] dark:text-emerald-400 font-mono">
             {coverageHealthScore}%
           </div>
-          <div className="text-[11px] text-slate-500">
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             {reinforcedCount + coveredCount}/{totalSyllabusConcepts} practiced in TP
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
             <span>Reinforced (2+ TP)</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
           </div>
-          <div className="text-2xl font-bold text-white font-mono">{reinforcedCount}</div>
-          <div className="text-[11px] text-emerald-400/80 font-medium">
+          <div className="text-2xl font-black text-[#0f172a] dark:text-white font-mono">{reinforcedCount}</div>
+          <div className="text-[11px] text-[#059669] dark:text-emerald-400 font-bold">
             Solid practical grounding
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
             <span>Covered (1 TP)</span>
-            <Check className="w-4 h-4 text-cyan-400" />
+            <Check className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
           </div>
-          <div className="text-2xl font-bold text-cyan-400 font-mono">{coveredCount}</div>
-          <div className="text-[11px] text-slate-500">
+          <div className="text-2xl font-black text-cyan-700 dark:text-cyan-400 font-mono">{coveredCount}</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             Practiced once
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
             <span>Syllabus Gaps (0 TP)</span>
-            <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           </div>
-          <div className="text-2xl font-bold text-rose-400 font-mono">{gapCount}</div>
-          <div className="text-[11px] text-slate-500">
+          <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">{gapCount}</div>
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             Theory without TP practice
           </div>
         </div>
 
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-          <div className="flex items-center justify-between text-slate-400 text-xs">
+        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
             <span>Lab Unanchored</span>
-            <Terminal className="w-4 h-4 text-amber-400" />
+            <Terminal className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           </div>
-          <div className="text-2xl font-bold text-amber-400 font-mono">
+          <div className="text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
             {unanchoredConceptsMap.size}
           </div>
-          <div className="text-[11px] text-slate-500">
+          <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
             TP skills not in slides
           </div>
         </div>
@@ -279,38 +280,38 @@ export default function TeacherCoverageTab({
       {/* ==================================================================== */}
       {/* 2. FULL WIDTH: CURRICULUM COVERAGE MATRIX (Course Chapters <-> Labs) */}
       {/* ==================================================================== */}
-      <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
+      <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-2">
-            <Compass className="w-5 h-5 text-emerald-400" />
+            <Compass className="w-5 h-5 text-[#059669] dark:text-emerald-400" />
             <div>
-              <h3 className="font-semibold text-slate-100 text-sm">
+              <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                 Curriculum Coverage Matrix (Course Syllabus &harr; TP Labs)
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                 Cross-references theoretical lecture competencies against practical lab assignments.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-emerald-400">
-              <Check className="w-3.5 h-3.5" /> Reinforced (2+ TP)
+          <div className="flex items-center gap-3 text-xs">
+            <span className="inline-flex items-center gap-1 text-[#059669] dark:text-emerald-400 font-bold">
+              <Check className="w-3.5 h-3.5 text-[#059669]" /> Reinforced (2+ TP)
             </span>
-            <span className="inline-flex items-center gap-1 text-cyan-400">
-              <Check className="w-3.5 h-3.5" /> Covered (1 TP)
+            <span className="inline-flex items-center gap-1 text-cyan-700 dark:text-cyan-400 font-bold">
+              <Check className="w-3.5 h-3.5 text-cyan-600" /> Covered (1 TP)
             </span>
-            <span className="inline-flex items-center gap-1 text-rose-400">
-              <AlertTriangle className="w-3.5 h-3.5" /> Gap (0 TP)
+            <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-bold">
+              <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Gap (0 TP)
             </span>
           </div>
         </div>
 
         {chaptersTaxonomy.length === 0 ? (
-          <div className="p-8 text-center border border-dashed border-slate-800 rounded-xl text-slate-500 text-xs space-y-3">
+          <div className="p-8 text-center border border-dashed border-slate-300 dark:border-slate-800 rounded-xl text-slate-500 text-xs space-y-3">
             <BookOpen className="w-8 h-8 mx-auto opacity-50" />
             <div className="space-y-1">
-              <p className="font-medium text-slate-300">No chapter competencies compiled yet.</p>
-              <p className="text-[11px] text-slate-600">
+              <p className="font-semibold text-slate-800 dark:text-slate-300">No chapter competencies compiled yet.</p>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                 Go to Course Studio and synthesize the curriculum (Step 3) to build the taxonomy matrix.
               </p>
             </div>
@@ -318,7 +319,7 @@ export default function TeacherCoverageTab({
               <Button
                 type="button"
                 onClick={onOpenStudioTab}
-                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3 rounded-lg shadow-sm gap-1"
+                className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs h-8 px-3 rounded-lg shadow-sm gap-1"
               >
                 <span>Open Course Studio</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -330,43 +331,43 @@ export default function TeacherCoverageTab({
             {chaptersTaxonomy.map((chapter) => (
               <div
                 key={chapter.chapter_code}
-                className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-xl space-y-2.5"
+                className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-850 rounded-xl space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-[10px] border-emerald-500/30 text-emerald-400">
+                    <Badge variant="outline" className="font-mono text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30 text-[#059669] dark:text-emerald-400">
                       {chapter.chapter_code}
                     </Badge>
-                    <span className="text-xs font-semibold text-slate-200">
+                    <span className="text-xs font-bold text-[#0f172a] dark:text-slate-200">
                       {chapter.competency_title}
                     </span>
                   </div>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[11px] text-slate-600 dark:text-slate-400 font-semibold">
                     {chapter.micro_competencies?.length || 0} Micro-Competencies
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                   {(chapter.micro_competencies || []).map((micro) => {
                     const coveredInLabs = conceptToLabsMap.get(micro.code) || [];
                     const labCount = coveredInLabs.length;
 
                     let statusBadge = (
-                      <Badge className="bg-rose-500/15 text-rose-400 border-rose-500/30 text-[10px] gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Gap (0 TP)
+                      <Badge className="bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30 text-[10px] gap-1 font-bold">
+                        <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Gap (0 TP)
                       </Badge>
                     );
 
                     if (labCount >= 2) {
                       statusBadge = (
-                        <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Reinforced ({labCount} TP)
+                        <Badge className="bg-emerald-50 dark:bg-emerald-500/15 text-[#059669] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 text-[10px] gap-1 font-bold">
+                          <CheckCircle2 className="w-3 h-3 text-[#059669] dark:text-emerald-400" /> Reinforced ({labCount} TP)
                         </Badge>
                       );
                     } else if (labCount === 1) {
                       statusBadge = (
-                        <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/30 text-[10px] gap-1">
-                          <Check className="w-3 h-3" /> Covered ({coveredInLabs[0]})
+                        <Badge className="bg-cyan-50 dark:bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 text-[10px] gap-1 font-bold">
+                          <Check className="w-3 h-3 text-cyan-600 dark:text-cyan-400" /> Covered ({coveredInLabs[0]})
                         </Badge>
                       );
                     }
@@ -374,24 +375,25 @@ export default function TeacherCoverageTab({
                     return (
                       <div
                         key={micro.code}
-                        className="p-2.5 bg-slate-900 border border-slate-800 rounded-lg space-y-1.5"
+                        className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5 shadow-sm hover:border-slate-300 dark:hover:border-slate-700 transition"
                       >
                         <div className="flex items-start justify-between gap-1">
-                          <span className="font-mono text-[11px] text-slate-200 font-medium">
+                          <span className="font-mono text-[11px] text-[#0f172a] dark:text-slate-100 font-bold">
                             {micro.code}
                           </span>
                           {statusBadge}
                         </div>
-                        <p className="text-[11px] text-slate-400 line-clamp-2 leading-snug" title={micro.title}>
+                        <p className="text-[11px] text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug font-medium" title={micro.title}>
                           {micro.title}
                         </p>
                         {micro.aliases && micro.aliases.length > 0 && (
-                          <div className="text-[10px] text-cyan-400/80 font-mono truncate">
-                            Aliases: {micro.aliases.join(', ')}
+                          <div className="text-[10px] font-mono truncate">
+                            <span className="text-slate-500 dark:text-cyan-400/80 font-semibold">Aliases: </span>
+                            <span className="text-slate-700 dark:text-cyan-300 font-medium">{micro.aliases.join(', ')}</span>
                           </div>
                         )}
                         {micro.slide_ref && (
-                          <div className="text-[10px] text-slate-500 font-mono">
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono font-medium">
                             Ref: {micro.slide_ref}
                           </div>
                         )}
@@ -408,20 +410,20 @@ export default function TeacherCoverageTab({
         {/* 3. UNANCHORED / LAB-SPECIFIC COMPETENCIES (TP -> Course Feedback) */}
         {/* ==================================================================== */}
         {unanchoredConceptsMap.size > 0 && (
-          <div className="p-4 bg-slate-950/80 border border-amber-500/30 rounded-xl space-y-3 mt-6">
+          <div className="p-4 bg-amber-50/60 dark:bg-slate-950/80 border border-amber-300 dark:border-amber-500/30 rounded-xl space-y-3 mt-6">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400">
+                <span className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
                   <Terminal className="w-4 h-4" />
                 </span>
                 <div>
-                  <h4 className="text-xs font-semibold text-amber-300 flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-amber-950 dark:text-amber-300 flex items-center gap-2">
                     <span>⚡ Practical / Lab-Specific Competencies</span>
-                    <Badge variant="outline" className="border-amber-500/40 text-amber-400 text-[10px] font-mono">
+                    <Badge variant="outline" className="border-amber-400 dark:border-amber-500/40 text-amber-800 dark:text-amber-400 text-[10px] font-mono font-semibold">
                       {unanchoredConceptsMap.size} Unanchored in Syllabus
                     </Badge>
                   </h4>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-700 dark:text-slate-400 font-medium">
                     Assessed in practical TP labs but not indexed in theoretical chapter slides. Keep as lab-only or assign/link them.
                   </p>
                 </div>
@@ -432,56 +434,56 @@ export default function TeacherCoverageTab({
               {Array.from(unanchoredConceptsMap.entries()).map(([conceptCode, data]) => (
                 <div
                   key={conceptCode}
-                  className="p-3 bg-slate-900/90 border border-slate-800 rounded-lg space-y-2.5 flex flex-col justify-between hover:border-slate-750 transition"
+                  className="p-3 bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-lg space-y-2.5 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-750 transition shadow-xs"
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between gap-1">
                       <span
-                        className="font-mono text-[11px] font-semibold text-slate-200 truncate"
+                        className="font-mono text-[11px] font-bold text-slate-900 dark:text-slate-200 truncate"
                         title={conceptCode}
                       >
                         {conceptCode}
                       </span>
                       <Badge
                         variant="outline"
-                        className="bg-amber-500/15 text-amber-300 border-amber-500/40 text-[9px] font-medium gap-1 shrink-0"
+                        className="bg-amber-50 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/40 text-[9px] font-semibold gap-1 shrink-0"
                       >
-                        <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+                        <AlertTriangle className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                         Not in syllabus
                       </Badge>
                     </div>
 
-                    <div className="text-[10px] text-slate-400 flex items-center gap-1.5 flex-wrap">
-                      <span className="text-slate-400 font-semibold">Exercised in:</span>
-                      <span className="font-mono text-amber-300 font-semibold">
+                    <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 flex-wrap">
+                      <span className="font-semibold">Exercised in:</span>
+                      <span className="font-mono text-amber-700 dark:text-amber-300 font-bold">
                         {data.labs.map((l) => l.code).join(', ')}
                       </span>
                     </div>
 
                     {data.labs.length === 1 ? (
                       <p
-                        className="text-[11px] text-slate-300 leading-snug line-clamp-2"
+                        className="text-[11px] text-slate-700 dark:text-slate-300 leading-snug line-clamp-2"
                         title={`${data.labs[0].code} — ${data.labs[0].fullTitle}`}
                       >
                         <span className="text-slate-500 font-normal">Lab: </span>
-                        <span className="font-medium text-slate-200">{data.labs[0].cleanTitle}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-200">{data.labs[0].cleanTitle}</span>
                       </p>
                     ) : (
                       <div className="space-y-1">
-                        <span className="text-slate-500 text-[10px] font-normal block">
+                        <span className="text-slate-600 dark:text-slate-500 text-[10px] font-medium block">
                           Practiced in {data.labs.length} labs:
                         </span>
                         <div className="space-y-0.5">
                           {data.labs.map((lb) => (
                             <div
                               key={lb.code}
-                              className="flex items-center gap-1.5 text-[10px] text-slate-300"
+                              className="flex items-center gap-1.5 text-[10px] text-slate-700 dark:text-slate-300"
                               title={`${lb.code} — ${lb.fullTitle}`}
                             >
-                              <span className="px-1 py-0.2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[9px] shrink-0 font-semibold">
+                              <span className="px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 text-amber-800 dark:text-amber-300 font-mono text-[9px] shrink-0 font-semibold">
                                 {lb.code}
                               </span>
-                              <span className="truncate text-slate-200">{lb.cleanTitle}</span>
+                              <span className="truncate text-slate-800 dark:text-slate-200">{lb.cleanTitle}</span>
                             </div>
                           ))}
                         </div>
@@ -489,7 +491,7 @@ export default function TeacherCoverageTab({
                     )}
                   </div>
 
-                  <div className="pt-2 border-t border-slate-800/80 flex items-center gap-1.5">
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-1.5">
                     <Button
                       type="button"
                       size="sm"
@@ -501,7 +503,7 @@ export default function TeacherCoverageTab({
                         setCustomSlideRef('Assigned from Lab (Practical)');
                         setActionError(null);
                       }}
-                      className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 flex-1"
+                      className="h-6 text-[10px] px-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-emerald-700 dark:hover:text-emerald-400 hover:border-emerald-500/50 flex-1 font-medium"
                     >
                       ➕ Assign to Chapter...
                     </Button>
@@ -515,7 +517,7 @@ export default function TeacherCoverageTab({
                         setSelectedCanonicalCode(firstCat);
                         setActionError(null);
                       }}
-                      className="h-6 text-[10px] px-2 border-slate-700 text-slate-300 hover:text-cyan-400 hover:border-cyan-500/50 flex-1"
+                      className="h-6 text-[10px] px-2 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-cyan-700 dark:hover:text-cyan-400 hover:border-cyan-500/50 flex-1 font-medium"
                     >
                       🔗 Link as Alias...
                     </Button>
@@ -528,10 +530,10 @@ export default function TeacherCoverageTab({
 
         {/* Modal for Unanchored Action (Assign or Link Alias) */}
         {activeUnanchoredAction && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="relative w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-5 space-y-4 text-slate-100">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <h3 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-4 text-slate-900 dark:text-slate-100">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   {activeUnanchoredAction.action === 'assign' ? '➕ Assign Concept to Chapter' : '🔗 Link Concept as Alias'}
                 </h3>
                 <button
@@ -542,14 +544,14 @@ export default function TeacherCoverageTab({
                 </button>
               </div>
 
-              <div className="text-xs text-slate-300 space-y-1.5">
-                <div>Concept: <span className="font-mono text-emerald-400 font-semibold">{activeUnanchoredAction.conceptCode}</span></div>
+              <div className="text-xs text-slate-700 dark:text-slate-300 space-y-1.5">
+                <div>Concept: <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold">{activeUnanchoredAction.conceptCode}</span></div>
                 {(() => {
                   const labRefs = unanchoredConceptsMap.get(activeUnanchoredAction.conceptCode)?.labs || [];
                   if (labRefs.length === 0) return null;
                   return (
-                    <div className="text-[11px] text-slate-400">
-                      Origin: <span className="text-slate-200 font-medium">{labRefs.map((l) => `${l.code} (${l.cleanTitle})`).join(', ')}</span>
+                    <div className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                      Origin: <span className="text-slate-900 dark:text-slate-200 font-semibold">{labRefs.map((l) => `${l.code} (${l.cleanTitle})`).join(', ')}</span>
                     </div>
                   );
                 })()}
@@ -561,7 +563,7 @@ export default function TeacherCoverageTab({
               </div>
 
               {actionError && (
-                <div className="p-2.5 rounded bg-rose-950/50 border border-rose-500/50 text-rose-300 text-xs">
+                <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-300 dark:border-rose-500/50 text-rose-800 dark:text-rose-300 text-xs font-medium">
                   {actionError}
                 </div>
               )}
@@ -572,17 +574,20 @@ export default function TeacherCoverageTab({
                     <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
                       Target Chapter
                     </label>
-                    <select
-                      value={selectedChapterCode}
-                      onChange={(e) => setSelectedChapterCode(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono"
-                    >
-                      {chaptersTaxonomy.map((ch) => (
-                        <option key={ch.chapter_code} value={ch.chapter_code}>
-                          {ch.chapter_code}: {ch.competency_title}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={selectedChapterCode}
+                        onChange={(e) => setSelectedChapterCode(e.target.value)}
+                        className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-8 py-1.5 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-mono shadow-sm transition"
+                      >
+                        {chaptersTaxonomy.map((ch) => (
+                          <option key={ch.chapter_code} value={ch.chapter_code} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
+                            {ch.chapter_code}: {ch.competency_title}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
 
                   <div>
@@ -594,7 +599,7 @@ export default function TeacherCoverageTab({
                       placeholder="e.g. Conditional branching with if/else"
                       value={customTitle}
                       onChange={(e) => setCustomTitle(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-emerald-500 shadow-sm transition"
                     />
                   </div>
 
@@ -607,7 +612,7 @@ export default function TeacherCoverageTab({
                       placeholder="e.g. Ch.2 Slide 15 or Practical Lab"
                       value={customSlideRef}
                       onChange={(e) => setCustomSlideRef(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-emerald-500 shadow-sm transition"
                     />
                   </div>
                 </div>
@@ -617,21 +622,24 @@ export default function TeacherCoverageTab({
                     <label className="text-[11px] uppercase font-semibold text-slate-400 block mb-1">
                       Existing Target Concept
                     </label>
-                    <select
-                      value={selectedCanonicalCode}
-                      onChange={(e) => setSelectedCanonicalCode(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-md px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono"
-                    >
-                      {chaptersTaxonomy.map((ch) => (
-                        <optgroup key={ch.chapter_code} label={`${ch.chapter_code}: ${ch.competency_title}`}>
-                          {(ch.micro_competencies || []).map((mc) => (
-                            <option key={mc.code} value={mc.code}>
-                              {mc.code} — {mc.title}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={selectedCanonicalCode}
+                        onChange={(e) => setSelectedCanonicalCode(e.target.value)}
+                        className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-8 py-1.5 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-cyan-500 font-mono shadow-sm transition"
+                      >
+                        {chaptersTaxonomy.map((ch) => (
+                          <optgroup key={ch.chapter_code} label={`${ch.chapter_code}: ${ch.competency_title}`} className="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-300 font-semibold">
+                            {(ch.micro_competencies || []).map((mc) => (
+                              <option key={mc.code} value={mc.code} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9] font-normal">
+                                {mc.code} — {mc.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
               )}

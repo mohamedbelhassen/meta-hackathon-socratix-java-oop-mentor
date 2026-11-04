@@ -111,24 +111,24 @@ export default function ChapterStagingModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400 border border-emerald-500/20">
-              <Sparkles className="w-5 h-5 text-emerald-400" />
+            <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <Sparkles className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-base">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
                   Curriculum Pre-flight & Sequencing
                 </h3>
-                <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] font-mono">
+                <Badge className="bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30 text-[10px] font-mono font-semibold">
                   Meta AI muse-spark-1.3
                 </Badge>
               </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Review the AI-proposed pedagogical progression, inspect grounded evidence, reorder with <span className="text-emerald-400">▲/▼</span>, and edit titles before launching distillation.
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Review the AI-proposed pedagogical progression, inspect grounded evidence, reorder with <span className="text-emerald-600 dark:text-emerald-400 font-bold">▲/▼</span>, and edit titles before launching distillation.
               </p>
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function ChapterStagingModal({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg"
+            className="h-8 w-8 p-0 text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
             onClick={onClose}
           >
             <X className="w-4 h-4" />
@@ -146,30 +146,30 @@ export default function ChapterStagingModal({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {/* EXECUTIVE CURRICULUM BRIEFING BANNER */}
-          <div className="p-3.5 rounded-xl bg-slate-950/90 border border-emerald-500/25 space-y-2.5">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/90 border border-emerald-300 dark:border-emerald-500/25 space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span className="text-xs font-bold text-white tracking-wide uppercase font-mono">
+                <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white tracking-wide uppercase font-mono">
                   Meta AI Curriculum Architecture
                 </span>
-                <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-[10px] font-mono">
+                <Badge className="bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30 text-[10px] font-mono font-semibold">
                   Grounded
                 </Badge>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
-                <span className="px-2 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-500/30 text-cyan-300">
+                <span className="px-2 py-0.5 rounded-md bg-cyan-100 dark:bg-cyan-950/50 border border-cyan-300 dark:border-cyan-500/30 text-cyan-800 dark:text-cyan-300 font-semibold">
                   📦 {modulesList.length} Module{modulesList.length > 1 ? 's' : ''}: {modulesList.join(' ➔ ') || 'Core'}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-950/50 border border-emerald-500/30 text-emerald-300">
+                <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-semibold">
                   🎯 Continuum: Ch. {items[0]?.chapter_number || 1}..{items[items.length - 1]?.chapter_number || items.length}
                 </span>
-                <span className="px-2 py-0.5 rounded-md bg-purple-950/50 border border-purple-500/30 text-purple-300">
+                <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-950/50 border border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-purple-300 font-semibold">
                   🛡️ {items.length} Collision-Proof Codes
                 </span>
               </div>
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-850 italic">
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-100 dark:bg-slate-900/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-850 italic">
               &ldquo;{curriculumSummary || 'Meta AI resolved relative lecture module indices into a continuous pedagogical progression, ensuring foundational concepts precede applied styling and dynamic features.'}&rdquo;
             </p>
           </div>
@@ -179,7 +179,7 @@ export default function ChapterStagingModal({
             {items.map((item, idx) => (
               <div
                 key={`${item.filename}-${idx}`}
-                className="p-3 rounded-xl bg-slate-950 border border-slate-850 hover:border-slate-800 transition text-xs space-y-2"
+                className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 hover:border-slate-300 dark:hover:border-slate-800 transition text-xs space-y-2"
               >
                 <div className="flex items-center gap-3">
                   {/* Reorder Buttons */}
@@ -188,7 +188,7 @@ export default function ChapterStagingModal({
                       type="button"
                       disabled={idx === 0}
                       onClick={() => handleMoveUp(idx)}
-                      className="p-1 text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-slate-400 transition"
+                      className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-slate-400 transition"
                       title="Move chapter up"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
@@ -197,7 +197,7 @@ export default function ChapterStagingModal({
                       type="button"
                       disabled={idx === items.length - 1}
                       onClick={() => handleMoveDown(idx)}
-                      className="p-1 text-slate-400 hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-slate-400 transition"
+                      className="p-1 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 disabled:opacity-30 disabled:hover:text-slate-400 transition"
                       title="Move chapter down"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
@@ -205,15 +205,15 @@ export default function ChapterStagingModal({
                   </div>
 
                   {/* Chapter Number Badge */}
-                  <div className="shrink-0 text-center w-12 py-1 px-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                    <span className="font-mono font-bold text-emerald-400 text-xs">
+                  <div className="shrink-0 text-center w-12 py-1 px-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20">
+                    <span className="font-mono font-bold text-emerald-800 dark:text-emerald-400 text-xs">
                       Ch. {item.chapter_number}
                     </span>
                   </div>
 
                   {/* Module Badge */}
                   {item.module && (
-                    <Badge variant="outline" className="shrink-0 text-[10px] uppercase font-mono border-slate-700 text-cyan-300 bg-cyan-950/30">
+                    <Badge variant="outline" className="shrink-0 text-[10px] uppercase font-mono border-cyan-300 dark:border-slate-700 text-cyan-800 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-950/30 font-semibold">
                       {item.module}
                     </Badge>
                   )}
@@ -224,7 +224,7 @@ export default function ChapterStagingModal({
                       type="text"
                       value={item.title}
                       onChange={(e) => handleTitleChange(idx, e.target.value)}
-                      className="h-7 text-xs bg-slate-900 border-slate-800 focus-visible:ring-emerald-500 text-slate-100 font-medium"
+                      className="h-7 text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-800 focus-visible:ring-emerald-500 text-slate-900 dark:text-slate-100 font-medium"
                       placeholder="Chapter Title"
                     />
                     <div className="flex items-center gap-2 text-[10px] text-slate-500 truncate">
@@ -265,7 +265,7 @@ export default function ChapterStagingModal({
                   <button
                     type="button"
                     onClick={() => handleRemove(idx)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 transition rounded-lg hover:bg-rose-950/30 shrink-0"
+                    className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 transition-all rounded-lg shrink-0"
                     title="Exclude file from batch"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -317,7 +317,7 @@ export default function ChapterStagingModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/70">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70">
           <p className="text-xs text-slate-500 font-mono">
             {items.length} chapter(s) ready for ingestion
           </p>
@@ -326,7 +326,7 @@ export default function ChapterStagingModal({
               variant="outline"
               size="sm"
               onClick={onClose}
-              className="text-xs h-8 border-slate-800 hover:bg-slate-800 text-slate-300"
+              className="text-xs h-8 border-slate-300 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
             >
               Cancel
             </Button>

@@ -71,37 +71,37 @@ export default function LabsBatchIngestionModal({
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[92vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0 shadow-xs">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   Labs Decomposed & Ready for Telemetry
                 </h2>
                 {course && (
-                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-mono">
+                  <Badge className="bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 text-[11px] font-mono">
                     {course.code}
                   </Badge>
                 )}
-                <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 text-[11px] font-mono">
+                <Badge className="bg-cyan-50 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 text-[11px] font-mono">
                   {activeLabs.length} TP Ingested
                 </Badge>
               </div>
-              <p className="text-xs text-slate-400">
-                Meta AI <span className="font-mono text-cyan-400">muse-spark-1.3</span> derived hierarchical activities, sequential milestones, and 1-click presets for {course ? `"${course.title}"` : 'all lab assignments'}.
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Meta AI <span className="font-mono text-cyan-700 dark:text-cyan-400 font-semibold">muse-spark-1.3</span> derived hierarchical activities, sequential milestones, and 1-click presets for {course ? `"${course.title}"` : 'all lab assignments'}.
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition"
             title="Fermer"
           >
             <X className="w-5 h-5" />
@@ -109,10 +109,10 @@ export default function LabsBatchIngestionModal({
         </div>
 
         {/* 4-KPI AGGREGATED SUMMARY BAR */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-950/40 border-b border-slate-800 text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-slate-400">Total Labs</span>
-            <div className="text-xl font-extrabold text-white mt-0.5">{activeLabs.length}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 text-xs">
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-slate-500 dark:text-slate-400 font-semibold">Total Labs</span>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">{activeLabs.length}</div>
             <span className="text-[10px] text-slate-500 font-mono">
               {activeLabs.length === 0
                 ? 'No TP Ingested'
@@ -122,27 +122,27 @@ export default function LabsBatchIngestionModal({
             </span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-cyan-400">Activities Extracted</span>
-            <div className="text-xl font-extrabold text-cyan-300 mt-0.5">{totalActivities}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-cyan-700 dark:text-cyan-400 font-semibold">Activities Extracted</span>
+            <div className="text-xl font-extrabold text-cyan-800 dark:text-cyan-300 mt-0.5">{totalActivities}</div>
             <span className="text-[10px] text-slate-500">Separated exercises</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-emerald-400">Derived Milestones</span>
-            <div className="text-xl font-extrabold text-emerald-400 mt-0.5">{totalMilestones}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-[#059669] dark:text-emerald-400 font-semibold">Derived Milestones</span>
+            <div className="text-xl font-extrabold text-[#059669] dark:text-emerald-400 mt-0.5">{totalMilestones}</div>
             <span className="text-[10px] text-slate-500">Strict validation criteria</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-amber-400">Demo Presets</span>
-            <div className="text-xl font-extrabold text-amber-300 mt-0.5">{totalPresets}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-amber-700 dark:text-amber-400 font-semibold">Demo Presets</span>
+            <div className="text-xl font-extrabold text-amber-800 dark:text-amber-300 mt-0.5">{totalPresets}</div>
             <span className="text-[10px] text-slate-500">2 presets / act. (1-click code)</span>
           </div>
         </div>
 
         {/* SEARCH & FILTERS WITH LANGUAGE TOGGLE */}
-        <div className="p-4 bg-slate-900 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-sm">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -150,20 +150,20 @@ export default function LabsBatchIngestionModal({
               placeholder="Filter by TP code, title, or concept..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition shadow-xs"
             />
           </div>
 
           <div className="flex items-center gap-3">
             {/* Bilingual Language Switcher */}
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-mono">
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono shadow-xs">
               <span className="text-[10px] text-slate-500 px-1.5">Description:</span>
               <button
                 onClick={() => setLang('en')}
                 className={`px-2 py-0.5 rounded-lg text-xs font-bold transition ${
                   lang === 'en'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-slate-300 dark:border-cyan-500/40 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 EN
@@ -172,22 +172,22 @@ export default function LabsBatchIngestionModal({
                 onClick={() => setLang('fr')}
                 className={`px-2 py-0.5 rounded-lg text-xs font-bold transition ${
                   lang === 'fr'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-slate-300 dark:border-cyan-500/40 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
                 }`}
               >
                 FR
               </button>
             </div>
 
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-slate-600 dark:text-slate-400 font-mono font-medium">
               Showing {filteredLabs.length} of {activeLabs.length} labs
             </span>
           </div>
         </div>
 
         {/* LABS LIST */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-3">
+        <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
           {filteredLabs.length > 0 ? (
             filteredLabs.map((lb) => {
               const bDesc = parseBilingualDescription(lb.description);
@@ -199,41 +199,41 @@ export default function LabsBatchIngestionModal({
               return (
                 <div
                   key={lb.id}
-                  className="p-4 rounded-2xl bg-slate-950 border border-slate-800/90 hover:border-slate-700 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 shadow-xs transition flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-cyan-950/60 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
+                      <span className="px-2 py-0.5 rounded-md bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-300 dark:border-cyan-500/30 text-cyan-900 dark:text-cyan-300 font-mono font-bold text-xs">
                         TP {lb.lab_number}
                       </span>
-                      <h3 className="text-sm font-bold text-white truncate" title={cleanTitle}>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate" title={cleanTitle}>
                         {cleanTitle}
                       </h3>
                       <span className="text-xs text-slate-500 font-mono">({lb.code})</span>
                     </div>
 
-                    <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-700 dark:text-slate-300 line-clamp-2 leading-relaxed font-medium">
                       {displayDesc}
                     </p>
 
                   <div className="flex items-center gap-2 pt-1 flex-wrap">
-                    <span className="text-[10px] text-slate-400 font-mono">
+                    <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono font-medium">
                       {lb.activities?.length || 0} act. &bull;{' '}
                       {lb.activities?.reduce((acc, act) => acc + (act.milestones?.length || 0), 0) || 0} milestones
                     </span>
 
                     {lb.covered_micro_concepts && lb.covered_micro_concepts.length > 0 && (
-                      <div className="flex items-center gap-1 flex-wrap pl-2 border-l border-slate-800">
+                      <div className="flex items-center gap-1 flex-wrap pl-2 border-l border-slate-200 dark:border-slate-800">
                         {lb.covered_micro_concepts.slice(0, 3).map((mc, mIdx) => (
                           <span
                             key={mIdx}
-                            className="text-[9px] px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-emerald-400 font-mono"
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#059669] dark:text-emerald-400 font-mono font-semibold"
                           >
                             {mc}
                           </span>
                         ))}
                         {lb.covered_micro_concepts.length > 3 && (
-                          <span className="text-[9px] text-slate-500 font-mono">
+                          <span className="text-[9px] text-slate-500 font-mono font-medium">
                             +{lb.covered_micro_concepts.length - 3} more
                           </span>
                         )}
@@ -247,7 +247,7 @@ export default function LabsBatchIngestionModal({
                     size="sm"
                     variant="outline"
                     onClick={() => onInspectLab(lb)}
-                    className="text-xs h-8 bg-slate-900 border-slate-800 text-cyan-400 hover:text-cyan-300 hover:bg-slate-800"
+                    className="text-xs h-8 bg-cyan-50 hover:bg-cyan-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-cyan-300 dark:border-slate-800 text-cyan-800 dark:text-cyan-400 font-semibold shadow-xs"
                   >
                     <Eye className="w-3.5 h-3.5 mr-1.5" />
                     <span>Inspect</span>
@@ -258,7 +258,7 @@ export default function LabsBatchIngestionModal({
                       href={lb.pdf_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white bg-slate-900 border border-slate-800 hover:bg-slate-800 transition"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 transition font-medium shadow-xs"
                       title="Open University PDF"
                     >
                       <span>PDF</span>
@@ -277,12 +277,12 @@ export default function LabsBatchIngestionModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="text-xs bg-slate-900 border-slate-800 text-slate-300 hover:text-white"
+            className="text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium shadow-xs"
           >
             Close Briefing
           </Button>
@@ -293,7 +293,7 @@ export default function LabsBatchIngestionModal({
                 onClose();
                 onOpenAnalytics();
               }}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-950/50"
+              className="bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-md"
             >
               <span>View Course ↔ Lab Coverage Matrix (Analytics)</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1.5" />

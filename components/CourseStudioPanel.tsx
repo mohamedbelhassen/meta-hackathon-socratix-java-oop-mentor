@@ -204,13 +204,13 @@ export default function CourseStudioPanel({
 
   if (!course) {
     return (
-      <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
-        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+      <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-sm">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-[#059669] dark:text-emerald-400 flex items-center justify-center mx-auto">
           <BookOpen className="w-6 h-6" />
         </div>
         <div className="space-y-1">
-          <h3 className="text-base font-bold text-slate-200">No Course Selected</h3>
-          <p className="text-xs text-slate-400">
+          <h3 className="text-base font-bold text-slate-900 dark:text-slate-200">No Course Selected</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400">
             Please select an existing course from the header dropdown, or create a brand new curriculum.
           </p>
         </div>
@@ -1135,30 +1135,30 @@ export default function CourseStudioPanel({
   return (
     <div className="space-y-6">
       {/* 4-STEP CHECKLIST HEADER */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-base font-bold text-white">{course.title}</span>
-              <Badge variant="outline" className="font-mono text-[10px] text-emerald-400 border-emerald-500/30">
+              <span className="text-base font-bold text-slate-900 dark:text-white">{course.title}</span>
+              <Badge variant="outline" className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30">
                 {course.code}
               </Badge>
               {/* STUDIO LANGUAGE TOGGLE */}
-              <div className="inline-flex items-center gap-0.5 bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-800 text-[10px] font-mono shrink-0 ml-1">
+              <div className="inline-flex items-center gap-0.5 bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-mono shrink-0 ml-1">
                 <button
                   onClick={() => setLang('en')}
                   className={`px-1.5 py-0.5 rounded transition ${
-                    lang === 'en' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                    lang === 'en' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                   title="Display in English for International Jury"
                 >
                   EN
                 </button>
-                <span className="text-slate-400 dark:text-slate-600">|</span>
+                <span className="text-slate-300 dark:text-slate-700">|</span>
                 <button
                   onClick={() => setLang('fr')}
                   className={`px-1.5 py-0.5 rounded transition ${
-                    lang === 'fr' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'
+                    lang === 'fr' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                   title="Afficher en Français"
                 >
@@ -1166,7 +1166,7 @@ export default function CourseStudioPanel({
                 </button>
               </div>
             </div>
-            <p className="text-xs text-slate-700 dark:text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
               Languages: <span className="text-slate-900 dark:text-slate-200 uppercase font-bold font-mono">{course.content_language}</span> (Slides) ➔{' '}
               <span className="text-slate-900 dark:text-slate-200 uppercase font-bold font-mono">{course.tutor_language}</span> (Tutor) • Extensions:{' '}
               <span className="text-slate-900 dark:text-slate-200 font-bold font-mono">{course.file_extensions?.join(', ')}</span>
@@ -1237,22 +1237,22 @@ export default function CourseStudioPanel({
 
         {/* PROGRESS STEPPER */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-200 dark:border-slate-800 text-xs">
-          <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 font-bold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>1. Course Config</span>
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-[#059669] text-white border border-[#059669] font-bold shadow-sm">
+            <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+            <span className="text-white">1. Course Config</span>
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold shadow-sm transition ${
               chapters.length > 0
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
+                ? 'bg-[#059669] text-white border-[#059669]'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400'
             }`}
           >
             {chapters.length > 0 ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-600 dark:text-slate-400 font-bold">
                 2
               </div>
             )}
@@ -1260,16 +1260,16 @@ export default function CourseStudioPanel({
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold shadow-sm transition ${
               hasTaxonomy && hasCompiledPrompt
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
+                ? 'bg-[#059669] text-white border-[#059669]'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400'
             }`}
           >
             {hasTaxonomy ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-600 dark:text-slate-400 font-bold">
                 3
               </div>
             )}
@@ -1277,16 +1277,16 @@ export default function CourseStudioPanel({
           </div>
 
           <div
-            className={`flex items-center gap-2 p-2 rounded-lg border font-bold ${
+            className={`flex items-center gap-2 p-2 rounded-lg border font-bold shadow-sm transition ${
               labs.length > 0
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-400'
+                ? 'bg-[#059669] text-white border-[#059669]'
+                : 'bg-slate-100 dark:bg-slate-950 border-slate-300 dark:border-slate-800 text-slate-600 dark:text-slate-400'
             }`}
           >
             {labs.length > 0 ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
             ) : (
-              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-700 dark:text-slate-400 font-bold">
+              <div className="w-4 h-4 rounded-full border border-slate-400 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-600 dark:text-slate-400 font-bold">
                 4
               </div>
             )}
@@ -1299,28 +1299,28 @@ export default function CourseStudioPanel({
       <div ref={progressBannerRef} className="scroll-mt-28 space-y-4">
       {/* IN-PAGE BATCH DISTILLATION: CHAPTERS */}
       {activeChapterDistillation && (
-        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#059669] dark:text-emerald-400">
                 {activeChapterDistillation.isFinished ? (
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <CheckCircle2 className="w-5 h-5 text-[#059669] dark:text-emerald-400" />
                 ) : activeChapterDistillation.error ? (
-                  <AlertCircle className="w-5 h-5 text-rose-400" />
+                  <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 ) : (
-                  <Sparkles className="w-5 h-5 animate-spin text-emerald-400" />
+                  <Sparkles className="w-5 h-5 animate-spin text-[#059669] dark:text-emerald-400" />
                 )}
               </div>
               <div>
-                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-sm">
                   {activeChapterDistillation.isFinished
                     ? 'Curriculum Chapters Distilled Successfully'
                     : 'Distilling Curriculum Chapters (In-Page Batch Engine)'}
-                  <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400 font-mono">
+                  <Badge variant="outline" className="text-[10px] border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 font-mono font-semibold">
                     muse-spark-1.3
                   </Badge>
                 </h4>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                   {activeChapterDistillation.isFinished
                     ? `All ${activeChapterDistillation.items.length} chapters processed & ready for Knowledge Base compilation`
                     : activeChapterDistillation.error
@@ -1363,9 +1363,9 @@ export default function CourseStudioPanel({
           </div>
 
           {/* Progress Bar with smooth transition */}
-          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+          <div className="w-full bg-slate-100 dark:bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-200 dark:border-slate-800">
             <div
-              className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-2 rounded-full transition-all duration-700 ease-out"
+              className="bg-gradient-to-r from-[#059669] via-teal-500 to-cyan-500 h-2.5 rounded-full transition-all duration-700 ease-out shadow-xs"
               style={{
                 width: activeChapterDistillation.isFinished
                   ? '100%'
@@ -1410,25 +1410,37 @@ export default function CourseStudioPanel({
                 return (
                   <div
                     key={s.step}
-                    className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                    className={`p-2.5 rounded-xl border text-[11px] space-y-1 transition ${
                       isPast
-                        ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-300'
                         : isCurrent
-                        ? 'bg-slate-950 border-cyan-500/50 text-cyan-200 shadow-sm'
-                        : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                        ? 'bg-cyan-50 dark:bg-slate-950 border-2 border-cyan-500 dark:border-cyan-400 text-cyan-950 dark:text-cyan-100 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-bold">{s.title}</span>
+                      <span className={`font-mono text-[10px] font-bold ${
+                        isPast
+                          ? 'text-emerald-800 dark:text-emerald-400'
+                          : isCurrent
+                          ? 'text-cyan-800 dark:text-cyan-300'
+                          : 'text-slate-500 dark:text-slate-500'
+                      }`}>{s.title}</span>
                       {isPast ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                       ) : isCurrent ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600 dark:text-cyan-400" />
                       ) : (
-                        <span className="w-2 h-2 rounded-full bg-slate-800" />
+                        <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-1">{s.desc}</p>
+                    <p className={`text-[10px] line-clamp-1 ${
+                      isPast
+                        ? 'font-medium text-emerald-900/80 dark:text-slate-300'
+                        : isCurrent
+                        ? 'font-medium text-cyan-900 dark:text-cyan-200'
+                        : 'font-normal text-slate-500 dark:text-slate-400'
+                    }`}>{s.desc}</p>
                   </div>
                 );
               })}
@@ -1436,8 +1448,8 @@ export default function CourseStudioPanel({
           )}
 
           {/* Real-time Grid of Items */}
-          <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
+          <div className="bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800/80 p-3 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-400 font-semibold px-1">
               <span>
                 Chapter Batch Queue ({activeChapterDistillation.completedCodes.length} /{' '}
                 {activeChapterDistillation.items.length} Completed)
@@ -1458,10 +1470,10 @@ export default function CourseStudioPanel({
                     key={item.code}
                     className={`flex items-center justify-between p-2 rounded-lg border text-xs transition ${
                       isCompleted
-                        ? 'bg-emerald-950/15 border-emerald-500/30 text-emerald-200'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/15 border-emerald-300 dark:border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
                         : isInProgress
-                        ? 'bg-cyan-950/30 border-cyan-500/50 text-cyan-100 shadow-inner'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                        ? 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-400 dark:border-cyan-500/50 text-cyan-950 dark:text-cyan-100 shadow-xs'
+                        : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -1469,10 +1481,10 @@ export default function CourseStudioPanel({
                         variant="outline"
                         className={`font-mono text-[9px] shrink-0 ${
                           isCompleted
-                            ? 'border-emerald-500/50 text-emerald-300'
+                            ? 'border-emerald-300 dark:border-emerald-500/50 text-[#059669] dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-500/10'
                             : isInProgress
-                            ? 'border-cyan-500/50 text-cyan-300'
-                            : 'border-slate-700 text-slate-400'
+                            ? 'border-cyan-300 dark:border-cyan-500/50 text-cyan-800 dark:text-cyan-300 bg-cyan-50/50 dark:bg-cyan-500/10'
+                            : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40'
                         }`}
                       >
                         {item.code}
@@ -1483,12 +1495,12 @@ export default function CourseStudioPanel({
                     </div>
                     <div className="shrink-0">
                       {isCompleted ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Distilled
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#059669] dark:text-emerald-400">
+                          <CheckCircle2 className="w-3 h-3 text-[#059669] dark:text-emerald-400" /> Distilled
                         </span>
                       ) : isInProgress ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-300">
-                          <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300">
+                          <Loader2 className="w-3 h-3 animate-spin text-cyan-600 dark:text-cyan-400" />
                           Step {activeChapterDistillation.subStep}/3
                         </span>
                       ) : (
@@ -1503,10 +1515,10 @@ export default function CourseStudioPanel({
 
           {/* Celebratory Completion Actions */}
           {activeChapterDistillation.isFinished && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-emerald-950/30 border border-emerald-500/40 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/40 rounded-xl">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span className="text-xs text-emerald-200 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-[#059669] dark:text-emerald-400 shrink-0" />
+                <span className="text-xs text-emerald-950 dark:text-emerald-200 font-medium">
                   All {activeChapterDistillation.items.length} chapters successfully ingested & vectorized! Ready to compile knowledge base.
                 </span>
               </div>
@@ -1514,7 +1526,7 @@ export default function CourseStudioPanel({
                 <Button
                   size="sm"
                   onClick={handleCompileCourse}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-7 gap-1.5 shadow-sm"
+                  className="bg-[#059669] hover:bg-[#047857] text-white font-semibold text-xs h-7 gap-1.5 shadow-sm"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
                   Compile Knowledge Base & Prompt ➔
@@ -1523,7 +1535,7 @@ export default function CourseStudioPanel({
                   variant="outline"
                   size="sm"
                   onClick={() => setActiveChapterDistillation(null)}
-                  className="text-xs h-7 bg-slate-900 border-slate-750 text-slate-300 hover:text-white"
+                  className="text-xs h-7 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Dismiss
                 </Button>
@@ -1533,16 +1545,16 @@ export default function CourseStudioPanel({
 
           {/* Error Banner */}
           {activeChapterDistillation.error && (
-            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex items-center justify-between">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-500/40 rounded-xl text-rose-900 dark:text-rose-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                 <span className="text-xs">{activeChapterDistillation.error}</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setActiveChapterDistillation(null)}
-                className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
+                className="text-xs h-7 bg-white dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 hover:bg-rose-100"
               >
                 Dismiss
               </Button>
@@ -1553,28 +1565,28 @@ export default function CourseStudioPanel({
 
       {/* IN-PAGE BATCH DISTILLATION: LABS */}
       {activeLabDistillation && (
-        <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+              <div className="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400">
                 {activeLabDistillation.isFinished ? (
-                  <CheckCircle2 className="w-5 h-5 text-cyan-400" />
+                  <CheckCircle2 className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                 ) : activeLabDistillation.error ? (
-                  <AlertCircle className="w-5 h-5 text-rose-400" />
+                  <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                 ) : (
-                  <Layers className="w-5 h-5 animate-spin text-cyan-400" />
+                  <Layers className="w-5 h-5 animate-spin text-cyan-600 dark:text-cyan-400" />
                 )}
               </div>
               <div>
-                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-sm">
                   {activeLabDistillation.isFinished
                     ? 'Practical Labs Decomposed Successfully'
                     : 'Decomposing Practical Labs & TP (In-Page Batch Engine)'}
-                  <Badge variant="outline" className="text-[10px] border-cyan-500/40 text-cyan-400 font-mono">
+                  <Badge variant="outline" className="text-[10px] border-cyan-300 dark:border-cyan-500/40 text-cyan-800 dark:text-cyan-400 font-mono font-semibold">
                     muse-spark-1.3
                   </Badge>
                 </h4>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                   {activeLabDistillation.isFinished
                     ? activeLabDistillation.error
                       ? `${activeLabDistillation.completedCodes.length} of ${activeLabDistillation.items.length} labs completed (${activeLabDistillation.failedCodes?.length || 0} failed)`
@@ -1617,9 +1629,9 @@ export default function CourseStudioPanel({
           </div>
 
           {/* Progress Bar with smooth transition */}
-          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+          <div className="w-full bg-slate-100 dark:bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-200 dark:border-slate-800">
             <div
-              className="bg-gradient-to-r from-cyan-500 via-teal-400 to-emerald-400 h-2 rounded-full transition-all duration-700 ease-out"
+              className="bg-gradient-to-r from-cyan-500 via-teal-400 to-[#059669] h-2.5 rounded-full transition-all duration-700 ease-out shadow-xs"
               style={{
                 width: activeLabDistillation.isFinished
                   ? '100%'
@@ -1664,25 +1676,37 @@ export default function CourseStudioPanel({
                 return (
                   <div
                     key={s.step}
-                    className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                    className={`p-2.5 rounded-xl border text-[11px] space-y-1 transition ${
                       isPast
-                        ? 'bg-cyan-950/20 border-cyan-500/40 text-cyan-300'
+                        ? 'bg-cyan-50 dark:bg-cyan-950/30 border-cyan-300 dark:border-cyan-500/40 text-cyan-900 dark:text-cyan-300'
                         : isCurrent
-                        ? 'bg-slate-950 border-emerald-500/50 text-emerald-200 shadow-sm'
-                        : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                        ? 'bg-emerald-50 dark:bg-slate-950 border-2 border-[#059669] dark:border-emerald-500 text-emerald-950 dark:text-emerald-100 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-bold">{s.title}</span>
+                      <span className={`font-mono text-[10px] font-bold ${
+                        isPast
+                          ? 'text-cyan-800 dark:text-cyan-400'
+                          : isCurrent
+                          ? 'text-emerald-800 dark:text-emerald-300'
+                          : 'text-slate-500 dark:text-slate-500'
+                      }`}>{s.title}</span>
                       {isPast ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                       ) : isCurrent ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-[#059669] dark:text-emerald-400" />
                       ) : (
-                        <span className="w-2 h-2 rounded-full bg-slate-800" />
+                        <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400 line-clamp-1">{s.desc}</p>
+                    <p className={`text-[10px] line-clamp-1 ${
+                      isPast
+                        ? 'font-medium text-cyan-900/80 dark:text-slate-300'
+                        : isCurrent
+                        ? 'font-medium text-emerald-900 dark:text-emerald-200'
+                        : 'font-normal text-slate-500 dark:text-slate-400'
+                    }`}>{s.desc}</p>
                   </div>
                 );
               })}
@@ -1690,8 +1714,8 @@ export default function CourseStudioPanel({
           )}
 
           {/* Real-time Grid of Items */}
-          <div className="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 font-semibold px-1">
+          <div className="bg-slate-50 dark:bg-slate-950/70 rounded-xl border border-slate-200 dark:border-slate-800/80 p-3 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-700 dark:text-slate-400 font-semibold px-1">
               <span>
                 Practical Labs Queue ({activeLabDistillation.completedCodes.length} /{' '}
                 {activeLabDistillation.items.length} Completed)
@@ -1714,12 +1738,12 @@ export default function CourseStudioPanel({
                     key={item.code}
                     className={`flex items-center justify-between p-2 rounded-lg border text-xs transition ${
                       isCompleted
-                        ? 'bg-cyan-950/15 border-cyan-500/30 text-cyan-200'
+                        ? 'bg-cyan-50 dark:bg-cyan-950/15 border-cyan-300 dark:border-cyan-500/30 text-cyan-900 dark:text-cyan-200'
                         : isFailed
-                        ? 'bg-rose-950/25 border-rose-500/40 text-rose-200'
+                        ? 'bg-rose-50 dark:bg-rose-950/25 border-rose-300 dark:border-rose-500/40 text-rose-900 dark:text-rose-200'
                         : isInProgress
-                        ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-100 shadow-inner'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-500/50 text-emerald-950 dark:text-emerald-100 shadow-xs'
+                        : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -1727,12 +1751,12 @@ export default function CourseStudioPanel({
                         variant="outline"
                         className={`font-mono text-[9px] shrink-0 ${
                           isCompleted
-                            ? 'border-cyan-500/50 text-cyan-300'
+                            ? 'border-cyan-300 dark:border-cyan-500/50 text-cyan-800 dark:text-cyan-300 bg-cyan-50/50 dark:bg-cyan-500/10'
                             : isFailed
-                            ? 'border-rose-500/50 text-rose-300'
+                            ? 'border-rose-300 dark:border-rose-500/50 text-rose-800 dark:text-rose-300 bg-rose-50/50 dark:bg-rose-500/10'
                             : isInProgress
-                            ? 'border-emerald-500/50 text-emerald-300'
-                            : 'border-slate-700 text-slate-400'
+                            ? 'border-emerald-400 dark:border-emerald-500/50 text-[#059669] dark:text-emerald-300 bg-emerald-50/50 dark:bg-emerald-500/10'
+                            : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40'
                         }`}
                       >
                         {item.code}
@@ -1743,16 +1767,16 @@ export default function CourseStudioPanel({
                     </div>
                     <div className="shrink-0">
                       {isCompleted ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-400">
-                          <CheckCircle2 className="w-3 h-3 text-cyan-400" /> Decomposed
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-700 dark:text-cyan-400">
+                          <CheckCircle2 className="w-3 h-3 text-cyan-600 dark:text-cyan-400" /> Decomposed
                         </span>
                       ) : isFailed ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-400">
-                          <AlertCircle className="w-3 h-3 text-rose-400" /> Failed / Timeout
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 dark:text-rose-400">
+                          <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Failed / Timeout
                         </span>
                       ) : isInProgress ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-300">
-                          <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#059669] dark:text-emerald-300">
+                          <Loader2 className="w-3 h-3 animate-spin text-[#059669] dark:text-emerald-400" />
                           Step {activeLabDistillation.subStep}/3
                         </span>
                       ) : (
@@ -1767,10 +1791,10 @@ export default function CourseStudioPanel({
 
           {/* Celebratory Completion Actions (when all succeeded) */}
           {activeLabDistillation.isFinished && (!activeLabDistillation.failedCodes || activeLabDistillation.failedCodes.length === 0) && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-cyan-950/30 border border-cyan-500/40 rounded-xl">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-cyan-50 dark:bg-cyan-950/30 border border-cyan-300 dark:border-cyan-500/40 rounded-xl">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                <span className="text-xs text-cyan-200 font-medium">
+                <CheckCircle2 className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                <span className="text-xs text-cyan-950 dark:text-cyan-200 font-medium">
                   All {activeLabDistillation.items.length} practical labs decomposed into milestones with interactive starter presets!
                 </span>
               </div>
@@ -1787,7 +1811,7 @@ export default function CourseStudioPanel({
                   variant="outline"
                   size="sm"
                   onClick={() => setActiveLabDistillation(null)}
-                  className="text-xs h-7 bg-slate-900 border-slate-750 text-slate-300 hover:text-white"
+                  className="text-xs h-7 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   Dismiss
                 </Button>
@@ -1797,9 +1821,9 @@ export default function CourseStudioPanel({
 
           {/* Error Banner with 1-Click Retry Failed Button */}
           {activeLabDistillation.error && (
-            <div className="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-rose-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-300 dark:border-rose-500/40 rounded-xl text-rose-900 dark:text-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                 <span className="text-xs">{activeLabDistillation.error}</span>
               </div>
               <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
@@ -1808,7 +1832,7 @@ export default function CourseStudioPanel({
                     size="sm"
                     variant="outline"
                     onClick={() => setShowLabsIngestionModal(true)}
-                    className="text-xs h-7 bg-slate-900 border-slate-750 text-cyan-300 hover:text-white gap-1"
+                    className="text-xs h-7 bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-cyan-800 dark:text-cyan-300 hover:bg-slate-50 dark:hover:bg-slate-800 gap-1"
                   >
                     <Layers className="w-3.5 h-3.5" />
                     View {activeLabDistillation.completedCodes.length} Decomposed Labs
@@ -1828,7 +1852,7 @@ export default function CourseStudioPanel({
                   variant="outline"
                   size="sm"
                   onClick={() => setActiveLabDistillation(null)}
-                  className="text-xs h-7 bg-rose-950/50 border-rose-500/40 text-rose-300 hover:text-white"
+                  className="text-xs h-7 bg-white dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-300 hover:bg-rose-100"
                 >
                   Dismiss
                 </Button>
@@ -1838,26 +1862,26 @@ export default function CourseStudioPanel({
         </div>
       )}
       {currentProgress && currentProgress.stage === 'Synthesizing KB & Prompt' ? (
-        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/40 rounded-2xl p-5 text-xs space-y-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                <Sparkles className="w-4 h-4 animate-spin text-emerald-400" />
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[#059669] dark:text-emerald-400">
+                <Sparkles className="w-4 h-4 animate-spin text-[#059669] dark:text-emerald-400" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-100 flex items-center gap-2 text-sm">
+                <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2 text-sm">
                   Distilling Curriculum with Meta AI
-                  <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400 font-mono">
+                  <Badge variant="outline" className="text-[10px] border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 font-mono font-semibold">
                     muse-spark-1.3
                   </Badge>
                 </h4>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
                   {COMPILATION_PHASES[compilationPhase]?.title}
                 </p>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-base font-bold text-emerald-400 font-mono">
+              <span className="text-base font-bold text-[#059669] dark:text-emerald-400 font-mono">
                 {COMPILATION_PHASES[compilationPhase]?.pct}%
               </span>
               <p className="text-[10px] text-slate-500 font-mono flex items-center gap-1 justify-end">
@@ -1868,9 +1892,9 @@ export default function CourseStudioPanel({
           </div>
 
           {/* Progress Bar with smooth transition */}
-          <div className="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+          <div className="w-full bg-slate-100 dark:bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-200 dark:border-slate-800">
             <div
-              className="bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 h-2 rounded-full transition-all duration-700 ease-out"
+              className="bg-gradient-to-r from-[#059669] via-teal-500 to-cyan-500 h-2.5 rounded-full transition-all duration-700 ease-out shadow-xs"
               style={{ width: `${COMPILATION_PHASES[compilationPhase]?.pct}%` }}
             />
           </div>
@@ -1883,73 +1907,91 @@ export default function CourseStudioPanel({
               return (
                 <div
                   key={p.step}
-                  className={`p-2 rounded-xl border text-[11px] space-y-1 transition ${
+                  className={`p-2.5 rounded-xl border text-[11px] space-y-1 transition ${
                     isPast
-                      ? 'bg-emerald-950/20 border-emerald-500/40 text-emerald-300'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-300'
                       : isCurrent
-                      ? 'bg-slate-950 border-cyan-500/50 text-cyan-200 shadow-sm'
-                      : 'bg-slate-950/40 border-slate-850 text-slate-500'
+                      ? 'bg-cyan-50 dark:bg-slate-950 border-2 border-cyan-500 dark:border-cyan-400 text-cyan-950 dark:text-cyan-100 shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-[10px] font-bold">Step {p.step}</span>
+                    <span className={`font-mono text-[10px] font-bold ${
+                      isPast
+                        ? 'text-emerald-800 dark:text-emerald-400'
+                        : isCurrent
+                        ? 'text-cyan-800 dark:text-cyan-300'
+                        : 'text-slate-500 dark:text-slate-500'
+                    }`}>Step {p.step}</span>
                     {isPast ? (
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                     ) : isCurrent ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-600 dark:text-cyan-400" />
                     ) : (
-                      <span className="w-2 h-2 rounded-full bg-slate-800" />
+                      <span className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700" />
                     )}
                   </div>
-                  <p className="text-[10px] font-medium leading-tight line-clamp-1">{p.title}</p>
+                  <p className={`text-[10px] leading-tight line-clamp-1 ${
+                    isPast
+                      ? 'font-semibold text-emerald-950 dark:text-emerald-200'
+                      : isCurrent
+                      ? 'font-bold text-cyan-950 dark:text-cyan-100'
+                      : 'font-medium text-slate-600 dark:text-slate-400'
+                  }`}>{p.title}</p>
                 </div>
               );
             })}
           </div>
 
-          <p className="text-[11px] text-slate-400 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-850">
-            <span className="text-emerald-400 font-semibold mr-1.5">Active Process:</span>
+          <p className="text-[11px] text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[#059669] dark:text-emerald-400 font-bold mr-1.5">Active Process:</span>
             {COMPILATION_PHASES[compilationPhase]?.description}
           </p>
         </div>
       ) : currentProgress ? (
-        <div className="bg-cyan-950/40 border border-cyan-500/50 rounded-2xl p-4 text-xs space-y-2 animate-pulse ring-2 ring-cyan-500/30 shadow-lg shadow-cyan-500/10 transition-all">
-          <div className="flex items-center justify-between font-semibold text-cyan-300">
+        <div className="bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-300 dark:border-cyan-500/50 rounded-2xl p-4 text-xs space-y-2 shadow-sm">
+          <div className="flex items-center justify-between font-bold text-cyan-900 dark:text-cyan-300">
             <span>
               Analyzing {currentProgress.stage} ({currentProgress.current} of {currentProgress.total})...
             </span>
             <span className="font-mono">{Math.round((currentProgress.current / currentProgress.total) * 100)}%</span>
           </div>
-          <div className="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
+          <div className="w-full bg-slate-100 dark:bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-200 dark:border-slate-800">
             <div
-              className="bg-cyan-400 h-1.5 rounded-full transition-all duration-300"
+              className="bg-cyan-600 dark:bg-cyan-400 h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentProgress.current / currentProgress.total) * 100}%` }}
             />
           </div>
-          <p className="text-[11px] text-slate-400 truncate">Current File: {currentProgress.filename}</p>
+          <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate font-medium">Current File: {currentProgress.filename}</p>
         </div>
       ) : null}
       </div>
 
       {statusMessage && (
         <div
-          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between ${
+          className={`p-3.5 rounded-xl border text-xs flex items-center justify-between font-medium shadow-xs transition ${
             statusMessage.type === 'error'
-              ? 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+              ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-500/40 text-rose-950 dark:text-rose-200'
               : statusMessage.type === 'success'
-              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
-              : 'bg-cyan-950/40 border-cyan-500/40 text-cyan-300'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-500/40 text-emerald-950 dark:text-emerald-100'
+              : 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-300 dark:border-cyan-500/40 text-cyan-950 dark:text-cyan-100'
           }`}
         >
           <div className="flex items-center gap-2">
             {statusMessage.type === 'error' ? (
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+            ) : statusMessage.type === 'success' ? (
+              <Sparkles className="w-4 h-4 shrink-0 text-[#059669] dark:text-emerald-400" />
             ) : (
-              <Sparkles className="w-4 h-4 shrink-0 text-emerald-400" />
+              <Sparkles className="w-4 h-4 shrink-0 text-cyan-600 dark:text-cyan-400" />
             )}
-            <span>{statusMessage.text}</span>
+            <span className="font-semibold text-xs leading-relaxed">{statusMessage.text}</span>
           </div>
-          <button onClick={() => setStatusMessage(null)} className="text-slate-500 hover:text-slate-300 text-sm ml-2">
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 text-sm ml-3 p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800 transition"
+            aria-label="Dismiss message"
+          >
             ✕
           </button>
         </div>
@@ -1957,14 +1999,14 @@ export default function CourseStudioPanel({
 
       {/* INSPECTOR: COMPILED TUTOR PROMPT */}
       {inspectingPrompt && (
-        <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 space-y-3">
+        <div className="bg-white dark:bg-slate-900 border border-emerald-300 dark:border-emerald-500/40 rounded-2xl p-5 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-              <Code2 className="w-4 h-4 text-emerald-400" /> Generated Course Mentor System Prompt (PEDAGOGICAL ANCHORING & FEW-SHOTS)
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+              <Code2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> Generated Course Mentor System Prompt (PEDAGOGICAL ANCHORING & FEW-SHOTS)
             </span>
             <span className="text-[10px] text-slate-500">Auto-generated via Golden Tutor Prompt Shot</span>
           </div>
-          <pre className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+          <pre className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-800 dark:text-slate-300 font-mono max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed">
             {course.compiled_tutor_prompt}
           </pre>
         </div>
@@ -1972,14 +2014,14 @@ export default function CourseStudioPanel({
 
       {/* INSPECTOR: COMPILED KNOWLEDGE BASE */}
       {inspectingKB && (
-        <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl p-5 space-y-3">
+        <div className="bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-500/40 rounded-2xl p-5 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-cyan-400" /> Dense Compiled Knowledge Base (~3,500 Tokens)
+            <span className="text-xs font-bold text-cyan-800 dark:text-cyan-300 flex items-center gap-1.5">
+              <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" /> Dense Compiled Knowledge Base (~3,500 Tokens)
             </span>
             <span className="text-[10px] text-slate-500">Cached statically on muse-spark-1.3 prefix</span>
           </div>
-          <pre className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-[11px] text-slate-300 font-mono max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+          <pre className="bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 text-[11px] text-slate-800 dark:text-slate-300 font-mono max-h-72 overflow-y-auto whitespace-pre-wrap leading-relaxed">
             {course.compiled_knowledge_base}
           </pre>
         </div>
@@ -1988,14 +2030,14 @@ export default function CourseStudioPanel({
       {/* TWO WORKFLOW CARDS: CHAPTERS & LABS */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* CARD 1: CHAPTERS UPLOAD & DISTILLATION */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#059669] dark:text-emerald-400">
                   <BookOpen className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-white">Course Chapters (PDF)</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Course Chapters (PDF)</h3>
               </div>
               <div className="flex items-center gap-2">
                 {hasTaxonomy && (
@@ -2003,20 +2045,20 @@ export default function CourseStudioPanel({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowCompilationModal(true)}
-                    className="text-[11px] h-7 bg-emerald-950/40 border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 transition font-medium"
+                    className="text-[11px] h-7 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 transition font-semibold"
                     title="View Curriculum Taxonomy & AI Mentor Prompt"
                   >
-                    <Sparkles className="w-3 h-3 mr-1 text-emerald-400" />
+                    <Sparkles className="w-3 h-3 mr-1 text-emerald-600 dark:text-emerald-400" />
                     View Synthesis 🧠
                   </Button>
                 )}
-                <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
+                <Badge variant="outline" className="text-xs text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 font-mono font-medium">
                   {chapters.length} Chapter(s)
                 </Badge>
               </div>
             </div>
-            <p className="text-xs text-slate-700 dark:text-slate-400 leading-relaxed">
-              Drag & drop your official chapter slide decks (e.g. from <code className="text-slate-800 dark:text-slate-300 font-bold font-mono">_dev/java_course/course_chapters/</code>).
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Drag & drop your official chapter slide decks (e.g. from <code className="text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-bold font-mono">_dev/java_course/course_chapters/</code>).
               Extracted client-side with exact slide anchoring.
             </p>
 
@@ -2031,7 +2073,7 @@ export default function CourseStudioPanel({
                 className="absolute inset-0 opacity-0 cursor-pointer disabled:cursor-not-allowed"
               />
               <Upload className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mx-auto mb-1.5" />
-              <p className="text-xs font-bold text-slate-900 dark:text-slate-200">
+              <p className="text-xs font-bold text-[#0f172a] dark:text-slate-200">
                 {isUploadingChapters ? 'Processing...' : 'Upload Chapter PDFs (Batch Supported)'}
               </p>
               <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5">Select ch1..ch6 all at once</p>
@@ -2073,7 +2115,7 @@ export default function CourseStudioPanel({
                         <span className="font-mono text-[10px] text-emerald-700 dark:text-emerald-400 shrink-0 font-bold">
                           Ch.{ch.chapter_number}
                         </span>
-                        <span className="text-slate-900 dark:text-slate-200 truncate font-semibold">
+                        <span className="text-[#0f172a] dark:text-slate-200 truncate font-semibold">
                           {getLocalizedChapterTitle(ch, lang)}
                         </span>
                       </div>
@@ -2093,7 +2135,7 @@ export default function CourseStudioPanel({
                           type="button"
                           disabled={isProcessing}
                           onClick={() => handleDeleteChapter(ch.id, getLocalizedChapterTitle(ch, lang))}
-                          className="p-1 text-slate-500 hover:text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-950/30 rounded transition"
+                          className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 rounded-lg transition-all"
                           title="Delete chapter from course"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -2106,19 +2148,19 @@ export default function CourseStudioPanel({
           </div>
 
           {/* COMPILE / VIEW SYNTHESIS BUTTONS */}
-          <div className="pt-3 border-t border-slate-800 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 px-0.5">
-              <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-200">
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 px-0.5">
+              <label className="flex items-center gap-1.5 cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 font-medium">
                 <input
                   type="checkbox"
                   checked={forceRedistillChapters}
                   onChange={(e) => setForceRedistillChapters(e.target.checked)}
                   disabled={isProcessing}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0 w-3.5 h-3.5"
+                  className="rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-emerald-600 focus:ring-0 w-3.5 h-3.5"
                 />
                 <span>Re-distill chapter PDFs from Storage</span>
               </label>
-              <span className="text-[10px] text-emerald-400 font-mono">Auto-detects missing title_i18n</span>
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-mono font-medium">Auto-detects missing title_i18n</span>
             </div>
 
             {hasTaxonomy ? (
@@ -2126,9 +2168,9 @@ export default function CourseStudioPanel({
                 <Button
                   onClick={() => setShowCompilationModal(true)}
                   disabled={isProcessing}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
+                  className="w-full bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                  <Sparkles className="w-3.5 h-3.5 text-white" />
                   <span>View Curriculum Synthesis &amp; Mentor Briefing</span>
                 </Button>
 
@@ -2136,7 +2178,7 @@ export default function CourseStudioPanel({
                   variant="outline"
                   onClick={handleCompileCourse}
                   disabled={isProcessing || chapters.length === 0}
-                  className="w-full border-slate-750 bg-slate-950/70 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-medium h-8 transition-all flex items-center justify-center gap-1.5"
+                  className="w-full border-slate-300 dark:border-slate-750 bg-white dark:bg-slate-950/70 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold h-8 transition-all flex items-center justify-center gap-1.5 shadow-xs"
                 >
                   {isDistillingChapters && currentProgress ? (
                     <>
@@ -2189,14 +2231,14 @@ export default function CourseStudioPanel({
         </div>
 
         {/* CARD 2: LABS & TP DECOMPOSITION */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                <div className="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-700 dark:text-cyan-400">
                   <Layers className="w-4 h-4" />
                 </div>
-                <h3 className="text-sm font-bold text-white">Lab Exercises (TP)</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Lab Exercises (TP)</h3>
               </div>
               <div className="flex items-center gap-2">
                 {labs.length > 0 && (
@@ -2204,33 +2246,33 @@ export default function CourseStudioPanel({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowLabsIngestionModal(true)}
-                    className="text-[11px] h-7 bg-cyan-950/40 border-cyan-500/30 text-cyan-300 hover:text-white hover:bg-cyan-900/40 transition font-medium"
+                    className="text-[11px] h-7 bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-950/40 dark:hover:bg-cyan-900/40 border border-cyan-300 dark:border-cyan-500/30 text-cyan-800 dark:text-cyan-300 transition font-semibold"
                     title="View decomposed activities, milestones, and 1-click Judge Presets"
                   >
-                    <Layers className="w-3 h-3 mr-1 text-cyan-400" />
+                    <Layers className="w-3 h-3 mr-1 text-cyan-600 dark:text-cyan-400" />
                     View TP Briefing 📋
                   </Button>
                 )}
-                <Badge variant="outline" className="text-xs text-slate-400 border-slate-800 font-mono">
+                <Badge variant="outline" className="text-xs text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 font-mono font-medium">
                   {labs.length} TP
                 </Badge>
               </div>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Upload your lab statements (e.g. <code className="text-slate-300 font-mono">TP1.pdf</code> to <code className="text-slate-300 font-mono">TP12.pdf</code>).
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              Upload your lab statements (e.g. <code className="text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-semibold font-mono">TP1.pdf</code> to <code className="text-slate-900 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-semibold font-mono">TP12.pdf</code>).
               The AI derives activities, sequential milestones, and 1-click Judge Demo Presets.
             </p>
 
             {/* PREREQUISITE ALERT WHEN NOT COMPILED */}
             {!hasTaxonomy ? (
-              <div className="p-3.5 bg-amber-950/30 border border-amber-500/40 rounded-xl space-y-2 text-xs">
-                <div className="flex items-start gap-2.5 text-amber-300 font-semibold">
-                  <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/40 rounded-xl space-y-2 text-xs">
+                <div className="flex items-start gap-2.5 text-amber-900 dark:text-amber-300 font-semibold">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="text-xs font-bold text-amber-200">
+                    <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                       Prerequisite Required: Compile Knowledge Base First (Step 3)
                     </p>
-                    <p className="text-[11px] font-normal text-amber-200/80 leading-relaxed">
+                    <p className="text-[11px] font-normal text-amber-800 dark:text-amber-200/80 leading-relaxed">
                       Before uploading Lab PDFs (TP), Socratix requires the Course Knowledge Base and Competency Matrix to be compiled from your chapter slides. This allows the AI to map lab activities to official lecture concepts.
                     </p>
                   </div>
@@ -2265,14 +2307,14 @@ export default function CourseStudioPanel({
                 </Button>
               </div>
             ) : (
-              <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300">
+              <div className="p-2.5 bg-[#059669] text-white border border-[#059669] rounded-xl flex items-center justify-between text-xs shadow-sm">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="font-semibold text-[11px]">
+                  <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
+                  <span className="font-bold text-[11px] text-white">
                     Knowledge Base &amp; Taxonomy compiled. Ready for Lab PDFs!
                   </span>
                 </div>
-                <Badge variant="outline" className="text-[9px] border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 font-semibold font-mono">
+                <Badge variant="outline" className="text-[9px] bg-white/20 text-white border-white/30 font-semibold font-mono">
                   Step 3 Ready
                 </Badge>
               </div>
@@ -2307,7 +2349,7 @@ export default function CourseStudioPanel({
               ) : (
                 <>
                   <Upload className="w-5 h-5 text-cyan-600 dark:text-cyan-400 mx-auto mb-1.5" />
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-200">
+                  <p className="text-xs font-bold text-[#0f172a] dark:text-slate-200">
                     {isUploadingLabs ? 'Processing...' : 'Upload Lab PDFs (batch supported)'}
                   </p>
                   <p className="text-[10px] text-slate-600 dark:text-slate-500 mt-0.5 font-medium">Select one or multiple TP files at once</p>
@@ -2346,7 +2388,7 @@ export default function CourseStudioPanel({
                         </button>
                       </div>
                       <span className="font-mono text-[10px] text-cyan-700 dark:text-cyan-400 font-bold">{lb.code || `TP ${lb.lab_number}`}</span>
-                      <span className="text-slate-900 dark:text-slate-200 truncate font-semibold">{getLocalizedLabTitle(lb, lang)}</span>
+                      <span className="text-[#0f172a] dark:text-slate-200 truncate font-semibold">{getLocalizedLabTitle(lb, lang)}</span>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
                       <button
@@ -2361,10 +2403,10 @@ export default function CourseStudioPanel({
                         <button
                           type="button"
                           disabled
-                          className="inline-flex items-center gap-1.5 text-[10px] text-amber-300 bg-amber-950/60 border border-amber-500/60 px-2 py-0.5 rounded-md font-semibold animate-pulse cursor-wait shadow-sm shadow-amber-500/20"
+                          className="inline-flex items-center gap-1.5 text-[10px] text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-500/60 px-2 py-0.5 rounded-md font-semibold animate-pulse cursor-wait shadow-xs"
                           title="Re-analyzing with Meta AI in progress..."
                         >
-                          <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                          <Loader2 className="w-3 h-3 animate-spin text-amber-600 dark:text-amber-400" />
                           <span>Re-analyzing...</span>
                         </button>
                       ) : (
@@ -2372,14 +2414,14 @@ export default function CourseStudioPanel({
                           type="button"
                           onClick={() => handleRequestTargetedLabReanalyze(lb)}
                           disabled={isProcessing || isQueryingTargetedLab}
-                          className="inline-flex items-center gap-1 text-[10px] text-amber-400 hover:text-amber-300 bg-amber-950/30 border border-amber-500/30 px-2 py-0.5 rounded-md hover:bg-amber-900/40 transition font-medium disabled:opacity-50"
+                          className="inline-flex items-center gap-1 text-[10px] text-amber-800 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-200 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-500/30 px-2 py-0.5 rounded-md transition font-semibold disabled:opacity-50 shadow-xs"
                           title="Re-analyze this TP with Meta AI (destructive confirmation required)"
                         >
-                          <Zap className="w-3 h-3 text-amber-400" />
+                          <Zap className="w-3 h-3 text-amber-600 dark:text-amber-400" />
                           <span>Re-analyze</span>
                         </button>
                       )}
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">
                         {lb.activities?.length || 0} act.
                       </span>
                       {lb.pdf_url && (
@@ -2387,7 +2429,7 @@ export default function CourseStudioPanel({
                           href={lb.pdf_url}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-[10px] text-slate-400 hover:text-slate-200 hover:underline"
+                          className="text-[10px] text-cyan-700 dark:text-cyan-400 font-semibold hover:underline px-1 py-0.5"
                         >
                           PDF ↗
                         </a>
@@ -2395,10 +2437,10 @@ export default function CourseStudioPanel({
                       <button
                         type="button"
                         onClick={() => handleDeleteLab(lb.id, lb.title)}
-                        className="p-1 text-slate-500 hover:text-rose-400 transition rounded hover:bg-rose-950/30 ml-1"
+                        className="p-1.5 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 rounded-lg transition-all ml-1"
                         title="Delete lab"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -2408,27 +2450,27 @@ export default function CourseStudioPanel({
           </div>
 
           {/* VIEW LABS DECOMPOSITION BRIEFING */}
-          <div className="pt-3 border-t border-slate-800 space-y-2">
+          <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
             {labs.length > 0 ? (
               <Button
                 onClick={() => setShowLabsIngestionModal(true)}
                 disabled={isProcessing}
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
+                className="w-full bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold h-9 shadow-md transition-all flex items-center justify-center gap-1.5"
               >
-                <Layers className="w-3.5 h-3.5 text-cyan-200" />
+                <Layers className="w-3.5 h-3.5 text-white" />
                 <span>View TP Decomposition &amp; Presets Briefing ({labs.length} TP)</span>
               </Button>
             ) : (
               <Button
                 disabled
-                className="w-full bg-slate-800/60 text-slate-500 text-xs font-semibold h-9 cursor-not-allowed flex items-center justify-center gap-1.5"
+                className="w-full bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-xs font-semibold h-9 cursor-not-allowed flex items-center justify-center gap-1.5 border border-slate-200 dark:border-transparent"
               >
                 <Layers className="w-3.5 h-3.5 opacity-60" />
                 <span>Upload Lab PDFs First (Step 4)</span>
               </Button>
             )}
 
-            <div className="text-[10px] text-slate-400 flex items-center justify-between">
+            <div className="text-[10px] text-slate-600 dark:text-slate-400 flex items-center justify-between font-medium">
               <span>Automatic natural sorting: TP1, TP2, ...</span>
               <span className="text-slate-500">Targeted re-analysis available per TP</span>
             </div>
@@ -2490,7 +2532,7 @@ export default function CourseStudioPanel({
                 <span>Permanently Delete this Course</span>
               </div>
               <p className="text-xs text-slate-700 dark:text-slate-300">
-                Permanently delete <span className="font-bold text-slate-900 dark:text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
+                Permanently delete <span className="font-bold text-[#0f172a] dark:text-white font-mono">{course.code}</span> ({course.title}) and cascade all its chapters, labs, and telemetry sessions.
               </p>
               <p className="text-[11px] text-slate-600 dark:text-slate-500 font-medium">
                 {isJurySandboxEnabled() ? (
@@ -2693,49 +2735,49 @@ export default function CourseStudioPanel({
       {/* TARGETED LAB RE-ANALYZE CONFIRMATION MODAL */}
       {targetedLabToReanalyze && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
-                <ShieldAlert className="w-5 h-5" />
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 border border-amber-300 dark:border-amber-500/40 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400 font-bold text-sm">
+                <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 <span>Confirmer la Ré-analyse Ciblée du {targetedLabToReanalyze.code || `TP ${targetedLabToReanalyze.lab_number}`}</span>
               </div>
               <button
                 onClick={() => setTargetedLabToReanalyze(null)}
-                className="text-slate-400 hover:text-white p-1 rounded"
+                className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs text-slate-300 leading-relaxed">
+            <div className="p-5 space-y-4 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
               <p>
                 Vous allez relancer l&apos;extraction et la décomposition Meta AI (muse-spark-1.3) pour le sujet :
-                <strong className="block text-white mt-1 text-sm">{targetedLabToReanalyze.title}</strong>
+                <strong className="block text-slate-900 dark:text-white mt-1 text-sm">{targetedLabToReanalyze.title}</strong>
               </p>
 
-              <div className="p-3 bg-rose-950/40 border border-rose-500/40 rounded-xl space-y-2 text-rose-200">
-                <div className="flex items-center gap-2 font-semibold text-rose-300 text-xs">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-500/40 rounded-xl space-y-2 text-rose-900 dark:text-rose-200">
+                <div className="flex items-center gap-2 font-semibold text-rose-800 dark:text-rose-300 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   <span>Impact sur les sessions étudiantes :</span>
                 </div>
                 <p>
                   Les activités, jalons et presets de ce TP seront <strong>régénérés à neuf</strong>.
                 </p>
-                <p className="font-semibold text-rose-100">
-                  💥 Pour éviter toute incohérence de jalons, les <span className="underline font-bold text-white text-sm">{targetedLabSessionCount} session(s) étudiante(s)</span> actuellement enregistrées sur ce TP seront DÉFINITIVEMENT PURGÉES.
+                <p className="font-semibold text-rose-950 dark:text-rose-100">
+                  💥 Pour éviter toute incohérence de jalons, les <span className="underline font-bold text-rose-900 dark:text-white text-sm">{targetedLabSessionCount} session(s) étudiante(s)</span> actuellement enregistrées sur ce TP seront DÉFINITIVEMENT PURGÉES.
                 </p>
-                <p className="text-[11px] text-rose-300/80">
+                <p className="text-[11px] text-rose-800 dark:text-rose-300/80">
                   Les étudiants qui ont commencé ou terminé ce TP devront le reprendre à zéro sur la nouvelle version. Les autres TP du cours restent intacts.
                 </p>
               </div>
             </div>
 
-            <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-end gap-2.5">
+            <div className="p-4 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setTargetedLabToReanalyze(null)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs"
               >
                 Annuler
               </Button>
@@ -2755,59 +2797,59 @@ export default function CourseStudioPanel({
       {/* GLOBAL RE-ANALYZE DANGER ZONE MODAL */}
       {showGlobalReanalyzeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-lg bg-slate-950 border border-rose-600/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-rose-900/60 bg-rose-950/40 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-rose-300 font-bold text-sm">
-                <ShieldAlert className="w-5 h-5 text-rose-400 animate-pulse" />
+          <div className="w-full max-w-lg bg-white dark:bg-slate-950 border-2 border-rose-400 dark:border-rose-600/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-bold text-sm">
+                <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 animate-pulse" />
                 <span>DANGER ZONE : Ré-analyse Globale de Tous les TP</span>
               </div>
               <button
                 onClick={() => setShowGlobalReanalyzeModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded"
+                className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-1 rounded"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs text-slate-300 leading-relaxed">
+            <div className="p-5 space-y-4 text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
               <p>
-                Cette action va ré-analyser l&apos;intégralité des <strong className="text-white">{labs.length} TP</strong> du cours <strong className="text-white font-mono">{course.code}</strong> via Meta AI.
+                Cette action va ré-analyser l&apos;intégralité des <strong className="text-slate-900 dark:text-white">{labs.length} TP</strong> du cours <strong className="text-slate-900 dark:text-white font-mono">{course.code}</strong> via Meta AI.
               </p>
 
-              <div className="p-3.5 bg-rose-950/60 border border-rose-600/60 rounded-xl space-y-2 text-rose-200">
-                <div className="flex items-center gap-2 font-bold text-rose-300 text-xs">
-                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-600/60 rounded-xl space-y-2 text-rose-900 dark:text-rose-200">
+                <div className="flex items-center gap-2 font-bold text-rose-800 dark:text-rose-300 text-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   <span>DESTRUCTION MASSIVE DES SESSIONS ÉTUDIANTES :</span>
                 </div>
                 <p>
                   Toutes les activités, jalons et presets de tous les TP seront écrasés par une nouvelle inférence.
                 </p>
-                <p className="font-semibold text-rose-100">
-                  💥 L&apos;ensemble des <span className="underline font-bold text-white text-sm">{globalReanalyzeSessionCount} session(s) étudiante(s)</span> du cours entier (tous TP confondus) seront IRRÉMÉDIABLEMENT DÉTRUITES.
+                <p className="font-semibold text-rose-950 dark:text-rose-100">
+                  💥 L&apos;ensemble des <span className="underline font-bold text-rose-900 dark:text-white text-sm">{globalReanalyzeSessionCount} session(s) étudiante(s)</span> du cours entier (tous TP confondus) seront IRRÉMÉDIABLEMENT DÉTRUITES.
                 </p>
               </div>
 
               <div className="space-y-1.5 pt-2">
-                <label className="text-[11px] font-semibold text-slate-300">
-                  Pour confirmer cette purge totale et lancer la ré-analyse, tapez <span className="font-mono font-bold text-rose-400">&ldquo;PURGE&rdquo;</span> ci-dessous :
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Pour confirmer cette purge totale et lancer la ré-analyse, tapez <span className="font-mono font-bold text-rose-600 dark:text-rose-400">&ldquo;PURGE&rdquo;</span> ci-dessous :
                 </label>
                 <Input
                   type="text"
                   value={purgeConfirmInput}
                   onChange={(e) => setPurgeConfirmInput(e.target.value)}
                   placeholder="Tapez PURGE pour confirmer"
-                  className="font-mono text-center tracking-widest text-rose-300 bg-slate-900 border-rose-500/50 focus:border-rose-400 text-xs h-9 uppercase"
+                  className="font-mono text-center tracking-widest text-rose-700 dark:text-rose-300 bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-500/50 focus:border-rose-500 text-xs h-9 uppercase font-bold"
                   autoFocus
                 />
               </div>
             </div>
 
-            <div className="p-4 bg-slate-900 border-t border-slate-800 flex items-center justify-end gap-2.5">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowGlobalReanalyzeModal(false)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs"
               >
                 Annuler
               </Button>

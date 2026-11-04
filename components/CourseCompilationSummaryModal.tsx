@@ -173,44 +173,44 @@ export default function CourseCompilationSummaryModal({
   }[lang];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[90vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[90vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-[#059669] dark:text-emerald-400 shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                   {i18n.title}
                 </h2>
-                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-mono">
+                <Badge className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30 text-[11px] font-mono font-bold">
                   {course.code}
                 </Badge>
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <div className="inline-flex items-center gap-0.5 bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-800 text-[10px] font-mono shrink-0">
+                <div className="inline-flex items-center gap-0.5 bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-mono shrink-0">
                   <button
                     onClick={() => setLang('en')}
                     className={`px-1.5 py-0.5 rounded transition ${
-                      lang === 'en' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                      lang === 'en' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
                     }`}
                   >
                     EN
                   </button>
-                  <span className="text-slate-600">|</span>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
                   <button
                     onClick={() => setLang('fr')}
                     className={`px-1.5 py-0.5 rounded transition ${
-                      lang === 'fr' ? 'bg-emerald-500/20 text-emerald-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                      lang === 'fr' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
                     }`}
                   >
                     FR
                   </button>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {i18n.subtitle}
                 </p>
               </div>
@@ -219,7 +219,7 @@ export default function CourseCompilationSummaryModal({
 
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
             title={i18n.closeTooltip}
           >
             <X className="w-5 h-5" />
@@ -227,40 +227,40 @@ export default function CourseCompilationSummaryModal({
         </div>
 
         {/* 4-KPI SUMMARY BAR */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-950/40 border-b border-slate-800 text-xs">
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-slate-400">{i18n.kpiChapters}</span>
-            <div className="text-xl font-extrabold text-white mt-0.5">{chaptersCount}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-5 bg-slate-50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 text-xs">
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-slate-600 dark:text-slate-400 font-semibold">{i18n.kpiChapters}</span>
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white mt-0.5">{chaptersCount}</div>
             <span className="text-[10px] text-slate-500">{i18n.kpiChaptersSub}</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-emerald-400">{i18n.kpiTaxonomy}</span>
-            <div className="text-xl font-extrabold text-emerald-400 mt-0.5">{totalMicroCompetencies}</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-emerald-700 dark:text-emerald-400 font-semibold">{i18n.kpiTaxonomy}</span>
+            <div className="text-xl font-extrabold text-[#059669] dark:text-emerald-400 mt-0.5">{totalMicroCompetencies}</div>
             <span className="text-[10px] text-slate-500">{i18n.kpiTaxonomySub}</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-cyan-400">{i18n.kpiPrompt}</span>
-            <div className="text-xl font-extrabold text-cyan-300 mt-0.5">~{promptTokensEstimate} tok</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-cyan-700 dark:text-cyan-400 font-semibold">{i18n.kpiPrompt}</span>
+            <div className="text-xl font-extrabold text-cyan-800 dark:text-cyan-300 mt-0.5">~{promptTokensEstimate} tok</div>
             <span className="text-[10px] text-slate-500">{i18n.kpiPromptSub(course.compiled_tutor_prompt?.length || 0)}</span>
           </div>
 
-          <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-            <span className="text-[10px] uppercase font-mono text-amber-400">{i18n.kpiKb}</span>
-            <div className="text-xl font-extrabold text-amber-300 mt-0.5">~{kbTokensEstimate} tok</div>
+          <div className="p-3 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <span className="text-[10px] uppercase font-mono text-amber-700 dark:text-amber-400 font-semibold">{i18n.kpiKb}</span>
+            <div className="text-xl font-extrabold text-amber-800 dark:text-amber-300 mt-0.5">~{kbTokensEstimate} tok</div>
             <span className="text-[10px] text-slate-500">{i18n.kpiKbSub}</span>
           </div>
         </div>
 
         {/* NAVIGATION TABS */}
-        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-800 bg-slate-900">
+        <div className="flex items-center gap-2 px-6 pt-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
           <button
             onClick={() => setActiveTab('overview')}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'overview'
-                ? 'border-emerald-400 text-emerald-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-600 dark:border-emerald-400 text-emerald-800 dark:text-emerald-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
@@ -271,8 +271,8 @@ export default function CourseCompilationSummaryModal({
             onClick={() => setActiveTab('prompt')}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'prompt'
-                ? 'border-emerald-400 text-emerald-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-600 dark:border-emerald-400 text-emerald-800 dark:text-emerald-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Code2 className="w-3.5 h-3.5" />
@@ -283,8 +283,8 @@ export default function CourseCompilationSummaryModal({
             onClick={() => setActiveTab('kb')}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'kb'
-                ? 'border-emerald-400 text-emerald-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-emerald-600 dark:border-emerald-400 text-emerald-800 dark:text-emerald-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -293,37 +293,37 @@ export default function CourseCompilationSummaryModal({
         </div>
 
         {/* MODAL BODY */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-200 text-xs">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-800 dark:text-slate-200 text-xs">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {/* 3 PILLARS CARDS FOR JURY */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[#059669] dark:text-emerald-400 flex items-center justify-center font-bold">
                     1
                   </div>
-                  <h3 className="font-bold text-white text-sm">{i18n.pillar1Title}</h3>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">{i18n.pillar1Title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
                     {i18n.pillar1Desc}
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
                     2
                   </div>
-                  <h3 className="font-bold text-white text-sm">{i18n.pillar2Title}</h3>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">{i18n.pillar2Title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
                     {i18n.pillar2Desc}
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                     3
                   </div>
-                  <h3 className="font-bold text-white text-sm">{i18n.pillar3Title}</h3>
-                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">{i18n.pillar3Title}</h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
                     {i18n.pillar3Desc}
                   </p>
                 </div>
@@ -332,11 +332,11 @@ export default function CourseCompilationSummaryModal({
               {/* CANONICAL TAXONOMY LIST */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
                     <span>{i18n.matrixTitle}</span>
                   </h3>
-                  <Badge variant="outline" className="font-mono text-[10px] text-slate-400 border-slate-800">
+                  <Badge variant="outline" className="font-mono text-[10px] text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800">
                     {i18n.matrixCategories(course.competency_matrix?.length || 0)}
                   </Badge>
                 </div>
@@ -345,24 +345,24 @@ export default function CourseCompilationSummaryModal({
                   {course.competency_matrix?.map((tax, idx) => (
                     <div
                       key={idx}
-                      className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-2"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-mono text-emerald-400 font-bold text-[11px]">
+                        <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold text-[11px]">
                           {tax.chapter_code}
                         </span>
-                        <span className="text-white font-medium text-xs">{tax.competency_title}</span>
+                        <span className="text-slate-900 dark:text-white font-medium text-xs">{tax.competency_title}</span>
                       </div>
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {tax.micro_competencies?.map((mc, mIdx) => (
                           <span
                             key={mIdx}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] text-slate-300 font-mono"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[10px] text-slate-700 dark:text-slate-300 font-mono shadow-xs"
                             title={mc.title}
                           >
-                            <span className="text-emerald-400 font-bold">{mc.code}</span>
+                            <span className="text-[#059669] dark:text-emerald-400 font-bold">{mc.code}</span>
                             {mc.slide_ref && (
-                              <span className="text-slate-500">({mc.slide_ref})</span>
+                              <span className="text-slate-400 dark:text-slate-500">({mc.slide_ref})</span>
                             )}
                           </span>
                         ))}
@@ -377,21 +377,21 @@ export default function CourseCompilationSummaryModal({
           {activeTab === 'prompt' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">
+                <span className="text-slate-600 dark:text-slate-400">
                   {i18n.promptHint}
                 </span>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleCopyPrompt}
-                  className="text-xs h-7 bg-slate-950 border-slate-800 text-slate-300 hover:text-white"
+                  className="text-xs h-7 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+                  {copied ? <Check className="w-3.5 h-3.5 mr-1 text-[#059669] dark:text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
                   {copied ? i18n.promptCopied : i18n.copyPrompt}
                 </Button>
               </div>
 
-              <pre className="p-4 rounded-xl bg-slate-950 border border-slate-850 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
+              <pre className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 font-mono text-[11px] text-slate-800 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
                 {course.compiled_tutor_prompt || i18n.noPrompt}
               </pre>
             </div>
@@ -399,13 +399,13 @@ export default function CourseCompilationSummaryModal({
 
           {activeTab === 'kb' && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-slate-400">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
                 <span>
                   {i18n.kbHint(chaptersCount, kbTokensEstimate)}
                 </span>
               </div>
 
-              <pre className="p-4 rounded-xl bg-slate-950 border border-slate-850 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
+              <pre className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 font-mono text-[11px] text-slate-800 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-[50vh] overflow-y-auto">
                 {course.compiled_knowledge_base || i18n.noKb}
               </pre>
             </div>
@@ -413,12 +413,12 @@ export default function CourseCompilationSummaryModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="text-xs bg-slate-900 border-slate-800 text-slate-300 hover:text-white"
+            className="text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white"
           >
             {i18n.closeOverview}
           </Button>

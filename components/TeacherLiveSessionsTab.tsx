@@ -35,6 +35,7 @@ import {
   X,
   Layers,
   Monitor,
+  ChevronDown,
 } from 'lucide-react';
 import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 
@@ -285,49 +286,55 @@ export default function TeacherLiveSessionsTab({
       {/* ==================================================================== */}
       {/* 1. TOP CONTROLS & FILTER BAR */}
       {/* ==================================================================== */}
-      <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
         {/* Lab Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase font-semibold text-slate-400">Target Lab:</span>
+          <span className="text-xs uppercase font-bold text-slate-700 dark:text-slate-400">Target Lab:</span>
           {hasLabs ? (
-            <select
-              value={selectedLab?.id || ''}
-              onChange={(e) => {
-                const target = labs.find((l) => l.id === e.target.value);
-                if (target) onSelectLab(target);
-              }}
-              className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium"
-            >
-              {labs.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {formatLabOptionLabel(l.code, l.title)}
-                </option>
-              ))}
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                value={selectedLab?.id || ''}
+                onChange={(e) => {
+                  const target = labs.find((l) => l.id === e.target.value);
+                  if (target) onSelectLab(target);
+                }}
+                className="appearance-none bg-white dark:bg-slate-950 border border-slate-300 hover:border-slate-400 dark:border-slate-700 text-[#0f172a] dark:text-slate-100 text-xs rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] font-semibold shadow-xs transition cursor-pointer"
+              >
+                {labs.map((l) => (
+                  <option key={l.id} value={l.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
+                    {formatLabOptionLabel(l.code, l.title)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 pointer-events-none" />
+            </div>
           ) : (
-            <select
-              disabled
-              value=""
-              className="bg-slate-950/60 border border-slate-800 text-slate-500 text-xs rounded-lg px-3 py-1.5 cursor-not-allowed italic font-medium"
-            >
-              <option value="">No Practical Labs (TP) yet</option>
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                disabled
+                value=""
+                className="appearance-none bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-500 text-xs rounded-xl pl-3 pr-8 py-1.5 cursor-not-allowed italic font-medium"
+              >
+                <option value="">No Practical Labs (TP) yet</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none opacity-50" />
+            </div>
           )}
         </div>
 
         {/* Status Filters */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
           {(['ALL', 'BLOCKED', 'IN_PROGRESS', 'COMPLETED'] as const).map((filter) => (
             <button
               key={filter}
               onClick={() => setStatusFilter(filter)}
               disabled={!hasLabs}
-              className={`px-3 py-1 rounded-lg font-medium transition-colors ${
+              className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
                 !hasLabs
-                  ? 'text-slate-600 cursor-not-allowed'
+                  ? 'text-slate-400 cursor-not-allowed'
                   : statusFilter === filter
-                  ? 'bg-slate-800 text-emerald-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white dark:bg-slate-800 text-[#059669] dark:text-emerald-400 shadow-sm border border-slate-200 dark:border-transparent'
+                  : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {filter === 'ALL' && 'All'}
@@ -347,7 +354,7 @@ export default function TeacherLiveSessionsTab({
               onChange={(e) => setSearchQuery(e.target.value)}
               disabled={!hasLabs}
               placeholder="Search student or PC..."
-              className="h-8 pl-8 pr-7 text-xs bg-slate-950 border-slate-700 w-44 rounded-lg focus-visible:ring-emerald-500 disabled:opacity-50"
+              className="h-8 pl-8 pr-7 text-xs bg-white dark:bg-slate-950 border border-slate-300 hover:border-slate-400 dark:border-slate-700 text-[#0f172a] dark:text-slate-100 w-44 rounded-xl focus-visible:ring-2 focus-visible:ring-[#059669]/20 focus-visible:border-[#059669] disabled:opacity-50 shadow-xs"
             />
             {searchQuery && (
               <button
@@ -387,21 +394,21 @@ export default function TeacherLiveSessionsTab({
       {/* 2. INCOMPLETE COURSE SETUP BANNER (When labs.length === 0) */}
       {/* ==================================================================== */}
       {!hasLabs ? (
-        <div className="p-8 sm:p-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-6 space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
+        <div className="p-8 sm:p-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-6 space-y-5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mx-auto">
             <BookOpen className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base font-semibold text-slate-100">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               Course Setup Incomplete for Live Lab Sessions
             </h3>
-            <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
               Live workstation telemetry and the <strong>Populate Demo Class</strong> sandbox require at least one Practical Lab (TP) assignment. Complete your course configuration in Course Studio.
             </p>
           </div>
 
           {/* Step checklist preview */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left text-xs bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-left text-xs bg-slate-50 dark:bg-slate-950/70 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800/80">
             <div className="space-y-1">
               <div className="flex items-center gap-1.5 font-medium text-slate-300">
                 {chaptersCount > 0 ? (
@@ -431,11 +438,11 @@ export default function TeacherLiveSessionsTab({
             </div>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-1.5 font-medium text-amber-300">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span>3. Practical Labs (0)</span>
               </div>
-              <p className="text-[10px] text-amber-400/80 font-medium">
+              <p className="text-[10px] text-amber-700 dark:text-amber-400/80 font-medium">
                 Upload & decompose TP PDFs
               </p>
             </div>
@@ -445,7 +452,7 @@ export default function TeacherLiveSessionsTab({
             <Button
               type="button"
               onClick={onOpenStudioTab}
-              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5"
+              className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5 transition-all"
             >
               <span>Open Course Studio (Step 4: Upload Lab PDFs)</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -470,7 +477,7 @@ export default function TeacherLiveSessionsTab({
                   </Badge>
                 </div>
                 <p className="text-slate-800 dark:text-slate-300 mt-1.5 leading-relaxed">
-                  <span className="font-bold text-slate-900 dark:text-white underline decoration-rose-400">
+                  <span className="font-bold text-[#0f172a] dark:text-white underline decoration-rose-400">
                     {bottleneckAlert.students
                       .map((s) => `${s.profiles?.display_name || 'Student'} (${s.seat_label})`)
                       .join(', ')}
@@ -488,11 +495,11 @@ export default function TeacherLiveSessionsTab({
           {/* ==================================================================== */}
           {/* 3. CONSOLIDATED STUDENT TABLE (1 Row per Student) */}
           {/* ==================================================================== */}
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-100 dark:bg-slate-950/80 border-b border-slate-300 dark:border-slate-800 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 tracking-wider">
+                  <tr className="bg-slate-50 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 text-[11px] uppercase font-bold text-slate-700 dark:text-slate-400 tracking-wider">
                     <th className="py-2.5 px-3.5">Student & Workstation</th>
                     <th className="py-2.5 px-3.5">Lab & Activity Progress</th>
                     <th className="py-2.5 px-3.5">Covered Micro-Competencies (Drill-Down)</th>
@@ -500,14 +507,14 @@ export default function TeacherLiveSessionsTab({
                     <th className="py-2.5 px-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 bg-white dark:bg-slate-900">
                   {filteredSessions.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-slate-500">
                         <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         <p className="text-sm">No student sessions found for this lab.</p>
                         <p className="text-[11px] text-slate-400 mt-1">
-                          Ask students to connect on <span className="font-mono text-emerald-400">/student</span>, or click <strong className="text-slate-300">&ldquo;🎭 Populate Demo Class&rdquo;</strong> above to generate test sessions instantly.
+                          Ask students to connect on <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold">/student</span>, or click <strong className="text-slate-900 dark:text-slate-300 font-bold">&ldquo;🎭 Populate Demo Class&rdquo;</strong> above to generate test sessions instantly.
                         </p>
                       </td>
                     </tr>
@@ -533,14 +540,14 @@ export default function TeacherLiveSessionsTab({
                       return (
                         <tr
                           key={session.id}
-                          className={`hover:bg-slate-800/40 transition-colors ${
-                            isBlocked ? 'bg-rose-950/10' : ''
+                          className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${
+                            isBlocked ? 'bg-rose-50/40 dark:bg-rose-950/10' : ''
                           }`}
                         >
                           {/* Col 1: Student & Workstation */}
                           <td className="py-2.5 px-3.5">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-800 dark:text-slate-300 text-[11px]">
+                              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-slate-800 dark:text-slate-300 text-[11px]">
                                 {session.profiles?.display_name?.[0] || 'S'}
                               </div>
                               <div>
@@ -566,12 +573,12 @@ export default function TeacherLiveSessionsTab({
                               type="button"
                               onClick={() => setSelectedSessionForMilestones(session)}
                               title="Click to view detailed milestones breakdown across all activities"
-                              className="w-full text-left space-y-1 p-1 -m-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
+                              className="w-full text-left space-y-1 p-1 -m-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:ring-1 hover:ring-cyan-500/30 transition-all cursor-pointer group"
                             >
                               <div className="flex justify-between items-center text-[10px]">
-                                <span className="text-slate-700 dark:text-slate-400 font-medium group-hover:text-cyan-700 dark:group-hover:text-cyan-300 transition-colors flex items-center gap-1">
+                                <span className="text-slate-700 dark:text-slate-400 font-semibold group-hover:text-emerald-700 dark:group-hover:text-cyan-300 transition-colors flex items-center gap-1">
                                   <span>Total Progress</span>
-                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 text-cyan-600 dark:text-cyan-400 font-normal transition-opacity">
+                                  <span className="text-[9px] opacity-0 group-hover:opacity-100 text-emerald-600 dark:text-cyan-400 font-normal transition-opacity">
                                     &bull; Details &rarr;
                                   </span>
                                 </span>
@@ -579,7 +586,7 @@ export default function TeacherLiveSessionsTab({
                                   {session.progress_percent}%
                                 </span>
                               </div>
-                              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
+                              <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden group-hover:ring-1 group-hover:ring-emerald-500/40 transition">
                                 <div
                                   className={`h-full transition-all duration-300 ${
                                     isCompleted
@@ -677,9 +684,9 @@ export default function TeacherLiveSessionsTab({
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleOpenInspector(session)}
-                                className="h-7.5 text-xs font-semibold border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 hover:border-emerald-500 shadow-sm gap-1.5 px-2.5"
+                                className="h-7.5 text-xs font-semibold border-slate-300 hover:border-slate-400 dark:border-slate-700 dark:hover:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 hover:text-emerald-700 dark:text-slate-200 dark:hover:text-emerald-300 hover:bg-slate-50 dark:hover:bg-slate-700/60 shadow-xs gap-1.5 px-2.5 rounded-xl transition"
                               >
-                                <Code2 className="w-3 h-3" />
+                                <Code2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                                 Inspect
                               </Button>
 
@@ -716,14 +723,14 @@ export default function TeacherLiveSessionsTab({
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 shrink-0">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm">
+                <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                   {drillDownData.conceptKey} &bull; {drillDownData.studentName}
                 </h3>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                className="h-7 w-7 p-0 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                 onClick={() => setDrillDownData(null)}
               >
                 <X className="w-4 h-4" />
@@ -763,7 +770,7 @@ export default function TeacherLiveSessionsTab({
                         )}
                         <div className="space-y-1 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-slate-900 dark:text-white">
+                            <span className="font-mono font-bold text-[#0f172a] dark:text-white">
                               {occ.location}
                             </span>
                             {occ.remediated && (
@@ -789,22 +796,22 @@ export default function TeacherLiveSessionsTab({
       {/* ==================================================================== */}
       {inspectingSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-3xl h-full bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
+          <div className="w-full max-w-3xl h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-right">
             {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-slate-100 text-sm flex items-center gap-2">
-                  <Monitor className="w-4 h-4 text-emerald-400" />
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-sm flex items-center gap-2">
+                  <Monitor className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
                   Live Inspection: {inspectingSession.profiles?.display_name} ({inspectingSession.seat_label})
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                   {course.title} &bull; {selectedLab?.code}
                 </p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 p-0 text-slate-400 hover:text-white"
+                className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 rounded-lg transition"
                 onClick={() => setInspectingSession(null)}
               >
                 <X className="w-4 h-4" />
@@ -814,25 +821,27 @@ export default function TeacherLiveSessionsTab({
             {/* Drawer Body: Code & Dialogue */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 overflow-hidden">
               {/* Left Column: Student Code */}
-              <div className="border-r border-slate-800 flex flex-col h-full overflow-hidden bg-slate-950/70">
-                <div className="p-2 border-b border-slate-800 bg-slate-900/60 text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Code2 className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-slate-950/70">
+                <div className="p-2.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                  <Code2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                   Live Code Snapshot
                 </div>
                 <div className="flex-1 overflow-auto p-3">
                   {isLoadingInspection ? (
-                    <div className="text-xs text-slate-400 p-4">Syncing live code from student workspace...</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 p-4 font-medium">Syncing live code from student workspace...</div>
                   ) : (
                     inspectedCodeFiles.map((file, idx) => (
                       <div key={idx} className="mb-4">
-                        <div className="text-[11px] font-mono text-emerald-400 mb-1 px-1">{file.name}</div>
-                        <CodeBlockHighlighter
-                          language={file.name.split('.').pop()?.toLowerCase() || 'java'}
-                          code={file.content || '// Empty'}
-                          fontSize="11px"
-                          showLineNumbers
-                          customStyle={{ background: '#090d16', margin: 0, borderRadius: '8px' }}
-                        />
+                        <div className="text-[11px] font-mono font-bold text-[#059669] dark:text-emerald-400 mb-1 px-1">{file.name}</div>
+                        <div className="rounded-xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#090d16] overflow-hidden shadow-xs">
+                          <CodeBlockHighlighter
+                            language={file.name.split('.').pop()?.toLowerCase() || 'java'}
+                            code={file.content || '// Empty'}
+                            fontSize="11px"
+                            showLineNumbers
+                            customStyle={{ background: 'transparent', margin: 0 }}
+                          />
+                        </div>
                       </div>
                     ))
                   )}
@@ -840,9 +849,9 @@ export default function TeacherLiveSessionsTab({
               </div>
 
               {/* Right Column: Dialogue History */}
-              <div className="flex flex-col h-full overflow-hidden bg-slate-900">
-                <div className="p-2 border-b border-slate-800 bg-slate-900/60 text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900">
+                <div className="p-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 text-xs font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                   Socratic Dialogue History ({inspectedChatHistory.length})
                 </div>
                 <div className="flex-1 overflow-auto p-3 space-y-3">
@@ -854,23 +863,23 @@ export default function TeacherLiveSessionsTab({
                         key={msg.id}
                         className={`p-3 rounded-xl text-xs space-y-1 ${
                           msg.role === 'user'
-                            ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-200'
-                            : 'bg-slate-950 border border-slate-800 text-slate-300'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-200'
+                            : 'bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300'
                         }`}
                       >
-                        <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                           {msg.role === 'user' ? 'Student' : 'Socratix'}
                         </div>
-                        <div className="whitespace-pre-wrap">{msg.content}</div>
+                        <div className="whitespace-pre-wrap leading-relaxed font-medium">{msg.content}</div>
                         {msg.course_reference && (
-                          <div className="pt-2 border-t border-slate-800/80">
+                          <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
                             <button
                               type="button"
                               onClick={() => {
                                 setSelectedSlideReference(msg.course_reference as StructuredCourseReference);
                                 setIsSlideModalOpen(true);
                               }}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/40 transition-colors text-[11px] font-medium text-left"
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-[#059669] dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors text-[11px] font-semibold text-left"
                               title="Inspect referenced course slide in Smart Slide Viewer"
                             >
                               <BookOpen className="w-3.5 h-3.5 shrink-0" />

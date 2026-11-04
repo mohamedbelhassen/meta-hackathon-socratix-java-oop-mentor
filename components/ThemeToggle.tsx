@@ -6,9 +6,10 @@ import { Sun, Moon } from 'lucide-react';
 interface ThemeToggleProps {
   className?: string;
   size?: 'sm' | 'md';
+  showLabel?: boolean;
 }
 
-export function ThemeToggle({ className = '', size = 'sm' }: ThemeToggleProps) {
+export function ThemeToggle({ className = '', size = 'sm', showLabel = false }: ThemeToggleProps) {
   const [isDark, setIsDark] = useState<boolean>(true);
   const [mounted, setMounted] = useState<boolean>(false);
 
@@ -48,36 +49,41 @@ export function ThemeToggle({ className = '', size = 'sm' }: ThemeToggleProps) {
     window.dispatchEvent(new Event('socratix-theme-change'));
   };
 
-  if (!mounted) {
-    return (
-      <div
-        className={`inline-flex items-center justify-center rounded-lg border border-slate-800 bg-slate-900/60 text-slate-400 opacity-60 ${
-          size === 'sm' ? 'w-7 h-7' : 'w-8 h-8'
-        } ${className}`}
-      >
-        <span className="w-3.5 h-3.5" />
-      </div>
-    );
-  }
+  const buttonSizeClasses = showLabel
+    ? size === 'sm'
+      ? 'h-8 px-2.5 text-xs gap-1.5'
+      : 'h-8 px-3 text-xs gap-2'
+    : size === 'sm'
+    ? 'w-8 h-8'
+    : 'w-9 h-9';
+
+  const currentIsDark = mounted ? isDark : true;
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? 'Switch to Light mode' : 'Switch to Dark mode'}
-      title={isDark ? 'Switch to Light mode (Ideal for crisp recording)' : 'Switch to Dark mode'}
-      className={`inline-flex items-center justify-center rounded-lg border border-slate-700/80 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 transition-all shadow-sm active:scale-95 cursor-pointer ${
-        size === 'sm' ? 'w-7 h-7' : 'w-8 h-8'
-      } ${className}`}
+      aria-label={currentIsDark ? 'Passer en mode clair' : 'Passer en mode sombre'}
+      title={currentIsDark ? 'Passer en mode clair (Light mode)' : 'Passer en mode sombre (Dark mode)'}
+      className={`inline-flex items-center justify-center rounded-lg border font-medium transition-all shadow-sm active:scale-95 cursor-pointer shrink-0 ${
+        currentIsDark
+          ? 'bg-slate-900 hover:bg-slate-800 border-slate-700/80 hover:border-slate-600 text-amber-400 hover:text-amber-300'
+          : 'bg-white hover:bg-[#f8fafc] border-[#cbd5e1] hover:border-[#94a3b8] text-[#334155] hover:text-[#0f172a]'
+      } ${buttonSizeClasses} ${className}`}
     >
-      {isDark ? (
-        <Sun className="w-3.5 h-3.5 text-amber-400 animate-in spin-in-90 duration-200" />
+      {currentIsDark ? (
+        <>
+          <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20 shrink-0" />
+          {showLabel && <span className="text-[11px] font-semibold text-slate-200">Clair</span>}
+        </>
       ) : (
-        <Moon className="w-3.5 h-3.5 text-indigo-500 animate-in spin-in-90 duration-200" />
+        <>
+          <Moon className="w-4 h-4 text-[#334155] fill-[#334155]/20 shrink-0" />
+          {showLabel && <span className="text-[11px] font-semibold text-[#0f172a]">Sombre</span>}
+        </>
       )}
     </button>
   );
 }
 
 export default ThemeToggle;
-

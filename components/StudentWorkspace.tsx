@@ -1198,50 +1198,50 @@ export default function StudentWorkspace() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 font-sans overflow-hidden">
       {/* ==================================================================== */}
       {/* LEFT PANEL: IDE & WORKSPACE (Resizable) */}
       {/* ==================================================================== */}
       <div
         style={{ width: `${leftPanelWidth}px` }}
-        className={`shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col h-full overflow-hidden ${
+        className={`shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden ${
           isDragging ? '' : 'transition-[width] duration-100 ease-out'
         }`}
       >
         {/* Workspace Top Header: Course & Lab Selectors */}
-        <div className="p-2 sm:p-2.5 border-b border-slate-800 bg-slate-950/80 space-y-1.5">
+        <div className="p-2 sm:p-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80 space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-emerald-400">🦉 Socratix</span>
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 text-[10px] px-1.5 py-0">
+              <span className="text-sm font-bold text-[#059669] dark:text-emerald-400">🦉 Socratix</span>
+              <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-transparent text-emerald-800 dark:text-emerald-300 text-[10px] px-1.5 py-0 font-semibold">
                 Workspace v2
               </Badge>
               {authUser ? (
                 authUser.role === 'teacher' ? (
                   <div className="flex items-center gap-1.5">
-                    <Badge variant="outline" className="border-amber-500/40 bg-amber-950/40 text-amber-300 text-[10px] px-2 py-0 flex items-center gap-1 font-mono">
-                      <GraduationCap className="w-2.5 h-2.5 text-amber-400" />
+                    <Badge variant="outline" className="border-amber-300 dark:border-amber-500/40 bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-300 text-[10px] px-2 py-0 flex items-center gap-1 font-mono font-semibold">
+                      <GraduationCap className="w-2.5 h-2.5 text-amber-700 dark:text-amber-400" />
                       <span className="max-w-[110px] truncate">{authUser.name}</span>
-                      <span className="text-[9px] text-amber-400/80 border-l border-amber-500/30 pl-1">Teacher Preview</span>
+                      <span className="text-[9px] text-amber-700 dark:text-amber-400/80 border-l border-amber-300 dark:border-amber-500/30 pl-1 font-medium">Teacher Preview</span>
                     </Badge>
                     <Link
                       href="/teacher"
-                      className="text-[10px] text-amber-400 hover:text-amber-300 underline font-medium transition"
+                      className="text-[10px] text-amber-800 dark:text-amber-400 hover:text-amber-950 dark:hover:text-amber-300 underline font-semibold transition"
                       title="Return to Teacher Hub"
                     >
                       Hub &rarr;
                     </Link>
                   </div>
                 ) : (
-                  <Badge variant="outline" className="border-emerald-500/30 bg-emerald-950/40 text-emerald-400 text-[10px] px-1.5 py-0 flex items-center gap-1 font-mono">
-                    <User className="w-2.5 h-2.5" />
+                  <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 text-[10px] px-1.5 py-0 flex items-center gap-1 font-mono font-semibold">
+                    <User className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
                     <span className="max-w-[100px] truncate">{authUser.name}</span>
                   </Badge>
                 )
               ) : (
                 <Link
                   href="/login"
-                  className="text-[10px] text-slate-400 hover:text-emerald-400 flex items-center gap-1 transition ml-1"
+                  className="text-[10px] text-slate-600 dark:text-slate-400 hover:text-[#059669] dark:hover:text-emerald-400 flex items-center gap-1 transition ml-1 font-medium"
                   title="Sign in with an email account"
                 >
                   <LogIn className="w-3 h-3" />
@@ -1249,16 +1249,16 @@ export default function StudentWorkspace() {
                 </Link>
               )}
             </div>
-            <div className="flex items-center gap-1">
-              <ThemeToggle size="sm" className="h-6 w-6" />
+            <div className="flex items-center gap-1.5">
+              <ThemeToggle size="sm" />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsResetModalOpen(true)}
-                className="h-6 text-[10px] text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 px-1.5 gap-1"
+                className="h-7 text-xs text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 px-2 gap-1 rounded-lg"
                 title="Reset current student session"
               >
-                <RotateCcw className="w-2.5 h-2.5" />
+                <RotateCcw className="w-3 h-3" />
                 Reset
               </Button>
             </div>
@@ -1267,51 +1267,57 @@ export default function StudentWorkspace() {
           {/* Course & Lab Pickers */}
           <div className="grid grid-cols-2 gap-1.5 text-xs">
             <div>
-              <label className="text-[9px] uppercase font-semibold text-slate-400 block mb-0.5">Course</label>
-              <select
-                value={activeCourse?.id || ''}
-                onChange={(e) => {
-                  const c = courses.find((x) => x.id === e.target.value);
-                  if (c) setActiveCourse(c);
-                }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
-              >
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title}
-                  </option>
-                ))}
-              </select>
+              <label className="text-[9px] uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Course</label>
+              <div className="relative flex items-center">
+                <select
+                  value={activeCourse?.id || ''}
+                  onChange={(e) => {
+                    const c = courses.find((x) => x.id === e.target.value);
+                    if (c) setActiveCourse(c);
+                  }}
+                  className="appearance-none w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-7 py-1 text-[#0f172a] dark:text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-medium shadow-sm transition cursor-pointer"
+                >
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
+                      {c.title}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2 pointer-events-none" />
+              </div>
             </div>
 
             <div>
-              <label className="text-[9px] uppercase font-semibold text-slate-400 block mb-0.5">Lab (TP)</label>
-              <select
-                value={activeLab?.id || ''}
-                onChange={(e) => {
-                  const l = labs.find((x) => x.id === e.target.value);
-                  if (l) {
-                    setActiveLab(l);
-                    setSessionState(null);
-                    setCompletionReport(null);
-                    setCompletedMilestone(null);
-                    const firstAct = l.activities?.[0] || null;
-                    setActiveActivity(firstAct);
-                    saveActiveContext({
-                      labId: l.id,
-                      activityId: firstAct?.id,
-                      activePresetKey: undefined,
-                    });
-                  }
-                }}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 text-slate-200 text-xs focus:outline-none focus:border-emerald-500"
-              >
-                {labs.map((l) => (
-                  <option key={l.id} value={l.id}>
+              <label className="text-[9px] uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-0.5">Lab (TP)</label>
+              <div className="relative flex items-center">
+                <select
+                  value={activeLab?.id || ''}
+                  onChange={(e) => {
+                    const l = labs.find((x) => x.id === e.target.value);
+                    if (l) {
+                      setActiveLab(l);
+                      setSessionState(null);
+                      setCompletionReport(null);
+                      setCompletedMilestone(null);
+                      const firstAct = l.activities?.[0] || null;
+                      setActiveActivity(firstAct);
+                      saveActiveContext({
+                        labId: l.id,
+                        activityId: firstAct?.id,
+                        activePresetKey: undefined,
+                      });
+                    }
+                  }}
+                  className="appearance-none w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-7 py-1 text-[#0f172a] dark:text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-medium shadow-sm transition cursor-pointer"
+                >
+                  {labs.map((l) => (
+                    <option key={l.id} value={l.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
                     {formatLabOptionLabel(l.code, l.title)}
                   </option>
                 ))}
-              </select>
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2 pointer-events-none" />
+              </div>
             </div>
           </div>
 
@@ -1321,18 +1327,18 @@ export default function StudentWorkspace() {
               <button
                 type="button"
                 onClick={() => setIsSyllabusModalOpen(true)}
-                className="w-full py-1 px-2.5 rounded-md text-[11px] font-medium bg-emerald-950/30 border border-emerald-500/30 text-emerald-300 hover:text-white hover:bg-emerald-900/40 hover:border-emerald-500/50 flex items-center justify-between transition group shadow-sm"
+                className="w-full py-1 px-2.5 rounded-md text-[11px] font-semibold bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 hover:text-emerald-950 dark:hover:text-white flex items-center justify-between transition group shadow-xs"
                 title="Browse course syllabus, lecture slides and chapter PDFs"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <BookOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
+                  <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0 group-hover:scale-110 transition-transform" />
                   <span className="truncate">Course Slides & Chapters</span>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 text-[10px] font-mono">
-                  <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-semibold">
                     {chapters.length} chap.
                   </span>
-                  <span className="px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                  <span className="px-1.5 py-0.2 rounded bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-500/30 font-semibold">
                     {labs.length} TP
                   </span>
                 </div>
@@ -1341,25 +1347,25 @@ export default function StudentWorkspace() {
           )}
 
           {/* Persona & Seat Selector */}
-          <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-800/80">
+          <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-200 dark:border-slate-800/80">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] uppercase font-semibold text-slate-400">
+                <label className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400">
                   {authUser?.role === 'student' ? 'Student Profile' : 'Student'}
                 </label>
                 {authUser?.role === 'student' ? (
-                  <span className="text-[9px] text-emerald-400 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[9px] text-[#059669] dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-emerald-400 animate-pulse" />
                     You (Enrolled)
                   </span>
                 ) : authUser?.role === 'teacher' ? (
-                  <span className="text-[9px] text-amber-400/90 font-medium flex items-center gap-1" title="Teacher previewing student workspace">
-                    <GraduationCap className="w-2.5 h-2.5 text-amber-400" />
+                  <span className="text-[9px] text-amber-600 dark:text-amber-400/90 font-medium flex items-center gap-1" title="Teacher previewing student workspace">
+                    <GraduationCap className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400" />
                     Preview Mode
                   </span>
                 ) : (
-                  <span className="text-[9px] text-emerald-400/90 font-medium flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[9px] text-[#059669] dark:text-emerald-400/90 font-medium flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#059669] dark:bg-emerald-400" />
                     {isJurySandboxEnabled() ? 'Jury Sandbox' : 'Guest Workstation'}
                   </span>
                 )}
@@ -1367,92 +1373,98 @@ export default function StudentWorkspace() {
 
               {authUser?.role === 'student' ? (
                 <div
-                  className="w-full bg-slate-900 border border-emerald-500/40 rounded-md px-2.5 py-1 text-slate-200 text-xs flex items-center justify-between gap-1.5 shadow-sm"
+                  className="w-full bg-slate-100 dark:bg-slate-900 border border-emerald-500/40 rounded-md px-2.5 py-1 text-slate-800 dark:text-slate-200 text-xs flex items-center justify-between gap-1.5 shadow-xs"
                   title={`Enrolled Student: ${activeStudent.name}`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-300 text-[9px] font-bold shrink-0">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[#059669] dark:text-emerald-300 text-[9px] font-bold shrink-0">
                       {activeStudent.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="font-semibold text-slate-100 truncate text-xs">{activeStudent.name}</span>
+                    <span className="font-semibold text-slate-900 dark:text-slate-100 truncate text-xs">{activeStudent.name}</span>
                   </div>
                   {activeStudent.email && (
-                    <span className="text-[9px] text-slate-400 font-mono truncate max-w-[110px] shrink-0">
+                    <span className="text-[9px] text-slate-500 dark:text-slate-400 font-mono truncate max-w-[110px] shrink-0">
                       {activeStudent.email}
                     </span>
                   )}
                 </div>
               ) : (
-                <select
-                  value={activeStudent.id}
-                  onChange={(e) => {
-                    const all = [...DEMO_PERSONAS, ...registeredStudents];
-                    const p = all.find((x) => x.id === e.target.value);
-                    if (p) {
-                      setActiveStudent(p);
-                      setSessionState(null);
-                      setCompletionReport(null);
-                      setCompletedMilestone(null);
-                      saveActiveContext({ studentId: p.id });
-                    }
-                  }}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-                >
-                  {(isJurySandboxEnabled() || authUser?.role === 'teacher') && (
-                    <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-950 text-slate-300 font-semibold">
-                      {DEMO_PERSONAS.map((p) => (
-                        <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
-                          {p.name} ({p.role})
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-
-                  {!isJurySandboxEnabled() && !authUser && (
-                    <option value="" disabled className="bg-slate-900 text-amber-400 italic">
-                      Please sign in with student email
-                    </option>
-                  )}
-
-                  {authUser?.role === 'teacher' && (
-                    <optgroup label="👤 Enrolled Students (Class Roster)" className="bg-slate-950 text-slate-300 font-semibold">
-                      {registeredStudents.length > 0 ? (
-                        registeredStudents.map((p) => (
-                          <option key={p.id} value={p.id} className="bg-slate-900 text-slate-200 font-normal">
-                            {p.isOnline ? `🟢 ${p.name} (Online)` : `⚪ ${p.name}`}
+                <div className="relative">
+                  <select
+                    value={activeStudent.id}
+                    onChange={(e) => {
+                      const all = [...DEMO_PERSONAS, ...registeredStudents];
+                      const p = all.find((x) => x.id === e.target.value);
+                      if (p) {
+                        setActiveStudent(p);
+                        setSessionState(null);
+                        setCompletionReport(null);
+                        setCompletedMilestone(null);
+                        saveActiveContext({ studentId: p.id });
+                      }
+                    }}
+                    className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-7 py-1 text-[#0f172a] dark:text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-sans shadow-sm transition"
+                  >
+                    {(isJurySandboxEnabled() || authUser?.role === 'teacher') && (
+                      <optgroup label="🎭 Demo Personas (Instant Sandbox)" className="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-300 font-semibold">
+                        {DEMO_PERSONAS.map((p) => (
+                          <option key={p.id} value={p.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9] font-normal">
+                            {p.name} ({p.role})
                           </option>
-                        ))
-                      ) : (
-                        <option value="" disabled className="bg-slate-900 text-slate-500 italic">
-                          No registered students yet
-                        </option>
-                      )}
-                    </optgroup>
-                  )}
-                </select>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {!isJurySandboxEnabled() && !authUser && (
+                      <option value="" disabled className="bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 italic">
+                        Please sign in with student email
+                      </option>
+                    )}
+
+                    {authUser?.role === 'teacher' && (
+                      <optgroup label="👤 Enrolled Students (Class Roster)" className="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-300 font-semibold">
+                        {registeredStudents.length > 0 ? (
+                          registeredStudents.map((p) => (
+                            <option key={p.id} value={p.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9] font-normal">
+                              {p.isOnline ? `🟢 ${p.name} (Online)` : `⚪ ${p.name}`}
+                            </option>
+                          ))
+                        ) : (
+                          <option value="" disabled className="bg-white dark:bg-slate-900 text-slate-500 italic">
+                            No registered students yet
+                          </option>
+                        )}
+                      </optgroup>
+                    )}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               )}
             </div>
 
             <div>
-              <label className="text-[10px] uppercase font-semibold text-slate-400 block mb-1">Seat</label>
-              <select
-                value={seatLabel}
-                onChange={(e) => handleSeatChange(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-              >
-                {SEAT_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+              <label className="text-[10px] uppercase font-semibold text-slate-500 dark:text-slate-400 block mb-1">Seat</label>
+              <div className="relative">
+                <select
+                  value={seatLabel}
+                  onChange={(e) => handleSeatChange(e.target.value)}
+                  className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg pl-2.5 pr-7 py-1 text-[#0f172a] dark:text-slate-100 text-xs focus:outline-none focus:border-emerald-500 font-mono shadow-sm transition"
+                >
+                  {SEAT_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* Activity & Milestone Brief (Collapsible) */}
         {activeLab && activeActivity && (
-          <div className="border-b border-slate-800 bg-slate-950/40 p-2 sm:p-2.5 space-y-1.5">
+          <div className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/40 p-2 sm:p-2.5 space-y-1.5">
             {/* Multi-Activity 1-Click Tab Bar (Option B) */}
             {activeLab.activities && activeLab.activities.length > 1 && (
               <div
@@ -1461,7 +1473,7 @@ export default function StudentWorkspace() {
                     e.currentTarget.scrollLeft += e.deltaY;
                   }
                 }}
-                className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-800/70 scrollbar-thin"
+                className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200 dark:border-slate-800/70 scrollbar-thin"
               >
                 {activeLab.activities.map((act) => {
                   const isSelected = activeActivity.id === act.id;
@@ -1474,17 +1486,17 @@ export default function StudentWorkspace() {
                       onClick={() => handleSelectActivity(act)}
                       className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium transition-all shrink-0 ${
                         isSelected
-                          ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-sm'
-                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/20 border border-emerald-300 dark:border-emerald-500/40 text-[#059669] dark:text-emerald-300 font-semibold shadow-xs'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-xs'
                       }`}
                       title={`Switch to Activity ${act.order}: ${act.title}`}
                     >
                       {isCompleted ? (
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 shrink-0" />
                       ) : (
                         <span
                           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            isSelected ? 'bg-emerald-400 ring-2 ring-emerald-500/30' : 'bg-slate-600'
+                            isSelected ? 'bg-[#059669] dark:bg-emerald-400 ring-2 ring-emerald-500/30' : 'bg-slate-400 dark:bg-slate-600'
                           }`}
                         />
                       )}
@@ -1504,8 +1516,8 @@ export default function StudentWorkspace() {
 
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1.5 min-w-0">
-                <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="text-xs font-semibold text-slate-200 truncate">
+                <Layers className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 shrink-0" />
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-200 truncate">
                   Activity {activeActivity.order}: {activeActivity.title}
                 </span>
               </div>
@@ -1514,17 +1526,17 @@ export default function StudentWorkspace() {
                   <button
                     type="button"
                     onClick={() => setActivePdfModal({ url: activeLab.pdf_url!, title: `${activeLab.code || 'Lab'} — Official Subject Sheet` })}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-400 hover:text-cyan-300 bg-cyan-950/60 border border-cyan-500/40 px-2 py-0.5 rounded-md hover:bg-cyan-900/50 transition shadow-sm"
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-cyan-800 dark:text-cyan-400 hover:text-cyan-950 dark:hover:text-cyan-300 bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-950/60 dark:hover:bg-cyan-900/50 border border-cyan-300 dark:border-cyan-500/40 px-2 py-0.5 rounded-md transition shadow-xs"
                     title="Read original full Lab Subject PDF"
                   >
-                    <FileText className="w-3 h-3 text-cyan-400" />
+                    <FileText className="w-3 h-3 text-cyan-600 dark:text-cyan-400" />
                     <span>Lab PDF ↗</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={() => setIsBriefExpanded(!isBriefExpanded)}
-                  className="text-slate-400 hover:text-slate-200 text-xs shrink-0 p-1 hover:bg-slate-800/80 rounded transition-colors"
+                  className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 text-xs shrink-0 p-1 hover:bg-slate-200/60 dark:hover:bg-slate-800/80 rounded transition-colors"
                   title={isBriefExpanded ? "Hide activity brief & milestones" : "Show activity brief & milestones"}
                 >
                   {isBriefExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -1534,31 +1546,31 @@ export default function StudentWorkspace() {
 
             {/* Dual Progress Gauges */}
             <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-              <div className="bg-slate-900 border border-slate-800 rounded p-1">
-                <div className="flex justify-between text-slate-400 mb-0.5">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 shadow-xs">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400 mb-0.5 font-medium">
                   <span>Activity</span>
-                  <span className="font-semibold text-emerald-400">
+                  <span className="font-semibold text-[#059669] dark:text-emerald-400">
                     {actProgress ? `${actProgress.completed_milestones.length}/${actProgress.total_milestones}` : `0/${activeActivity.milestones.length}`}
                   </span>
                 </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-emerald-500 h-full transition-all duration-300"
+                    className="bg-[#059669] dark:bg-emerald-500 h-full transition-all duration-300"
                     style={{ width: `${actProgress?.percent || 0}%` }}
                   />
                 </div>
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded p-1">
-                <div className="flex justify-between text-slate-400 mb-0.5">
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1.5 shadow-xs">
+                <div className="flex justify-between text-slate-600 dark:text-slate-400 mb-0.5 font-medium">
                   <span>Total Lab</span>
-                  <span className="font-semibold text-cyan-400">
+                  <span className="font-semibold text-cyan-700 dark:text-cyan-400">
                     {sessionState?.progress_percent || 0}%
                   </span>
                 </div>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-cyan-500 h-full transition-all duration-300"
+                    className="bg-cyan-600 dark:bg-cyan-500 h-full transition-all duration-300"
                     style={{ width: `${sessionState?.progress_percent || 0}%` }}
                   />
                 </div>
@@ -1567,29 +1579,29 @@ export default function StudentWorkspace() {
 
             {/* Expanded Brief Details */}
             {isBriefExpanded && (
-              <div className="pt-2 text-xs space-y-2 border-t border-slate-800/60">
+              <div className="pt-2 text-xs space-y-2 border-t border-slate-200 dark:border-slate-800/60">
                 <div className="flex items-center justify-between pb-0.5">
                   <span className="text-[10px] uppercase font-semibold text-slate-500">
                     Activity Instructions:
                   </span>
                   {activeActivity.instructions_i18n?.fr && (
-                    <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[10px]">
+                    <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-md px-1.5 py-0.5 text-[10px] shadow-xs">
                       <button
                         type="button"
                         onClick={() => setBriefLang('en')}
                         className={`font-semibold transition ${
-                          briefLang === 'en' ? 'text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-300'
+                          briefLang === 'en' ? 'text-[#059669] dark:text-emerald-400 font-bold' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                         title="English instructions"
                       >
                         EN
                       </button>
-                      <span className="text-slate-700">|</span>
+                      <span className="text-slate-300 dark:text-slate-700">|</span>
                       <button
                         type="button"
                         onClick={() => setBriefLang('fr')}
                         className={`font-semibold transition ${
-                          briefLang === 'fr' ? 'text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-300'
+                          briefLang === 'fr' ? 'text-cyan-700 dark:text-cyan-400 font-bold' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                         }`}
                         title="French original instructions"
                       >
@@ -1599,7 +1611,7 @@ export default function StudentWorkspace() {
                   )}
                 </div>
 
-                <div className="prose prose-invert prose-xs max-w-none text-slate-300 leading-relaxed text-[11px] space-y-1.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-900 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[10px] [&_strong]:text-slate-100 [&_p]:my-1">
+                <div className="prose prose-slate dark:prose-invert prose-xs max-w-none text-slate-700 dark:text-slate-300 leading-relaxed text-[11px] space-y-1.5 bg-white dark:bg-slate-950/60 p-2.5 rounded-lg border border-slate-200 dark:border-slate-800/80 shadow-xs [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-100 dark:[&_code]:bg-slate-900 [&_code]:text-emerald-700 dark:[&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[10px] [&_strong]:text-slate-900 dark:[&_strong]:text-slate-100 [&_p]:my-1">
                   <ReactMarkdown>
                     {cleanInstructionsMarkdown(
                       briefLang === 'fr' && activeActivity.instructions_i18n?.fr
@@ -1615,11 +1627,11 @@ export default function StudentWorkspace() {
                     return (
                       <div key={m.id} className="flex items-center gap-1.5 text-[11px]">
                         {isDone ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 shrink-0" />
                         ) : (
-                          <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                         )}
-                        <span className={isDone ? 'text-emerald-300 line-through' : 'text-slate-300'}>
+                        <span className={isDone ? 'text-emerald-700 dark:text-emerald-300 line-through font-medium' : 'text-slate-700 dark:text-slate-300'}>
                           {m.title}
                         </span>
                       </div>
@@ -1628,13 +1640,13 @@ export default function StudentWorkspace() {
                 </div>
 
                 {activeActivity.target_files && activeActivity.target_files.length > 0 && (
-                  <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-800/60">
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-slate-200 dark:border-slate-800/60">
                     <span className="text-[10px] uppercase font-semibold text-slate-500">Target Files:</span>
                     {activeActivity.target_files.map((file) => (
                       <Badge
                         key={file}
                         variant="outline"
-                        className="text-[10px] font-mono text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0"
+                        className="text-[10px] font-mono text-emerald-800 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0 font-medium"
                       >
                         {file}
                       </Badge>
@@ -1647,20 +1659,20 @@ export default function StudentWorkspace() {
         )}
 
         {/* Source Switcher: Presets vs Disk */}
-        <div className="p-2 sm:p-2.5 border-b border-slate-800 bg-slate-900/60 space-y-1.5">
+        <div className="p-2 sm:p-2.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 space-y-1.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium text-slate-400 flex items-center gap-1.5">
-              <FileCode className="w-3.5 h-3.5 text-emerald-400" />
-              Source: <span className="text-slate-200">{folderName}</span>
+            <span className="font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+              <FileCode className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
+              Source: <span className="text-slate-900 dark:text-slate-200 font-semibold">{folderName}</span>
             </span>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleSelectFolder}
-                className="h-6 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border-slate-700 hover:border-emerald-500/50 px-2.5 gap-1.5 transition-all shadow-sm"
+                className="h-6 text-[11px] font-medium bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white border-slate-300 dark:border-slate-700 hover:border-emerald-500/50 px-2.5 gap-1.5 transition-all shadow-xs"
               >
-                <FolderOpen className="w-3.5 h-3.5 text-emerald-400" />
+                <FolderOpen className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                 Folder
               </Button>
             </div>
@@ -1679,17 +1691,17 @@ export default function StudentWorkspace() {
                       className={`text-[10px] px-2 py-0.5 rounded border transition-colors inline-flex items-center gap-1 ${
                         sourceMode === 'preset' && activePresetKey === preset.key
                           ? isSolution
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-medium'
-                            : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-medium'
+                            ? 'bg-cyan-50 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/40 font-semibold'
+                            : 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40 font-semibold'
                           : isSolution
-                          ? 'bg-slate-800 text-cyan-400/90 border-slate-700 hover:text-cyan-300'
-                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
+                          ? 'bg-white dark:bg-slate-800 text-cyan-700 dark:text-cyan-400/90 border-slate-300 dark:border-slate-700 hover:text-cyan-900 dark:hover:text-cyan-300 hover:bg-slate-50'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50'
                       }`}
                       title={isSolution ? 'Reference Solution (Jury / Teacher / Guest Persona)' : preset.description}
                     >
                       <span>{preset.label}</span>
                       {isSolution && (
-                        <span className="text-[9px] px-1 py-0 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30 font-mono font-bold">
+                        <span className="text-[9px] px-1 py-0 rounded bg-cyan-100 dark:bg-cyan-950 text-cyan-800 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-500/30 font-mono font-bold">
                           JURY
                         </span>
                       )}
@@ -1699,7 +1711,7 @@ export default function StudentWorkspace() {
                 {sourceMode === 'preset' && activePresetKey && (
                   <button
                     onClick={handleRestorePreset}
-                    className="text-[10px] px-1.5 py-0.5 rounded border border-slate-700 text-slate-500 hover:text-slate-300"
+                    className="text-[10px] px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 bg-white dark:bg-transparent"
                     title="Restore default preset code"
                   >
                     ↺ Restore
@@ -1707,8 +1719,8 @@ export default function StudentWorkspace() {
                 )}
               </>
             ) : (
-              <span className="text-[10px] text-slate-400 italic flex items-center gap-1.5 py-0.5">
-                <Info className="w-3 h-3 text-slate-500 shrink-0" />
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 italic flex items-center gap-1.5 py-0.5">
+                <Info className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
                 No presets for Act. {activeActivity?.order || 1} (Re-analyze lab in Studio to auto-generate)
               </span>
             )}
@@ -1716,7 +1728,7 @@ export default function StudentWorkspace() {
 
           {/* Disk Reconnection Banner after F5 */}
           {needsDiskReconnect && (
-            <div className="p-2 bg-amber-500/10 border border-amber-500/30 rounded text-xs text-amber-300 flex items-center justify-between">
+            <div className="p-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/30 rounded text-xs text-amber-900 dark:text-amber-300 flex items-center justify-between font-medium">
               <span>Reconnect local folder</span>
               <Button
                 size="sm"
@@ -1730,15 +1742,15 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Tab List of Files */}
-        <div className="flex bg-slate-950/70 border-b border-slate-800 overflow-x-auto text-xs px-2 pt-1 gap-1">
+        <div className="flex bg-slate-100 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 overflow-x-auto text-xs px-2 pt-1 gap-1">
           {workspaceFiles.map((file, idx) => (
             <button
               key={file.name}
               onClick={() => setActiveFileIndex(idx)}
               className={`px-3 py-1.5 rounded-t font-mono text-xs border-t border-l border-r transition-colors ${
                 activeFileIndex === idx
-                  ? 'bg-slate-900 border-slate-800 text-emerald-400 font-semibold'
-                  : 'bg-slate-950/40 border-transparent text-slate-400 hover:text-slate-200'
+                  ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-emerald-700 dark:text-emerald-400 font-semibold'
+                  : 'bg-slate-200/50 dark:bg-slate-950/40 border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               {file.name.split('/').pop()}
@@ -1747,7 +1759,7 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Code Editor / Viewer */}
-        <div className="flex-1 min-h-0 bg-slate-950 relative overflow-hidden">
+        <div className="flex-1 min-h-0 bg-white dark:bg-slate-950 relative overflow-hidden">
           {sourceMode === 'disk' ? (
             <div className="h-full overflow-y-auto p-3">
               <CodeBlockHighlighter
@@ -1762,14 +1774,14 @@ export default function StudentWorkspace() {
             <textarea
               value={currentFile.content}
               onChange={(e) => handleCodeChange(e.target.value)}
-              className="w-full h-full block p-3 bg-transparent text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
+              className="w-full h-full block p-3 bg-transparent text-slate-900 dark:text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
               spellCheck={false}
             />
           )}
         </div>
 
         {/* Editor Footer Status */}
-        <div className="px-3 py-1 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 flex justify-between">
+        <div className="px-3 py-1 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 flex justify-between">
           <span>{currentFile.name}</span>
           <span>{sourceMode === 'disk' ? 'Disk (Read Only)' : 'Preset (Editable)'}</span>
         </div>
@@ -1787,7 +1799,7 @@ export default function StudentWorkspace() {
         }}
         title="Glisser pour ajuster la largeur / Double-cliquer pour réinitialiser à 50%"
         className={`w-1.5 relative group cursor-col-resize shrink-0 transition-colors z-20 ${
-          isDragging ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-slate-800 hover:bg-emerald-500'
+          isDragging ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-slate-200 dark:bg-slate-800 hover:bg-emerald-500'
         }`}
       >
         {/* Invisible wider hit area (12px) for effortless mouse/trackpad grabbing */}
@@ -1797,42 +1809,42 @@ export default function StudentWorkspace() {
       {/* ==================================================================== */}
       {/* RIGHT PANEL: SOCRATIC CHAT & GUIDANCE */}
       {/* ==================================================================== */}
-      <div className="flex-1 flex flex-col h-full bg-slate-950 overflow-hidden">
+      <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
         {/* Chat Header */}
-        <div className="p-3.5 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
+        <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-sm text-slate-100">Socratic Mentor</span>
+            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span className="font-bold text-sm text-slate-900 dark:text-slate-100">Socratic Mentor</span>
             {activeLab && (
-              <Badge variant="outline" className="text-xs text-slate-400 border-slate-700">
+              <Badge variant="outline" className="text-xs text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 font-mono">
                 {activeLab.code}
               </Badge>
             )}
           </div>
 
-          <div className="flex items-center gap-2.5 text-xs">
-            <span className="text-slate-400">Target:</span>
-            <span className="font-mono text-emerald-400 font-medium">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500 dark:text-slate-400">Target:</span>
+            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
               {activeStudent.name} ({seatLabel})
             </span>
-            <ThemeToggle size="sm" />
+            <ThemeToggle size="sm" showLabel={true} />
           </div>
         </div>
 
         {/* Pinned Milestone Completion Banner (v0-socratix) */}
         {activeActivityReport && (
-          <div className="mx-4 mt-3 p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-slate-900 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-lg shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300 shrink-0">
+          <div className="mx-4 mt-3 p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-white to-white dark:from-emerald-950/70 dark:via-slate-900 dark:to-slate-900 border border-emerald-300 dark:border-emerald-500/50 flex flex-wrap items-center justify-between gap-3 shadow-md dark:shadow-lg dark:shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300 shrink-0">
             <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40">
+              <span className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-400 ring-1 ring-emerald-300 dark:ring-emerald-500/40">
                 <Sparkles className="w-5 h-5 animate-pulse" />
               </span>
               <div>
-                <div className="text-xs font-mono text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-2">
+                <div className="text-xs font-mono text-[#059669] dark:text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-2">
                   <span>🏆 Milestone Mastered</span>
-                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-400 dark:text-slate-500">•</span>
                   <span>{activeActivity?.title || completedMilestone || 'Milestone Mastered'}</span>
                 </div>
-                <div className="text-xs text-slate-300 mt-0.5">
+                <div className="text-xs text-slate-700 dark:text-slate-300 mt-0.5">
                   All contracts met! Review your competency report & consolidation slides.
                 </div>
               </div>
@@ -1843,10 +1855,10 @@ export default function StudentWorkspace() {
                 size="sm"
                 variant="ghost"
                 onClick={replayCelebration}
-                className="text-xs text-slate-400 hover:text-emerald-400 h-8 px-2.5 flex items-center gap-1.5 hover:bg-slate-800"
+                className="text-xs text-slate-600 dark:text-slate-400 hover:text-[#059669] dark:hover:text-emerald-400 h-8 px-2.5 flex items-center gap-1.5 hover:bg-emerald-50 dark:hover:bg-slate-800"
                 title="Replay Celebration Sound & Fireworks"
               >
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                <Sparkles className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400 animate-pulse" />
                 <span>Replay 🎉</span>
               </Button>
               <Button
@@ -1856,7 +1868,7 @@ export default function StudentWorkspace() {
                   setCompletionReport(activeActivityReport);
                   setIsCelebrationOpen(true);
                 }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
+                className="bg-[#059669] hover:bg-[#047857] dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-slate-950 font-bold text-xs h-8 px-3.5 rounded-lg shadow-md"
               >
                 View Report Card 🏆
               </Button>
@@ -1879,12 +1891,12 @@ export default function StudentWorkspace() {
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {currentActivityMessages.length === 0 && (
             <div className="flex flex-col items-start">
-              <div className="max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none space-y-2">
-                <div className="prose prose-invert prose-xs max-w-none">
+              <div className="max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none space-y-2">
+                <div className="prose prose-slate dark:prose-invert prose-xs max-w-none">
                   <p>
                     Hello <strong>{activeStudent.name}</strong>! You are working on <strong>Activity {activeActivity?.order}: {activeActivity?.title}</strong>.
                   </p>
-                  <p className="text-slate-400 text-[11px]">
+                  <p className="text-slate-500 dark:text-slate-400 text-[11px]">
                     Ask me a question or click <strong>&quot;🧪 Check&quot;</strong>, <strong>&quot;💡 Hint&quot;</strong>, or <strong>&quot;📖 Concept&quot;</strong> to get guided on this activity!
                   </p>
                 </div>
@@ -1900,28 +1912,28 @@ export default function StudentWorkspace() {
               <div
                 className={`max-w-[85%] rounded-2xl p-4 text-xs leading-relaxed shadow-sm ${
                   msg.role === 'user'
-                    ? 'bg-emerald-600 text-white rounded-br-none'
-                    : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none space-y-2'
+                    ? 'bg-[#059669] dark:bg-emerald-600 text-white rounded-br-none'
+                    : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none space-y-2'
                 }`}
               >
-                <div className="prose prose-invert prose-xs max-w-none">
+                <div className={`prose prose-xs max-w-none ${msg.role === 'user' ? 'prose-invert' : 'prose-slate dark:prose-invert'}`}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
 
                 {/* Socratic Slide Citation Pill */}
                 {msg.courseReference && (
-                  <div className="pt-2 border-t border-slate-800/80">
+                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80">
                     <button
                       onClick={() => {
                         setActiveSlideReference(msg.courseReference || null);
                         setIsSlideModalOpen(true);
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 transition-colors text-[11px] font-medium text-left"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-colors text-[11px] font-semibold text-left"
                     >
                       <BookOpen className="w-3.5 h-3.5 shrink-0" />
                       <span>{formatSlideCitationLabel(msg.courseReference)}</span>
                       {!formatSlideCitationLabel(msg.courseReference).toLowerCase().includes('slide') && (
-                        <span className="text-[10px] text-emerald-300 font-mono shrink-0">
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-mono shrink-0">
                           (Slide #{msg.courseReference.page_number})
                         </span>
                       )}
@@ -1939,7 +1951,7 @@ export default function StudentWorkspace() {
           ))}
 
           {isAnalyzing && (
-            <div className="flex items-center gap-2.5 text-xs font-medium text-emerald-400 bg-slate-900/80 border border-emerald-500/30 rounded-xl px-4 py-3 w-fit min-w-[360px] whitespace-nowrap shadow-md shadow-emerald-950/30 animate-pulse">
+            <div className="flex items-center gap-2.5 text-xs font-medium text-[#059669] dark:text-emerald-400 bg-white dark:bg-slate-900/80 border border-emerald-300 dark:border-emerald-500/30 rounded-xl px-4 py-3 w-fit min-w-[360px] whitespace-nowrap shadow-md dark:shadow-emerald-950/30 animate-pulse">
               <Sparkles className="w-4 h-4 animate-spin shrink-0" />
               <span>Analyzing code socratic-style with muse-spark-1.3...</span>
             </div>
@@ -1949,7 +1961,7 @@ export default function StudentWorkspace() {
         </div>
 
         {/* Chat Input & Action Bar */}
-        <div className="p-3 sm:p-3.5 border-t border-slate-800 bg-slate-900/40">
+        <div className="p-3 sm:p-3.5 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2 sm:gap-2.5">
             {/* 1. Check Code Button */}
             <Button
@@ -1996,7 +2008,7 @@ export default function StudentWorkspace() {
                   : 'Ask Socratix a question...'
               }
               disabled={isAnalyzing}
-              className="flex-1 bg-slate-900 border-slate-800 text-xs sm:text-sm h-10 px-3.5 rounded-xl focus-visible:ring-emerald-500 shadow-sm"
+              className="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 text-xs sm:text-sm h-10 px-3.5 rounded-xl focus-visible:ring-emerald-500 shadow-sm"
             />
 
             <Button
@@ -2031,32 +2043,32 @@ export default function StudentWorkspace() {
         nextActivityLabel={nextActivity ? `Activity ${nextActivity.order}` : undefined}
       />
 
-      {/* Custom Dark-Themed Reset Confirmation Modal */}
+      {/* Dual-Theme Reset Confirmation Modal */}
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 shrink-0">
+              <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-100">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                   Reset Student Session?
                 </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Reset session for <span className="font-semibold text-slate-200">{activeStudent.name}</span> on{' '}
-                  <span className="font-semibold text-slate-200">{activeLab?.title || 'this lab'}</span>? This will clear all dialogue history, code edits, and telemetry.
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Reset session for <span className="font-semibold text-slate-900 dark:text-slate-200">{activeStudent.name}</span> on{' '}
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{activeLab?.title || 'this lab'}</span>? This will clear all dialogue history, code edits, and telemetry.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsResetModalOpen(false)}
                 disabled={isResetting}
-                className="h-8 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700 hover:border-slate-600"
+                className="h-8 text-xs bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600"
               >
                 Cancel
               </Button>

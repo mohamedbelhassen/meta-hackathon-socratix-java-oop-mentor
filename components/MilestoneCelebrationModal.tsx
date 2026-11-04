@@ -141,12 +141,12 @@ export default function MilestoneCelebrationModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl md:max-w-4xl bg-slate-900 border-2 border-emerald-500/50 rounded-2xl shadow-2xl shadow-emerald-500/20 p-6 md:p-8 text-slate-100 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl md:max-w-4xl bg-white dark:bg-slate-900 border-2 border-emerald-500/50 rounded-2xl shadow-2xl shadow-emerald-500/20 p-6 md:p-8 text-slate-900 dark:text-slate-100 flex flex-col gap-6 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
           title="Close dialog"
         >
           <X className="w-5 h-5" />
@@ -155,27 +155,27 @@ export default function MilestoneCelebrationModal({
         {/* Celebration Header */}
         <div className="flex flex-col items-center text-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="p-3 rounded-full bg-emerald-500/20 text-emerald-400 ring-2 ring-emerald-500/40">
+            <span className="p-3 rounded-full bg-emerald-50 dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-400 ring-2 ring-emerald-400/40 shadow-sm">
               <Sparkles className="w-8 h-8 animate-pulse" />
             </span>
           </div>
           
           {/* Badge & Activity Subtitle without overflow */}
           <div className="flex flex-col items-center gap-2 max-w-2xl px-2">
-            <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-xs px-3.5 py-1 font-mono uppercase tracking-wider shrink-0">
+            <Badge className="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/40 text-xs px-3.5 py-1 font-mono uppercase tracking-wider shrink-0 font-bold">
               🏆 Activity Mastered
             </Badge>
             {milestoneId && (
-              <span className="text-xs font-mono text-emerald-400/90 bg-emerald-950/40 border border-emerald-500/30 px-3 py-1 rounded-full text-center leading-relaxed break-words line-clamp-2 max-w-full">
+              <span className="text-xs font-mono text-[#059669] dark:text-emerald-400/90 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-500/30 px-3 py-1 rounded-full text-center leading-relaxed break-words line-clamp-2 max-w-full font-semibold">
                 {milestoneId}
               </span>
             )}
           </div>
 
-          <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-600 dark:from-emerald-400 dark:via-teal-300 dark:to-cyan-400">
             Activity Successfully Mastered!
           </h2>
-          <p className="text-sm md:text-base text-slate-300 max-w-2xl mt-1 leading-relaxed">
+          <p className="text-sm md:text-base text-slate-700 dark:text-slate-300 max-w-2xl mt-1 leading-relaxed font-medium">
             {rawCongratulations}
           </p>
         </div>
@@ -184,8 +184,8 @@ export default function MilestoneCelebrationModal({
         <div className="flex flex-col gap-4">
           {/* 1. Mastered OOP Concepts */}
           {report.mastered_concepts && report.mastered_concepts.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/30">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm mb-2.5">
+            <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-slate-950/60 border border-emerald-300 dark:border-emerald-500/30">
+              <div className="flex items-center gap-2 text-[#059669] dark:text-emerald-400 font-bold text-sm mb-2.5">
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Mastered OOP Concepts</span>
               </div>
@@ -194,7 +194,7 @@ export default function MilestoneCelebrationModal({
                   <Badge
                     key={idx}
                     variant="outline"
-                    className="bg-emerald-950/40 border-emerald-500/40 text-emerald-300 text-xs py-1 px-2.5 font-sans"
+                    className="bg-emerald-100 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-500/40 text-emerald-900 dark:text-emerald-300 text-xs py-1 px-2.5 font-sans font-semibold"
                   >
                     ✓ {concept}
                   </Badge>
@@ -205,15 +205,15 @@ export default function MilestoneCelebrationModal({
 
           {/* 2. Friction Points Overcome */}
           {report.friction_points && report.friction_points.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-amber-500/30">
-              <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm mb-2.5">
+            <div className="p-4 rounded-xl bg-amber-50/50 dark:bg-slate-950/60 border border-amber-300 dark:border-amber-500/30">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-bold text-sm mb-2.5">
                 <AlertTriangle className="w-4 h-4" />
                 <span>Hurdles Overcome During Mentoring</span>
               </div>
-              <ul className="space-y-1.5 text-xs text-slate-300 list-disc list-inside">
+              <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300 list-disc list-inside font-medium">
                 {report.friction_points.map((pt, idx) => (
                   <li key={idx} className="leading-relaxed">
-                    <span className="text-slate-200">{pt}</span>
+                    <span className="text-slate-900 dark:text-slate-200">{pt}</span>
                   </li>
                 ))}
               </ul>
@@ -222,8 +222,8 @@ export default function MilestoneCelebrationModal({
 
           {/* 3. Recommended Course Slides */}
           {report.revision_recommendations && report.revision_recommendations.length > 0 && (
-            <div className="p-4 rounded-xl bg-slate-950/60 border border-indigo-500/30">
-              <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm mb-2.5">
+            <div className="p-4 rounded-xl bg-indigo-50/50 dark:bg-slate-950/60 border border-indigo-300 dark:border-indigo-500/30">
+              <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-400 font-bold text-sm mb-2.5">
                 <BookOpen className="w-4 h-4" />
                 <span>Recommended Course Slides for Consolidation</span>
               </div>
@@ -231,7 +231,7 @@ export default function MilestoneCelebrationModal({
                 {report.revision_recommendations.map((ref, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 text-xs text-indigo-300 font-mono bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-500/20"
+                    className="flex items-center gap-2 text-xs text-indigo-900 dark:text-indigo-300 font-mono bg-white dark:bg-indigo-950/30 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-500/20 font-medium"
                   >
                     <span>📖 {ref}</span>
                   </div>
@@ -242,16 +242,16 @@ export default function MilestoneCelebrationModal({
         </div>
 
         {/* Modal Footer Actions */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={replayCelebration}
-            className="text-slate-400 hover:text-emerald-400 text-xs flex items-center gap-1.5 hover:bg-slate-800"
+            className="text-slate-600 hover:text-[#059669] dark:text-slate-400 dark:hover:text-emerald-400 text-xs flex items-center gap-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
             title="Replay Celebration Sound & Fireworks"
           >
-            <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
+            <Sparkles className="w-4 h-4 text-[#059669] dark:text-emerald-400 animate-pulse" />
             <span>Replay Fireworks & Chime 🎉</span>
           </Button>
 
@@ -263,7 +263,7 @@ export default function MilestoneCelebrationModal({
                   onClose();
                   onContinueNext();
                 }}
-                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-cyan-600/30 flex items-center gap-1.5"
+                className="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-md flex items-center gap-1.5"
               >
                 <span>Continue to {nextActivityLabel} →</span>
               </Button>
@@ -271,7 +271,7 @@ export default function MilestoneCelebrationModal({
             <Button
               type="button"
               onClick={onClose}
-              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30"
+              className="bg-[#059669] hover:bg-[#047857] text-white font-bold px-5 py-2 rounded-xl text-xs sm:text-sm transition-all shadow-md"
             >
               Inspect Completed Workspace
             </Button>

@@ -53,72 +53,72 @@
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
 
-    /* LIGHT MODE SLATE (Crisp Canvas, Pure White Cards, Deep Readable Text) */
-    --color-slate-50: 15 23 42;       /* Inverted for high contrast on light */
-    --color-slate-100: 15 23 42;      /* Deep navy/black #0f172a for primary titles */
-    --color-slate-200: 30 41 59;      /* Slate-800 #1e293b for subheadings & active text */
-    --color-slate-300: 51 65 85;      /* Slate-700 #334155 for body text (8.3:1 contrast) */
-    --color-slate-400: 71 85 105;     /* Slate-600 #475569 for secondary/muted text (5.7:1) */
-    --color-slate-500: 100 116 139;   /* Slate-500 #64748b */
-    --color-slate-600: 148 163 184;   /* Slate-400 #94a3b8 */
-    --color-slate-700: 203 213 225;   /* Slate-300 #cbd5e1 for subtle borders */
-    --color-slate-750: 226 232 240;   /* Slate-200 #e2e8f0 */
-    --color-slate-800: 226 232 240;   /* Slate-200 #e2e8f0 for borders & dividers */
-    --color-slate-850: 241 245 249;   /* Slate-100 #f1f5f9 for inner subtle containers */
-    --color-slate-900: 255 255 255;   /* Pure White #ffffff for cards, sidebars, modals */
-    --color-slate-950: 248 250 252;   /* Slate-50 #f8fafc for main page canvas */
+    /* LIGHT MODE SLATE (Standard Natural High-Contrast Palette: Light Surfaces & Borders, Deep Text) */
+    --color-slate-50: 248 250 252;    /* #f8fafc - Crisp Canvas & Soft Card Backgrounds */
+    --color-slate-100: 241 245 249;   /* #f1f5f9 - Subtle Inner Containers & Control Pills */
+    --color-slate-200: 226 232 240;   /* #e2e8f0 - Modern Clean Subtle Card Borders & Progress Tracks */
+    --color-slate-300: 203 213 225;   /* #cbd5e1 - Defined Soft Control Outlines & Badge Borders */
+    --color-slate-400: 148 163 184;   /* #94a3b8 - Secondary Placeholder & Inactive Icons */
+    --color-slate-500: 100 116 139;   /* #64748b - Subtle Labels & Helper Text (5.2:1 contrast) */
+    --color-slate-600: 71 85 105;     /* #475569 - Crisp Secondary Text & Indicators (6:1 contrast) */
+    --color-slate-700: 51 65 85;      /* #334155 - High-Contrast Body Text & Notes (8.5:1 contrast) */
+    --color-slate-750: 40 53 72;      /* Slate-750 */
+    --color-slate-800: 30 41 59;      /* #1e293b - Deep Slate Subheadings & Active Controls (12:1) */
+    --color-slate-850: 20 30 46;      /* Slate-850 */
+    --color-slate-900: 15 23 42;      /* #0f172a - Primary Headings & Bold Text (16:1) */
+    --color-slate-950: 2 6 23;        /* #020617 - Deepest Navy Canvas */
 
-    /* LIGHT MODE EMERALD (Mint Backgrounds, Crisp Forest Green Text) */
-    --color-emerald-50: 6 78 59;
-    --color-emerald-100: 6 95 70;
-    --color-emerald-200: 4 120 87;
-    --color-emerald-300: 5 150 105;
-    --color-emerald-400: 5 150 105;   /* Emerald-600 #059669 for punchy readable green text */
-    --color-emerald-500: 16 185 129;
-    --color-emerald-600: 5 150 105;
-    --color-emerald-700: 167 243 208;
-    --color-emerald-800: 167 243 208; /* Emerald-200 #a7f3d0 for clean light green borders */
-    --color-emerald-900: 209 250 229; /* Emerald-100 #d1fae5 */
-    --color-emerald-950: 236 253 245; /* Emerald-50 #ecfdf5 for light green badge/card bg */
+    /* LIGHT MODE EMERALD (Mint Backgrounds, Vibrant #059669 Primary, Deep Forest Text) */
+    --color-emerald-50: 236 253 245;  /* #ecfdf5 - Clean soft mint background */
+    --color-emerald-100: 209 250 229; /* #d1fae5 - Light mint badge background */
+    --color-emerald-200: 167 243 208; /* #a7f3d0 - Soft mint border */
+    --color-emerald-300: 110 231 183; /* #6ee7b7 - Accent border */
+    --color-emerald-400: 52 211 153;  /* #34d399 */
+    --color-emerald-500: 16 185 129;  /* #10b981 */
+    --color-emerald-600: 5 150 105;   /* #059669 - Brand Primary Green */
+    --color-emerald-700: 4 120 87;    /* #047857 - Deep emerald hover & text */
+    --color-emerald-800: 6 95 70;     /* #065f46 - High contrast forest text */
+    --color-emerald-900: 6 78 59;     /* #064e3b */
+    --color-emerald-950: 2 44 34;     /* #022c22 */
 
     /* LIGHT MODE CYAN */
-    --color-cyan-50: 22 78 99;
-    --color-cyan-100: 21 94 117;
-    --color-cyan-200: 14 116 144;
-    --color-cyan-300: 8 145 178;
-    --color-cyan-400: 8 145 178;     /* Cyan-600 #0891b2 */
-    --color-cyan-500: 6 182 212;
-    --color-cyan-600: 8 145 178;
-    --color-cyan-700: 165 243 252;
-    --color-cyan-800: 165 243 252;   /* Cyan-200 */
-    --color-cyan-900: 207 250 254;   /* Cyan-100 */
-    --color-cyan-950: 236 254 255;   /* Cyan-50 */
+    --color-cyan-50: 236 254 255;     /* #ecfeff */
+    --color-cyan-100: 207 250 254;    /* #cffafe */
+    --color-cyan-200: 165 243 252;    /* #a5f3fc */
+    --color-cyan-300: 103 232 249;    /* #67e8f9 */
+    --color-cyan-400: 45 212 191;     /* #2dd4bf */
+    --color-cyan-500: 6 182 212;      /* #06b6d4 */
+    --color-cyan-600: 8 145 178;      /* #0891b2 - Primary cyan */
+    --color-cyan-700: 14 116 144;     /* #0e7490 */
+    --color-cyan-800: 21 94 117;      /* #155e75 - High contrast cyan text */
+    --color-cyan-900: 22 78 99;       /* #164e63 */
+    --color-cyan-950: 8 51 68;        /* #083344 */
 
     /* LIGHT MODE AMBER */
-    --color-amber-50: 120 53 15;
-    --color-amber-100: 146 64 14;
-    --color-amber-200: 180 83 9;
-    --color-amber-300: 217 119 6;
-    --color-amber-400: 217 119 6;     /* Amber-600 #d97706 */
-    --color-amber-500: 245 158 11;
-    --color-amber-600: 217 119 6;
-    --color-amber-700: 253 230 138;
-    --color-amber-800: 253 230 138;   /* Amber-200 */
-    --color-amber-900: 254 243 199;   /* Amber-100 */
-    --color-amber-950: 255 251 235;   /* Amber-50 */
+    --color-amber-50: 255 251 235;    /* #fffbeb */
+    --color-amber-100: 254 243 199;   /* #fef3c7 */
+    --color-amber-200: 253 230 138;   /* #fde68a */
+    --color-amber-300: 252 211 77;    /* #fcd34d */
+    --color-amber-400: 251 191 36;    /* #fbbf24 */
+    --color-amber-500: 245 158 11;    /* #f59e0b */
+    --color-amber-600: 217 119 6;     /* #d97706 - Primary amber */
+    --color-amber-700: 180 83 9;      /* #b45309 */
+    --color-amber-800: 146 64 14;     /* #92400e - High contrast amber text */
+    --color-amber-900: 120 53 15;     /* #78350f */
+    --color-amber-950: 69 26 3;       /* #451a03 */
 
     /* LIGHT MODE ROSE */
-    --color-rose-50: 136 19 55;
-    --color-rose-100: 159 18 57;
-    --color-rose-200: 190 18 60;
-    --color-rose-300: 225 29 72;
-    --color-rose-400: 225 29 72;      /* Rose-600 #e11d48 */
-    --color-rose-500: 244 63 94;
-    --color-rose-600: 225 29 72;
-    --color-rose-700: 254 205 211;
-    --color-rose-800: 254 205 211;    /* Rose-200 */
-    --color-rose-900: 255 228 230;    /* Rose-100 */
-    --color-rose-950: 255 241 242;    /* Rose-50 */
+    --color-rose-50: 255 241 242;     /* #fff1f2 - Delicate soft pink/rose bg */
+    --color-rose-100: 255 228 230;    /* #ffe4e6 - Gentle hover background */
+    --color-rose-200: 254 205 211;    /* #fecdd3 - Soft border */
+    --color-rose-300: 253 164 175;    /* #fda4af */
+    --color-rose-400: 251 113 133;    /* #fb7185 */
+    --color-rose-500: 244 63 94;      /* #f43f5e */
+    --color-rose-600: 225 29 72;      /* #e11d48 - Primary rose red */
+    --color-rose-700: 190 18 60;      /* #be123c */
+    --color-rose-800: 159 18 57;      /* #9f1239 - High contrast rose text */
+    --color-rose-900: 136 19 55;      /* #881337 */
+    --color-rose-950: 76 5 25;        /* #4c0519 */
   }
 
   /* ========================================================================== */
@@ -228,6 +228,21 @@
 
   * {
     border-color: var(--border);
+  }
+
+  /* Native select & option color protection across Light and Dark themes (fixes white-on-white dropdowns) */
+  select {
+    color-scheme: light dark;
+  }
+
+  select option {
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+
+  .dark select option {
+    background-color: #0f172a;
+    color: #f1f5f9;
   }
 
   body {

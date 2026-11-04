@@ -15,6 +15,7 @@ import {
   ArrowRight,
   TrendingUp,
   Award,
+  ChevronDown,
 } from 'lucide-react';
 
 interface TeacherAnalyticsTabProps {
@@ -212,39 +213,45 @@ export default function TeacherAnalyticsTab({
       {/* ==================================================================== */}
       {/* 1. TOP CONTROLS: SCOPE SELECTOR & QUICK KPIS */}
       {/* ==================================================================== */}
-      <div className="p-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="text-xs uppercase font-semibold text-slate-400">Analytics Scope:</span>
+          <span className="text-xs uppercase font-bold text-slate-700 dark:text-slate-400">Analytics Scope:</span>
           {hasLabs ? (
-            <select
-              value={scopeLabId}
-              onChange={(e) => {
-                const val = e.target.value;
-                setScopeLabId(val);
-                if (val !== 'ALL' && onSelectLab) {
-                  const target = labs.find((l) => l.id === val);
-                  if (target) onSelectLab(target);
-                }
-              }}
-              className="bg-slate-950 border border-slate-700 text-slate-100 text-xs rounded-lg px-3 py-1.5 focus:outline-none focus:border-emerald-500 font-medium min-w-[240px]"
-            >
-              <option value="ALL">🌐 All Labs — Course Cohort Overview</option>
-              <optgroup label="Single Lab Breakdown">
-                {labs.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {formatLabOptionLabel(l.code, l.title)}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                value={scopeLabId}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setScopeLabId(val);
+                  if (val !== 'ALL' && onSelectLab) {
+                    const target = labs.find((l) => l.id === val);
+                    if (target) onSelectLab(target);
+                  }
+                }}
+                className="appearance-none bg-white dark:bg-slate-950 border border-slate-300 hover:border-slate-400 dark:border-slate-700 text-[#0f172a] dark:text-slate-100 text-xs rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] font-semibold min-w-[240px] shadow-xs transition cursor-pointer"
+              >
+                <option value="ALL" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">🌐 All Labs — Course Cohort Overview</option>
+                <optgroup label="Single Lab Breakdown" className="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-300 font-semibold">
+                  {labs.map((l) => (
+                    <option key={l.id} value={l.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9] font-normal">
+                      {formatLabOptionLabel(l.code, l.title)}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 pointer-events-none" />
+            </div>
           ) : (
-            <select
-              disabled
-              value=""
-              className="bg-slate-950/60 border border-slate-800 text-slate-500 text-xs rounded-lg px-3 py-1.5 cursor-not-allowed italic font-medium"
-            >
-              <option value="">No Practical Labs configured</option>
-            </select>
+            <div className="relative inline-flex items-center">
+              <select
+                disabled
+                value=""
+                className="appearance-none bg-slate-100 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-slate-500 text-xs rounded-xl pl-3 pr-8 py-1.5 cursor-not-allowed italic font-medium"
+              >
+                <option value="">No Practical Labs configured</option>
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 pointer-events-none opacity-50" />
+            </div>
           )}
         </div>
 
@@ -255,9 +262,9 @@ export default function TeacherAnalyticsTab({
             variant="ghost"
             size="sm"
             onClick={onOpenCoverageTab}
-            className="text-xs text-slate-400 hover:text-emerald-400 h-8 gap-1.5"
+            className="text-xs font-semibold text-[#059669] dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 h-8 gap-1.5"
           >
-            <Compass className="w-3.5 h-3.5 text-emerald-400" />
+            <Compass className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
             <span>View Syllabus ↔ Lab Alignment (Coverage Matrix) &rarr;</span>
           </Button>
         )}
@@ -267,15 +274,15 @@ export default function TeacherAnalyticsTab({
       {/* 2. EMPTY STATE: NO LABS CONFIGURED */}
       {/* ==================================================================== */}
       {!hasLabs ? (
-        <div className="p-8 sm:p-10 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-6 space-y-5">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
+        <div className="p-8 sm:p-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-center max-w-2xl mx-auto my-6 space-y-5">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 mx-auto">
             <BarChart3 className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="text-base font-semibold text-slate-100">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">
               No Practical Labs to Analyze
             </h3>
-            <p className="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-lg mx-auto leading-relaxed">
               Student milestone completion and micro-concept metrics require at least one Practical Lab (TP) in the course curriculum.
             </p>
           </div>
@@ -283,7 +290,7 @@ export default function TeacherAnalyticsTab({
             <Button
               type="button"
               onClick={onOpenStudioTab}
-              className="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5"
+              className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-md gap-1.5"
             >
               <span>Open Course Studio (Upload Lab PDFs)</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -292,15 +299,15 @@ export default function TeacherAnalyticsTab({
         </div>
       ) : totalStudents === 0 ? (
         /* Empty State: Labs exist but 0 student sessions recorded */
-        <div className="p-8 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm text-center max-w-xl mx-auto my-6 space-y-4">
-          <Users className="w-10 h-10 text-slate-600 mx-auto" />
+        <div className="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm text-center max-w-xl mx-auto my-6 space-y-4">
+          <Users className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
           <div className="space-y-1">
-            <p className="text-base font-medium text-slate-300">No Student Telemetry Recorded Yet</p>
-            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-              Once students connect via <span className="text-emerald-400 font-mono">/student</span>, their milestone evaluations, code checks, and Socratic interactions will appear here in real time.
+            <p className="text-base font-medium text-slate-800 dark:text-slate-300">No Student Telemetry Recorded Yet</p>
+            <p className="text-xs text-slate-600 dark:text-slate-500 max-w-md mx-auto leading-relaxed">
+              Once students connect via <span className="text-[#059669] dark:text-emerald-400 font-mono font-semibold">/student</span>, their milestone evaluations, code checks, and Socratic interactions will appear here in real time.
             </p>
           </div>
-          <div className="text-xs text-slate-400 bg-slate-950/60 p-3 rounded-xl border border-slate-800/80 max-w-md mx-auto">
+          <div className="text-xs text-slate-700 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80 max-w-md mx-auto">
             💡 <strong>Hackathon Demo Tip:</strong> Switch to the <strong>&ldquo;📡 Live Lab Sessions&rdquo;</strong> tab and click <strong>&ldquo;🎭 Populate Demo Class&rdquo;</strong> to instantly simulate a live classroom with 4 realistic student sessions!
           </div>
         </div>
@@ -310,48 +317,48 @@ export default function TeacherAnalyticsTab({
         /* ==================================================================== */
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-              <div className="flex items-center justify-between text-slate-400 text-xs">
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
                 <span>Active Cohort</span>
-                <Users className="w-4 h-4 text-emerald-400" />
+                <Users className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
               </div>
-              <div className="text-2xl font-bold text-white font-mono">{totalStudents}</div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-2xl font-black text-[#0f172a] dark:text-white font-mono">{totalStudents}</div>
+              <div className="text-[11px] text-slate-500 font-medium">
                 {isAllScope ? `Students across ${course.title}` : `Students on ${currentLab?.code}`}
               </div>
             </div>
 
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-              <div className="flex items-center justify-between text-slate-400 text-xs">
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
                 <span>Average Progress</span>
-                <TrendingUp className="w-4 h-4 text-cyan-400" />
+                <TrendingUp className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
               </div>
-              <div className="text-2xl font-bold text-cyan-400 font-mono">{avgProgress}%</div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-2xl font-black text-cyan-700 dark:text-cyan-400 font-mono">{avgProgress}%</div>
+              <div className="text-[11px] text-slate-500 font-medium">
                 {completedCount} students completed (100%)
               </div>
             </div>
 
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-              <div className="flex items-center justify-between text-slate-400 text-xs">
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
                 <span>Blocked Friction</span>
-                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               </div>
-              <div className="text-2xl font-bold text-rose-400 font-mono">{blockedCount}</div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-2xl font-black text-rose-600 dark:text-rose-400 font-mono">{blockedCount}</div>
+              <div className="text-[11px] text-slate-500 font-medium">
                 {blockedCount > 0 ? 'Students needing assistance' : 'No active blockers'}
               </div>
             </div>
 
-            <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-1">
-              <div className="flex items-center justify-between text-slate-400 text-xs">
+            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1 shadow-sm">
+              <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 text-xs font-semibold">
                 <span>Tracked Competencies</span>
-                <Award className="w-4 h-4 text-emerald-400" />
+                <Award className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
               </div>
-              <div className="text-2xl font-bold text-emerald-400 font-mono">
+              <div className="text-2xl font-black text-[#059669] dark:text-emerald-400 font-mono">
                 {isAllScope ? allConceptsAggregated.length : coveredConcepts.length}
               </div>
-              <div className="text-[11px] text-slate-500">
+              <div className="text-[11px] text-slate-500 font-medium">
                 Assessed via Socratic turns
               </div>
             </div>
@@ -364,15 +371,15 @@ export default function TeacherAnalyticsTab({
             /* ALL LABS OVERVIEW */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Left: Lab by Lab Progression */}
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
+              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-emerald-400" />
-                    <h3 className="font-semibold text-slate-100 text-sm">
+                    <BarChart3 className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
+                    <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                       Lab-by-Lab Cohort Progression
                     </h3>
                   </div>
-                  <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
+                  <Badge variant="outline" className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-400 font-semibold">
                     {labs.length} Practical Labs
                   </Badge>
                 </div>
@@ -381,45 +388,45 @@ export default function TeacherAnalyticsTab({
                   {labSummaries.map(({ lab, studentCount, blockedCount: bCount, completedCount: cCount, avgProgress: avg }) => (
                     <div
                       key={lab.id}
-                      className="p-3 bg-slate-950/70 border border-slate-800/80 rounded-xl space-y-2 hover:border-slate-700 transition"
+                      className="p-3 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl space-y-2 hover:border-slate-300 dark:hover:border-slate-700 transition"
                     >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-mono text-emerald-400 font-semibold shrink-0">
+                          <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold shrink-0">
                             {lab.code}
                           </span>
-                          <span className="text-slate-200 truncate font-medium">
+                          <span className="text-[#0f172a] dark:text-slate-200 truncate font-semibold">
                             {lab.title}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 font-mono text-[11px] shrink-0">
                           {bCount > 0 && (
-                            <span className="text-rose-400 flex items-center gap-1 font-semibold">
+                            <span className="text-rose-600 dark:text-rose-400 flex items-center gap-1 font-bold">
                               <AlertTriangle className="w-3 h-3" /> {bCount} blocked
                             </span>
                           )}
-                          <span className="text-slate-400">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">
                             {studentCount} students &bull; {avg}% avg
                           </span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-800">
+                      <div className="w-full bg-slate-100 dark:bg-slate-900 h-2 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
                         <div
                           className={`h-full transition-all duration-300 ${
-                            bCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+                            bCount > 0 ? 'bg-amber-500' : 'bg-[#059669]'
                           }`}
                           style={{ width: `${avg}%` }}
                         />
                       </div>
 
-                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                      <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5 font-medium">
                         <span>Activities: {lab.activities?.length || 0}</span>
                         <span>{cCount} Finished &bull; {studentCount - cCount - bCount} In Progress</span>
                         <button
                           type="button"
                           onClick={() => setScopeLabId(lab.id)}
-                          className="text-emerald-400 hover:text-emerald-300 underline font-medium"
+                          className="text-[#059669] dark:text-emerald-400 hover:underline font-bold"
                         >
                           View Breakdown &rarr;
                         </button>
@@ -430,15 +437,15 @@ export default function TeacherAnalyticsTab({
               </div>
 
               {/* Right: Class-wide Competency Friction & Mastery */}
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
+              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-400" />
-                    <h3 className="font-semibold text-slate-100 text-sm">
+                    <Layers className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
+                    <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                       Curriculum-Wide Competency Health
                     </h3>
                   </div>
-                  <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
+                  <Badge variant="outline" className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-400 font-semibold">
                     Ranked by Friction
                   </Badge>
                 </div>
@@ -452,22 +459,22 @@ export default function TeacherAnalyticsTab({
                     {allConceptsAggregated.slice(0, 8).map((c) => (
                       <div key={c.conceptKey} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-mono text-slate-200 text-[11px] truncate max-w-[220px]">
+                          <span className="font-mono text-[#0f172a] dark:text-slate-200 text-[11px] truncate max-w-[220px] font-semibold">
                             {c.conceptKey}
                           </span>
                           <div className="flex items-center gap-2 font-mono text-[11px]">
                             {c.strugglingCount > 0 && (
-                              <span className="text-rose-400 text-[10px]">
+                              <span className="text-rose-600 dark:text-rose-400 text-[10px] font-bold">
                                 {c.strugglingCount} struggling
                               </span>
                             )}
-                            <span className="text-emerald-400 font-semibold">{c.avgScore}%</span>
+                            <span className="text-[#059669] dark:text-emerald-400 font-bold">{c.avgScore}%</span>
                           </div>
                         </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div className="w-full bg-slate-200 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-slate-800">
                           <div
                             className={`h-full transition-all duration-300 ${
-                              c.avgScore < 50 ? 'bg-rose-500' : c.avgScore < 75 ? 'bg-amber-500' : 'bg-emerald-500'
+                              c.avgScore < 50 ? 'bg-rose-500' : c.avgScore < 75 ? 'bg-amber-500' : 'bg-[#059669]'
                             }`}
                             style={{ width: `${c.avgScore}%` }}
                           />
@@ -482,15 +489,15 @@ export default function TeacherAnalyticsTab({
             /* SINGLE LAB BREAKDOWN */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Left Card: Milestone Completion Breakdown */}
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
+              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <BarChart3 className="w-4 h-4 text-emerald-400" />
-                    <h3 className="font-semibold text-slate-100 text-sm">
+                    <BarChart3 className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
+                    <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                       Milestone Progress ({currentLab?.code})
                     </h3>
                   </div>
-                  <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
+                  <Badge variant="outline" className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 font-semibold rounded-lg px-2.5 py-0.5 shadow-xs">
                     {totalStudents} Active Students
                   </Badge>
                 </div>
@@ -504,24 +511,24 @@ export default function TeacherAnalyticsTab({
                     {milestoneStats.map((stat) => (
                       <div key={stat.milestoneId} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-300 font-medium truncate max-w-[240px]">
+                          <span className="text-[#0f172a] dark:text-slate-200 font-semibold truncate max-w-[240px]">
                             {stat.milestoneTitle}
                           </span>
                           <div className="flex items-center gap-2 font-mono text-[11px]">
                             {stat.blockedCount > 0 && (
-                              <span className="text-rose-400 font-semibold flex items-center gap-1">
+                              <span className="text-rose-600 dark:text-rose-400 font-bold flex items-center gap-1">
                                 <AlertTriangle className="w-3 h-3" /> {stat.blockedCount} blocked
                               </span>
                             )}
-                            <span className="text-emerald-400">
+                            <span className="text-[#059669] dark:text-emerald-400 font-bold">
                               {stat.completedCount}/{totalStudents} ({stat.completionRate}%)
                             </span>
                           </div>
                         </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div className="w-full bg-slate-100 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
                           <div
                             className={`h-full transition-all duration-300 ${
-                              stat.blockedCount > 0 ? 'bg-amber-500' : 'bg-emerald-500'
+                              stat.blockedCount > 0 ? 'bg-amber-500' : 'bg-[#059669]'
                             }`}
                             style={{ width: `${stat.completionRate}%` }}
                           />
@@ -533,15 +540,15 @@ export default function TeacherAnalyticsTab({
               </div>
 
               {/* Right Card: Micro-Competency Mastery on Active Lab */}
-              <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl shadow-sm space-y-4">
+              <div className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-emerald-400" />
-                    <h3 className="font-semibold text-slate-100 text-sm">
+                    <Layers className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
+                    <h3 className="font-bold text-[#0f172a] dark:text-slate-100 text-sm">
                       Average Micro-Concept Mastery
                     </h3>
                   </div>
-                  <Badge variant="outline" className="text-xs border-slate-700 text-slate-400">
+                  <Badge variant="outline" className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 font-semibold rounded-lg px-2.5 py-0.5 shadow-xs">
                     {coveredConcepts.length} Tracked Concepts
                   </Badge>
                 </div>
@@ -555,16 +562,16 @@ export default function TeacherAnalyticsTab({
                     {conceptScores.map((c) => (
                       <div key={c.conceptKey} className="space-y-1">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="font-mono text-slate-200 text-[11px]">{c.conceptKey}</span>
-                          <span className="font-mono text-emerald-400 font-semibold">{c.avgScore}%</span>
+                          <span className="font-mono text-[#0f172a] dark:text-slate-200 text-[11px] font-semibold">{c.conceptKey}</span>
+                          <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold">{c.avgScore}%</span>
                         </div>
-                        <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div className="w-full bg-slate-100 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800">
                           <div
-                            className="bg-emerald-500 h-full transition-all duration-300"
+                            className="bg-[#059669] h-full transition-all duration-300"
                             style={{ width: `${c.avgScore}%` }}
                           />
                         </div>
-                        <div className="flex justify-between text-[10px] text-slate-500">
+                        <div className="flex justify-between text-[10px] text-slate-500 font-medium">
                           <span>{c.masteredCount} Mastered</span>
                           <span>{c.strugglingCount} Struggling</span>
                         </div>

@@ -17,6 +17,7 @@ import {
   Plus,
   Trash2,
   Compass,
+  ChevronDown,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import TeacherLiveSessionsTab from './TeacherLiveSessionsTab';
@@ -214,44 +215,47 @@ export default function TeacherHub() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+      <header className="border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-emerald-400 flex items-center gap-2">
+            <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
               🦉 Socratix ERP
             </span>
-            <Badge variant="outline" className="border-emerald-500/40 text-emerald-400 text-xs">
+            <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-transparent text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
               Teacher Hub v2
             </Badge>
 
             {/* Course Selector & Actions */}
-            <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-slate-800">
-              <span className="text-xs text-slate-400 font-medium">Course:</span>
-              <select
-                value={selectedCourse?.id || ''}
-                onChange={(e) => {
-                  const target = courses.find((c) => c.id === e.target.value);
-                  if (target) {
-                    setSelectedLab(null);
-                    setLabs([]);
-                    setSelectedCourse({
-                      ...target,
-                      course_chapters: [],
-                      labs: [],
-                    });
-                  }
-                }}
-                className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 font-semibold min-w-[220px] max-w-[360px] xl:max-w-[440px] truncate transition-all shadow-sm"
-                title={selectedCourse ? `${selectedCourse.title} (${selectedCourse.code})` : 'Select course'}
-              >
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.title} ({c.code})
-                  </option>
-                ))}
-              </select>
+            <div className="hidden sm:flex items-center gap-2 ml-4 pl-4 border-l border-slate-200 dark:border-slate-800">
+              <span className="text-xs text-slate-700 dark:text-slate-400 font-semibold">Course:</span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={selectedCourse?.id || ''}
+                  onChange={(e) => {
+                    const target = courses.find((c) => c.id === e.target.value);
+                    if (target) {
+                      setSelectedLab(null);
+                      setLabs([]);
+                      setSelectedCourse({
+                        ...target,
+                        course_chapters: [],
+                        labs: [],
+                      });
+                    }
+                  }}
+                  className="appearance-none bg-white dark:bg-slate-950 border border-slate-300 hover:border-slate-400 dark:border-slate-700 text-[#0f172a] dark:text-slate-100 text-xs rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#059669]/20 focus:border-[#059669] font-semibold min-w-[220px] max-w-[360px] xl:max-w-[440px] truncate transition-all shadow-xs cursor-pointer"
+                  title={selectedCourse ? `${selectedCourse.title} (${selectedCourse.code})` : 'Select course'}
+                >
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id} className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">
+                      {c.title} ({c.code})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 pointer-events-none" />
+              </div>
 
               {/* Create New Course */}
               <Button
@@ -271,7 +275,7 @@ export default function TeacherHub() {
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg"
+                  className="h-8 w-8 p-0 text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-transparent hover:border-rose-200 dark:hover:border-rose-900/50 rounded-lg transition-all"
                   title={`Delete course ${selectedCourse.code} (Protected by Jury PIN)`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -284,13 +288,13 @@ export default function TeacherHub() {
           <div className="flex items-center gap-2.5">
             <ThemeToggle size="sm" />
 
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
               <Radio
                 className={`w-3.5 h-3.5 ${
-                  isRealtimeActive ? 'text-emerald-600 dark:text-emerald-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'
+                  isRealtimeActive ? 'text-[#059669] dark:text-emerald-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'
                 }`}
               />
-              <span className="text-[11px] text-slate-700 dark:text-slate-400 font-medium">
+              <span className="text-[11px] text-slate-700 dark:text-slate-300 font-semibold">
                 {isRealtimeActive ? 'Realtime Connected' : 'Connecting...'}
               </span>
             </div>
@@ -299,7 +303,7 @@ export default function TeacherHub() {
               variant="outline"
               size="sm"
               onClick={() => window.open('/student', '_blank')}
-              className="text-xs border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-300 font-semibold gap-1.5 h-8"
+              className="h-8 text-xs border border-emerald-400 dark:border-emerald-500/40 text-[#059669] dark:text-emerald-400 bg-emerald-50 dark:bg-transparent hover:bg-[#059669] hover:text-white dark:hover:bg-emerald-500/20 px-3 gap-1.5 font-semibold rounded-lg shadow-sm transition-all"
               title="Open Student Workspace in a new window for side-by-side demo"
             >
               <span>Student View</span>
@@ -314,10 +318,10 @@ export default function TeacherHub() {
           <nav className="flex space-x-1">
             <button
               onClick={() => setActiveTab('live')}
-              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-all ${
                 activeTab === 'live'
-                  ? 'border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-400'
-                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'border-[#059669] text-[#059669]'
+                  : 'border-transparent text-slate-500 hover:text-[#059669] dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/30'
               }`}
             >
               <Activity className="w-3.5 h-3.5" />
@@ -331,10 +335,10 @@ export default function TeacherHub() {
 
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-all ${
                 activeTab === 'analytics'
-                  ? 'border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-400'
-                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'border-[#059669] text-[#059669]'
+                  : 'border-transparent text-slate-500 hover:text-[#059669] dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/30'
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
@@ -343,10 +347,10 @@ export default function TeacherHub() {
 
             <button
               onClick={() => setActiveTab('coverage')}
-              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-all ${
                 activeTab === 'coverage'
-                  ? 'border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-400'
-                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'border-[#059669] text-[#059669]'
+                  : 'border-transparent text-slate-500 hover:text-[#059669] dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/30'
               }`}
             >
               <Compass className="w-3.5 h-3.5" />
@@ -355,10 +359,10 @@ export default function TeacherHub() {
 
             <button
               onClick={() => setActiveTab('studio')}
-              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-colors ${
+              className={`flex items-center gap-1.5 py-2 px-3 border-b-2 text-xs font-bold transition-all ${
                 activeTab === 'studio'
-                  ? 'border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-400'
-                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  ? 'border-[#059669] text-[#059669]'
+                  : 'border-transparent text-slate-500 hover:text-[#059669] dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-500/30'
               }`}
             >
               <BookOpen className="w-3.5 h-3.5" />
@@ -367,18 +371,18 @@ export default function TeacherHub() {
           </nav>
 
           {/* Quick Stats Pill */}
-          <div className="hidden md:flex items-center gap-3.5 text-xs font-mono text-slate-600 dark:text-slate-400 py-1.5">
+          <div className="hidden md:flex items-center gap-3.5 text-xs font-mono text-slate-700 dark:text-slate-400 py-1.5 font-medium">
             <span className="flex items-center gap-1.5">
               <Users className="w-3.5 h-3.5 text-slate-500" />
-              <strong className="text-slate-900 dark:text-slate-200 font-bold">{totalActive}</strong> students
+              <strong className="text-[#0f172a] dark:text-slate-200 font-bold">{totalActive}</strong> students
             </span>
             <span className="flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
               <strong className="text-rose-700 dark:text-rose-400 font-bold">{blockedCount}</strong> blocked
             </span>
             <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-              <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{completedCount}</strong> finished
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
+              <strong className="text-[#059669] dark:text-emerald-400 font-bold">{completedCount}</strong> finished
             </span>
           </div>
         </div>
@@ -387,18 +391,18 @@ export default function TeacherHub() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-[1600px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {!selectedCourse ? (
-          <div className="p-12 text-center bg-slate-900 border border-slate-800 rounded-3xl text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
-            <BookOpen className="w-10 h-10 text-slate-600 mx-auto" />
+          <div className="p-12 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl text-slate-600 dark:text-slate-400 space-y-4 max-w-xl mx-auto my-8 shadow-xl">
+            <BookOpen className="w-10 h-10 text-slate-400 dark:text-slate-600 mx-auto" />
             <div className="space-y-1">
-              <p className="text-base font-medium text-slate-300">No Course Selected</p>
-              <p className="text-xs text-slate-500 max-w-md mx-auto">
+              <p className="text-base font-semibold text-slate-900 dark:text-slate-300">No Course Selected</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 max-w-md mx-auto">
                 Please create a course or select one from the dropdown above to manage live sessions and analytics.
               </p>
             </div>
             <Button
               onClick={() => setIsCreateModalOpen(true)}
               size="sm"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5 font-semibold px-4"
+              className="bg-[#059669] hover:bg-[#047857] text-white text-xs gap-1.5 font-semibold px-4 rounded-xl shadow-sm"
             >
               <Plus className="w-4 h-4" />
               <span>Create New Course</span>

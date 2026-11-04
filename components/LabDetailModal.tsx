@@ -155,29 +155,29 @@ export default function LabDetailModal({
   const cleanTitle = rawTitle.replace(/^(?:TP\s*\d+\s*[-—:]*\s*)+/i, '').trim() || rawTitle;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl max-h-[92vh] bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-5xl max-h-[92vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* MODAL HEADER */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shrink-0">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2.5 flex-wrap">
                 <Badge
                   variant="outline"
-                  className="font-mono text-xs font-bold text-cyan-300 border-cyan-500/40 bg-cyan-950/60 px-2.5 py-0.5 rounded-lg shrink-0"
+                  className="font-mono text-xs font-bold text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/40 bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-0.5 rounded-lg shrink-0"
                 >
                   TP {lab.lab_number}
                 </Badge>
-                <h2 className="text-base font-bold text-white tracking-tight">{cleanTitle}</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">{cleanTitle}</h2>
                 {lab.pdf_url && (
                   <a
                     href={lab.pdf_url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 hover:underline bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded-md ml-1"
+                    className="inline-flex items-center gap-1 text-[11px] text-cyan-800 dark:text-cyan-400 hover:text-cyan-950 dark:hover:text-cyan-300 hover:underline bg-cyan-50 dark:bg-cyan-950/40 border border-cyan-200 dark:border-cyan-500/30 px-2 py-0.5 rounded-md ml-1 font-medium"
                   >
                     <span>{i18n.originalPdf}</span>
                     <ExternalLink className="w-3 h-3" />
@@ -185,26 +185,26 @@ export default function LabDetailModal({
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <div className="inline-flex items-center gap-0.5 bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-800 text-[10px] font-mono shrink-0">
+                <div className="inline-flex items-center gap-0.5 bg-slate-100 dark:bg-slate-950 px-1.5 py-0.5 rounded-lg border border-slate-200 dark:border-slate-800 text-[10px] font-mono shrink-0">
                   <button
                     onClick={() => setLang('en')}
                     className={`px-1.5 py-0.5 rounded transition ${
-                      lang === 'en' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                      lang === 'en' ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold border border-cyan-300 dark:border-cyan-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
                     }`}
                   >
                     EN
                   </button>
-                  <span className="text-slate-600">|</span>
+                  <span className="text-slate-300 dark:text-slate-600">|</span>
                   <button
                     onClick={() => setLang('fr')}
                     className={`px-1.5 py-0.5 rounded transition ${
-                      lang === 'fr' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                      lang === 'fr' ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-800 dark:text-cyan-300 font-bold border border-cyan-300 dark:border-cyan-500/30' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
                     }`}
                   >
                     FR
                   </button>
                 </div>
-                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
                   {parseBilingualDescription(lab.description)[lang]}
                 </p>
               </div>
@@ -217,16 +217,16 @@ export default function LabDetailModal({
                 variant="outline"
                 size="sm"
                 onClick={() => onReanalyzeLab(lab)}
-                className="bg-amber-950/30 border-amber-500/40 text-amber-300 hover:text-white hover:bg-amber-600 hover:border-amber-600 text-xs font-semibold h-8 px-3 gap-1.5 transition"
+                className="bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/40 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-500/40 text-amber-800 dark:text-amber-300 hover:text-amber-950 dark:hover:text-white text-xs font-semibold h-8 px-3 gap-1.5 transition shadow-xs"
                 title="Re-analyze this TP with Meta AI (destructive confirmation required)"
               >
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <Zap className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Re-analyze TP</span>
               </Button>
             )}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-2 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
               title={i18n.closeTooltip}
             >
               <X className="w-5 h-5" />
@@ -235,13 +235,13 @@ export default function LabDetailModal({
         </div>
 
         {/* NAVIGATION TABS */}
-        <div className="flex items-center gap-2 px-6 pt-2.5 border-b border-slate-800 bg-slate-900">
+        <div className="flex items-center gap-2 px-6 pt-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
           <button
             onClick={() => setActiveTab('activities')}
             className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'activities'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-cyan-600 dark:border-cyan-400 text-cyan-800 dark:text-cyan-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Target className="w-3.5 h-3.5" />
@@ -252,8 +252,8 @@ export default function LabDetailModal({
             onClick={() => setActiveTab('concepts')}
             className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'concepts'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-cyan-600 dark:border-cyan-400 text-cyan-800 dark:text-cyan-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <Bookmark className="w-3.5 h-3.5" />
@@ -264,8 +264,8 @@ export default function LabDetailModal({
             onClick={() => setActiveTab('presets')}
             className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'presets'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-cyan-600 dark:border-cyan-400 text-cyan-800 dark:text-cyan-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <FileCode2 className="w-3.5 h-3.5" />
@@ -276,8 +276,8 @@ export default function LabDetailModal({
             onClick={() => setActiveTab('raw_text')}
             className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold border-b-2 transition ${
               activeTab === 'raw_text'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-cyan-600 dark:border-cyan-400 text-cyan-800 dark:text-cyan-300'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
@@ -286,7 +286,7 @@ export default function LabDetailModal({
         </div>
 
         {/* MODAL BODY */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-200 text-xs">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 text-slate-800 dark:text-slate-200 text-xs">
           {/* TAB 1: ACTIVITIES & MILESTONES */}
           {activeTab === 'activities' && (
             <div className="space-y-5">
@@ -297,14 +297,14 @@ export default function LabDetailModal({
                   return (
                     <div
                       key={act.id}
-                      className="p-5 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-4"
+                      className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 space-y-4"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-3">
                         <div>
-                          <span className="text-[10px] font-mono uppercase text-cyan-400 tracking-wider">
+                          <span className="text-[10px] font-mono uppercase text-cyan-700 dark:text-cyan-400 font-bold tracking-wider">
                             {i18n.activityLabel} {act.order}
                           </span>
-                          <h3 className="text-sm font-bold text-white mt-0.5">{locAct.title}</h3>
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{locAct.title}</h3>
                         </div>
 
                         {act.target_files && act.target_files.length > 0 && (
@@ -314,7 +314,7 @@ export default function LabDetailModal({
                               <Badge
                                 key={fIdx}
                                 variant="outline"
-                                className="font-mono text-[10px] bg-slate-900 border-slate-700 text-emerald-400"
+                                className="font-mono text-[10px] bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-[#059669] dark:text-emerald-400 font-medium"
                               >
                                 {file}
                               </Badge>
@@ -324,7 +324,7 @@ export default function LabDetailModal({
                       </div>
 
                       {locAct.instructions && (
-                        <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-slate-300 leading-relaxed text-xs space-y-2 font-sans prose prose-invert prose-xs max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-950 [&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[11px] [&_strong]:text-white [&_p]:my-1">
+                        <div className="p-3.5 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 leading-relaxed text-xs space-y-2 font-sans prose prose-slate dark:prose-invert prose-xs max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_code]:bg-slate-100 dark:[&_code]:bg-slate-950 [&_code]:text-[#059669] dark:[&_code]:text-emerald-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-[11px] [&_strong]:text-slate-900 dark:[&_strong]:text-white [&_p]:my-1">
                           <ReactMarkdown>
                             {cleanInstructionsMarkdown(locAct.instructions)}
                           </ReactMarkdown>
@@ -333,8 +333,8 @@ export default function LabDetailModal({
 
                       {/* SEQUENTIAL MILESTONES */}
                       <div className="space-y-2 pt-1">
-                        <h4 className="text-[11px] font-mono uppercase text-slate-400 flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <h4 className="text-[11px] font-mono uppercase text-slate-600 dark:text-slate-400 font-bold flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                           <span>{i18n.milestonesHeader} ({act.milestones?.length || 0})</span>
                         </h4>
 
@@ -345,16 +345,16 @@ export default function LabDetailModal({
                             return (
                               <div
                                 key={m.id}
-                                className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5"
+                                className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-1.5 shadow-xs"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 flex items-center justify-center font-mono font-bold text-[10px]">
+                                  <span className="w-5 h-5 rounded-full bg-cyan-100 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/30 text-cyan-800 dark:text-cyan-300 flex items-center justify-center font-mono font-bold text-[10px]">
                                     {m.order}
                                   </span>
-                                  <span className="font-semibold text-white text-xs">{locM.title}</span>
+                                  <span className="font-semibold text-slate-900 dark:text-white text-xs">{locM.title}</span>
                                 </div>
-                                <p className="text-[11px] text-slate-400 pl-7 leading-relaxed">
-                                  <strong className="text-slate-300">{i18n.validationCriteria}</strong>{' '}
+                                <p className="text-[11px] text-slate-600 dark:text-slate-400 pl-7 leading-relaxed">
+                                  <strong className="text-slate-800 dark:text-slate-300 font-semibold">{i18n.validationCriteria}</strong>{' '}
                                   {locM.validationCriteria}
                                 </p>
                               </div>
@@ -376,11 +376,11 @@ export default function LabDetailModal({
           {/* TAB 2: COVERED MICRO-COMPETENCIES */}
           {activeTab === 'concepts' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                <h3 className="font-bold text-white text-sm">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
+                <h3 className="font-bold text-slate-900 dark:text-white text-sm">
                   {i18n.conceptsTitle}
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {i18n.conceptsDesc}
                 </p>
               </div>
@@ -390,16 +390,16 @@ export default function LabDetailModal({
                   lab.covered_micro_concepts.map((conceptCode, idx) => (
                     <div
                       key={idx}
-                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3 hover:border-cyan-500/40 transition"
+                      className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-3 hover:border-cyan-500/40 transition shadow-xs"
                     >
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[#059669] dark:text-emerald-400 flex items-center justify-center font-mono font-bold text-xs shrink-0">
                         ✓
                       </div>
                       <div className="truncate">
-                        <span className="font-mono text-emerald-400 font-bold text-xs block truncate">
+                        <span className="font-mono text-[#059669] dark:text-emerald-400 font-bold text-xs block truncate">
                           {conceptCode}
                         </span>
-                        <span className="text-[10px] text-slate-400">{i18n.practicedInLab}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">{i18n.practicedInLab}</span>
                       </div>
                     </div>
                   ))
@@ -415,17 +415,17 @@ export default function LabDetailModal({
           {/* TAB 3: DEMO PRESETS */}
           {activeTab === 'presets' && (
             <div className="space-y-4">
-              <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4 shadow-lg">
+              <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 space-y-4 shadow-sm">
                 {/* Header info */}
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                    <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                      <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400">
                         <Sparkles className="w-4 h-4" />
                       </div>
                       <span>{i18n.presetsTitle}</span>
                     </h3>
-                    <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
                       {i18n.presetsDesc}
                     </p>
                   </div>
@@ -433,7 +433,7 @@ export default function LabDetailModal({
                   {lab.demo_presets && lab.demo_presets.length > 0 && (
                     <Badge
                       variant="outline"
-                      className="shrink-0 font-mono text-[11px] text-cyan-300 border-cyan-500/30 bg-cyan-950/30 px-2.5 py-1"
+                      className="shrink-0 font-mono text-[11px] text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/30 bg-cyan-100 dark:bg-cyan-950/30 px-2.5 py-1 font-semibold"
                     >
                       {i18n.presetsCount(lab.demo_presets.length)}
                     </Badge>
@@ -442,7 +442,7 @@ export default function LabDetailModal({
 
                 {/* Presets Cards Grid */}
                 {lab.demo_presets && lab.demo_presets.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-3 border-t border-slate-800/80">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800/80">
                     {lab.demo_presets.map((preset, pIdx) => {
                       const isSelected = selectedPresetIdx === pIdx;
                       const act = lab.activities?.find((a) => a.id === preset.activity_id);
@@ -460,24 +460,24 @@ export default function LabDetailModal({
                             setSelectedPresetIdx(pIdx);
                             setSelectedFileIdx(0);
                           }}
-                          className={`p-3 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between gap-2 ${
+                          className={`p-3 rounded-xl border text-left transition-all duration-150 flex flex-col justify-between gap-2 shadow-xs ${
                             isSelected
-                              ? 'bg-cyan-950/40 border-cyan-500/60 shadow-lg shadow-cyan-950/40 ring-1 ring-cyan-500/40'
-                              : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900'
+                              ? 'bg-cyan-50 dark:bg-cyan-950/40 border-cyan-400 dark:border-cyan-500/60 shadow-md ring-1 ring-cyan-400 dark:ring-cyan-500/40'
+                              : 'bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {act && (
-                                <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-slate-950 text-cyan-400 border border-cyan-500/30">
+                                <span className="text-[10px] font-mono font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-950 text-cyan-800 dark:text-cyan-400 border border-cyan-300 dark:border-cyan-500/30">
                                   {i18n.actShort} {act.order}
                                 </span>
                               )}
                               <span
                                 className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border ${
                                   isBuggy
-                                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-                                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                                    ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/30 font-semibold'
+                                    : 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30 font-semibold'
                                 }`}
                               >
                                 {isBuggy ? i18n.presetBuggyBadge : i18n.presetSolutionBadge}
@@ -486,14 +486,14 @@ export default function LabDetailModal({
 
                             <span
                               className={`w-2 h-2 rounded-full transition ${
-                                isSelected ? 'bg-cyan-400 shadow-sm shadow-cyan-400' : 'bg-slate-700'
+                                isSelected ? 'bg-cyan-500 dark:bg-cyan-400 shadow-sm shadow-cyan-400' : 'bg-slate-300 dark:bg-slate-700'
                               }`}
                             />
                           </div>
 
                           <div
                             className={`text-xs font-semibold ${
-                              isSelected ? 'text-white' : 'text-slate-300'
+                              isSelected ? 'text-cyan-950 dark:text-white' : 'text-slate-800 dark:text-slate-300'
                             }`}
                           >
                             {preset.label}
@@ -507,11 +507,11 @@ export default function LabDetailModal({
 
               {/* Code Viewer Panel */}
               {currentPreset ? (
-                <div className="rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden shadow-xl space-y-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-3 bg-slate-900/70 border-b border-slate-800">
+                <div className="rounded-2xl bg-slate-950 border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl space-y-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 py-3 bg-slate-900/90 border-b border-slate-800">
                     <div className="flex items-center gap-2 min-w-0">
                       <FileCode2 className="w-4 h-4 text-cyan-400 shrink-0" />
-                      <span className="text-xs text-slate-300 truncate">
+                      <span className="text-xs text-slate-200 truncate">
                         {currentPreset.description || currentPreset.label}
                       </span>
                     </div>
@@ -558,20 +558,20 @@ export default function LabDetailModal({
           {/* TAB 4: RAW EXTRACTED PDF TEXT */}
           {activeTab === 'raw_text' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-white text-sm flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-cyan-400" />
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     <span>{i18n.rawTextTitle}</span>
                   </h3>
-                  <Badge variant="outline" className="font-mono text-[10px] text-cyan-300 border-cyan-500/30">
+                  <Badge variant="outline" className="font-mono text-[10px] text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-500/30 bg-cyan-100 dark:bg-cyan-950/30 font-semibold">
                     {i18n.rawTextBadge(
                       lab.pages_json?.length || 0,
                       lab.pages_json?.reduce((sum, p) => sum + (p.text?.length || 0), 0) || 0
                     )}
                   </Badge>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   {i18n.rawTextDesc}
                 </p>
               </div>
@@ -579,9 +579,9 @@ export default function LabDetailModal({
               {lab.pages_json && lab.pages_json.length > 0 ? (
                 <div className="space-y-4">
                   {lab.pages_json.map((p) => (
-                    <div key={p.page} className="p-4 rounded-2xl bg-slate-950 border border-slate-850 space-y-2">
-                      <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-                        <span className="font-mono font-bold text-cyan-400 text-xs">
+                    <div key={p.page} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 space-y-2">
+                      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-850 pb-2">
+                        <span className="font-mono font-bold text-cyan-700 dark:text-cyan-400 text-xs">
                           {i18n.pageHeader(p.page, p.text?.length || 0)}
                         </span>
                         <Button
@@ -590,11 +590,11 @@ export default function LabDetailModal({
                           onClick={() => {
                             if (p.text) handleCopyPage(p.page, p.text);
                           }}
-                          className="text-[10px] h-6 bg-slate-900 border-slate-800 text-slate-400 hover:text-white"
+                          className="text-[10px] h-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                         >
                           {copiedPage === p.page ? (
                             <>
-                              <Check className="w-3 h-3 mr-1 text-emerald-400" />
+                              <Check className="w-3 h-3 mr-1 text-[#059669] dark:text-emerald-400" />
                               <span>{i18n.pageCopied}</span>
                             </>
                           ) : (
@@ -602,14 +602,14 @@ export default function LabDetailModal({
                           )}
                         </Button>
                       </div>
-                      <pre className="p-3 rounded-xl bg-slate-900/60 font-mono text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">
+                      <pre className="p-3 rounded-xl bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 font-mono text-[11px] text-slate-800 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-72 overflow-y-auto">
                         {p.text}
                       </pre>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center bg-slate-950/60 border border-slate-800 rounded-2xl text-slate-400 space-y-2">
+                <div className="p-8 text-center bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 dark:text-slate-400 space-y-2">
                   <p className="text-sm">{i18n.noRawText}</p>
                   <p className="text-xs text-slate-500">
                     {i18n.reAnalyzeHint}
@@ -621,12 +621,12 @@ export default function LabDetailModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-950/80">
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/80">
           <Button
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="text-xs bg-slate-900 border-slate-800 text-slate-300 hover:text-white"
+            className="text-xs bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white"
           >
             {i18n.closeInspector}
           </Button>

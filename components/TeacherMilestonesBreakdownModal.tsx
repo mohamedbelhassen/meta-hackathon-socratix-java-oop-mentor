@@ -33,27 +33,27 @@ export default function TeacherMilestonesBreakdownModal({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-3xl max-h-[85vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl max-h-[85vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-950/70 shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/70 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-cyan-500/10 rounded-xl text-cyan-400 border border-cyan-500/20 shrink-0">
+            <div className="p-2.5 bg-cyan-50 dark:bg-cyan-500/10 rounded-xl text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-500/20 shrink-0">
               <Layers className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-slate-100 text-base">
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 text-base">
                   Milestones Breakdown &bull; {studentName}
                 </h3>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-cyan-100 dark:bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-200 dark:border-cyan-500/30 font-semibold">
                   {seatLabel}
                 </span>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-semibold">
                   {lab.code || `TP ${lab.lab_number}`}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
                 {lab.title} &bull; Detailed milestone checklist & validation telemetry
               </p>
             </div>
@@ -61,17 +61,17 @@ export default function TeacherMilestonesBreakdownModal({
 
           <div className="flex items-center gap-3 shrink-0">
             <div className="text-right">
-              <span className="text-xs text-slate-400 block font-mono">
+              <span className="text-xs text-slate-600 dark:text-slate-400 block font-mono font-medium">
                 {completedMilestonesCount}/{totalMilestonesCount} Milestones
               </span>
-              <span className="text-sm font-bold text-emerald-400 font-mono">
+              <span className="text-sm font-bold text-[#059669] dark:text-emerald-400 font-mono">
                 {session.progress_percent}% Complete
               </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-800 rounded-lg ml-1"
+              className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 rounded-lg ml-1"
               onClick={onClose}
               title="Close modal"
             >
@@ -81,7 +81,7 @@ export default function TeacherMilestonesBreakdownModal({
         </div>
 
         {/* Global Progress Bar */}
-        <div className="w-full bg-slate-950 h-1.5 overflow-hidden shrink-0 border-b border-slate-800">
+        <div className="w-full bg-slate-100 dark:bg-slate-950 h-1.5 overflow-hidden shrink-0 border-b border-slate-200 dark:border-slate-800">
           <div
             className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full transition-all duration-300"
             style={{ width: `${session.progress_percent}%` }}
@@ -134,7 +134,7 @@ export default function TeacherMilestonesBreakdownModal({
                       >
                         {act.order}
                       </span>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-200 truncate">
+                      <h4 className="text-xs font-bold text-[#0f172a] dark:text-slate-200 truncate">
                         Activity {act.order}: {act.title}
                       </h4>
                     </div>
@@ -172,7 +172,7 @@ export default function TeacherMilestonesBreakdownModal({
                         <div
                           key={m.id}
                           className={`pt-2 first:pt-0 flex items-start justify-between gap-3 ${
-                            isCompleted ? 'text-slate-900 dark:text-slate-200' : isCurrent ? 'text-cyan-900 dark:text-cyan-200' : 'text-slate-800 dark:text-slate-400'
+                            isCompleted ? 'text-[#0f172a] dark:text-slate-200' : isCurrent ? 'text-cyan-900 dark:text-cyan-200' : 'text-slate-800 dark:text-slate-400'
                           }`}
                         >
                           <div className="flex items-start gap-2.5 min-w-0">
@@ -186,7 +186,7 @@ export default function TeacherMilestonesBreakdownModal({
                               )}
                             </div>
                             <div className="min-w-0">
-                              <p className={`text-xs leading-snug ${isCompleted ? 'text-slate-900 dark:text-slate-100 font-bold' : isCurrent ? 'text-cyan-900 dark:text-cyan-300 font-bold' : 'text-slate-900 dark:text-slate-300 font-semibold'}`}>
+                              <p className={`text-xs leading-snug ${isCompleted ? 'text-[#0f172a] dark:text-slate-100 font-bold' : isCurrent ? 'text-cyan-900 dark:text-cyan-300 font-bold' : 'text-[#0f172a] dark:text-slate-300 font-semibold'}`}>
                                 <span className="font-mono text-[11px] opacity-75 mr-1.5">
                                   #{m.order || m.id}:
                                 </span>
@@ -194,7 +194,7 @@ export default function TeacherMilestonesBreakdownModal({
                               </p>
                               {m.validation_criteria && (
                                 <p className="text-[11px] text-slate-700 dark:text-slate-400 leading-relaxed mt-0.5 font-sans">
-                                  <span className="text-slate-900 dark:text-slate-200 font-bold mr-1">Criteria:</span>
+                                  <span className="text-[#0f172a] dark:text-slate-200 font-bold mr-1">Criteria:</span>
                                   {m.validation_criteria}
                                 </p>
                               )}

@@ -13,6 +13,7 @@ import {
   Globe2,
   Clock,
   Check,
+  ChevronDown,
 } from 'lucide-react';
 
 interface CreateCourseModalProps {
@@ -166,204 +167,212 @@ export default function CreateCourseModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-3xl max-h-[92vh] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/60">
+        <div className="px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between bg-slate-50 dark:bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-[#059669] dark:text-emerald-400 shadow-xs">
               <BookPlus className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 Create New Course
-                <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400">
+                <Badge variant="outline" className="text-[10px] border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 font-bold">
                   Course Studio
                 </Badge>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-600 dark:text-slate-400">
                 Register a new curriculum before importing chapters and lab statements.
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto max-h-[75vh]">
-          {error && (
-            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-300 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="p-6 space-y-4 overflow-y-auto flex-1">
+            {error && (
+              <div className="p-3 bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 rounded-xl text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2 font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{error}</span>
+              </div>
+            )}
 
-          {/* Code & Title */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Code & Title */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Course Code <span className="text-[#059669] dark:text-emerald-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. PYTHON_AI"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-xs"
+                  required
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Unique uppercase identifier</span>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                  Course Title <span className="text-[#059669] dark:text-emerald-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Python for Data Science & AI"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-xs"
+                  required
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">Full official course title</span>
+              </div>
+            </div>
+
+            {/* Description */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1">
-                Course Code <span className="text-emerald-400">*</span>
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1">
+                Pedagogical Description
               </label>
-              <input
-                type="text"
-                placeholder="e.g. PYTHON_AI"
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
-                required
+              <textarea
+                rows={2}
+                placeholder="e.g. Comprehensive university course covering object-oriented programming, design patterns, and defensive programming in Java."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 resize-none shadow-xs"
               />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Unique uppercase identifier</span>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1">
-                Course Title <span className="text-emerald-400">*</span>
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Python for Data Science & AI"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-emerald-500"
-                required
-              />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">Full official course title</span>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="text-[11px] font-semibold text-slate-300 block mb-1">
-              Pedagogical Description
-            </label>
-            <textarea
-              rows={2}
-              placeholder="e.g. Comprehensive university course covering object-oriented programming, design patterns, and defensive programming in Java."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 resize-none"
-            />
-          </div>
-
-          {/* Languages & File Extensions */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <Globe2 className="w-3.5 h-3.5 text-slate-400" />
-                Slides Language
-              </label>
-              <select
-                value={contentLanguage}
-                onChange={(e) => setContentLanguage(e.target.value as 'fr' | 'en' | 'ar')}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="fr">French (Français)</option>
-                <option value="en">English (English)</option>
-                <option value="ar">Arabic (العربية)</option>
-              </select>
             </div>
 
-            <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                Tutor Dialogue
-              </label>
-              <select
-                value={tutorLanguage}
-                onChange={(e) => setTutorLanguage(e.target.value as 'en' | 'fr')}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="en">English (Jury Default)</option>
-                <option value="fr">French (Français)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <FileCode className="w-3.5 h-3.5 text-sky-400" />
-                File Extensions
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. .c, .h or .py or .java"
-                value={fileExtensions}
-                onChange={(e) => setFileExtensions(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-emerald-500"
-              />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">
-                Comma-separated (e.g. <code className="text-slate-400">.c, .h</code>)
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Extension Chips & Presets */}
-          <div className="space-y-1.5 pt-0.5">
-            <div className="flex items-center justify-between text-[10px] text-slate-400">
-              <span className="font-semibold text-slate-300 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-emerald-400" /> Curriculum Presets (Click to Auto-Configure):
-              </span>
-              <span className="text-slate-500">Includes Web, Kotlin, React Native</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {PRESET_CONFIGS.map((preset) => {
-                const isSelected = fileExtensions === preset.exts;
-                return (
-                  <button
-                    key={preset.name}
-                    type="button"
-                    onClick={() => handleApplyPreset(preset)}
-                    className={`text-[10px] px-2.5 py-1 rounded-lg font-mono transition border flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-sm shadow-emerald-950/40'
-                        : `bg-slate-800/80 hover:bg-slate-700 text-slate-300 ${preset.badgeColor}`
-                    }`}
-                    title={`Click to apply ${preset.name} preset (${preset.exts})`}
+            {/* Languages & File Extensions */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1 flex items-center gap-1">
+                  <Globe2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+                  Slides Language
+                </label>
+                <div className="relative">
+                  <select
+                    value={contentLanguage}
+                    onChange={(e) => setContentLanguage(e.target.value as 'fr' | 'en' | 'ar')}
+                    className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-medium shadow-sm transition"
                   >
-                    <span className="font-sans font-bold">{preset.name}</span>
-                    <span className="text-[9px] opacity-75">({preset.exts.split(',')[0]}...)</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <option value="fr" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">French (Français)</option>
+                    <option value="en" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">English (English)</option>
+                    <option value="ar" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">Arabic (العربية)</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
 
-          {/* Stuck Threshold & Dual Criteria */}
-          <div className="p-3.5 bg-slate-950/60 border border-slate-800/80 rounded-2xl space-y-2">
-            <label className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              Stuck Threshold (Turns before BLOCKED status)
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={stuckThresholdTurns}
-                onChange={(e) => setStuckThresholdTurns(Number(e.target.value))}
-                className="w-16 bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-100 text-center font-bold focus:outline-none focus:border-emerald-500 shrink-0"
-              />
-              <div className="text-[11px] text-slate-400 leading-relaxed">
-                Marks an active student as <span className="text-rose-400 font-semibold">🔴 BLOCKED</span> if they fail for{' '}
-                <span className="text-slate-200 font-semibold">&ge; {stuckThresholdTurns} consecutive turns</span> with unresolved errors{' '}
-                <span className="text-amber-300/90 font-medium">OR</span> remain stuck on the same milestone for{' '}
-                <span className="text-slate-200 font-semibold">&ge; 10 minutes</span> without progress.
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
+                  Tutor Dialogue
+                </label>
+                <div className="relative">
+                  <select
+                    value={tutorLanguage}
+                    onChange={(e) => setTutorLanguage(e.target.value as 'en' | 'fr')}
+                    className="w-full appearance-none bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs text-[#0f172a] dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-medium shadow-sm transition"
+                  >
+                    <option value="en" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">English (Jury Default)</option>
+                    <option value="fr" className="bg-white dark:bg-slate-900 text-[#0f172a] dark:text-[#f1f5f9]">French (Français)</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 block mb-1 flex items-center gap-1">
+                  <FileCode className="w-3.5 h-3.5 text-cyan-600 dark:text-sky-400" />
+                  File Extensions
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. .c, .h or .py or .java"
+                  value={fileExtensions}
+                  onChange={(e) => setFileExtensions(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-900 dark:text-slate-100 font-mono placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-xs"
+                />
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  Comma-separated (e.g. <code className="text-slate-700 dark:text-slate-400 font-bold">.c, .h</code>)
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Extension Chips & Presets */}
+            <div className="space-y-1.5 pt-0.5">
+              <div className="flex items-center justify-between text-[10px] text-slate-600 dark:text-slate-400">
+                <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-[#059669] dark:text-emerald-400" /> Curriculum Presets (Click to Auto-Configure):
+                </span>
+                <span className="text-slate-500 font-medium">Includes Web, Kotlin, React Native</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {PRESET_CONFIGS.map((preset) => {
+                  const isSelected = fileExtensions === preset.exts;
+                  return (
+                    <button
+                      key={preset.name}
+                      type="button"
+                      onClick={() => handleApplyPreset(preset)}
+                      className={`text-[10px] px-2.5 py-1 rounded-lg font-mono transition border flex items-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border-emerald-400 dark:border-emerald-500/50 shadow-xs font-bold'
+                          : 'bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-medium'
+                      }`}
+                      title={`Click to apply ${preset.name} preset (${preset.exts})`}
+                    >
+                      <span className="font-sans font-bold">{preset.name}</span>
+                      <span className="text-[9px] opacity-75">({preset.exts.split(',')[0]}...)</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Stuck Threshold & Dual Criteria */}
+            <div className="p-3.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl space-y-2">
+              <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                Stuck Threshold (Turns before BLOCKED status)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  max={5}
+                  value={stuckThresholdTurns}
+                  onChange={(e) => setStuckThresholdTurns(Number(e.target.value))}
+                  className="w-16 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 dark:text-slate-100 text-center font-bold focus:outline-none focus:border-emerald-500 shrink-0 shadow-xs"
+                />
+                <div className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                  Marks an active student as <span className="text-rose-600 dark:text-rose-400 font-bold">🔴 BLOCKED</span> if they fail for{' '}
+                  <span className="text-slate-900 dark:text-slate-200 font-bold">&ge; {stuckThresholdTurns} consecutive turns</span> with unresolved errors{' '}
+                  <span className="text-amber-700 dark:text-amber-300/90 font-bold">OR</span> remain stuck on the same milestone for{' '}
+                  <span className="text-slate-900 dark:text-slate-200 font-bold">&ge; 10 minutes</span> without progress.
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Footer buttons */}
-          <div className="pt-4 border-t border-slate-800/80 flex items-center justify-end gap-2">
+          {/* Sticky Footer buttons - ALWAYS VISIBLE without scrolling */}
+          <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-950/80 flex items-center justify-end gap-2 shrink-0">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={onClose}
               disabled={isSubmitting}
-              className="text-xs border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="text-xs border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium"
             >
               Cancel
             </Button>
@@ -371,7 +380,7 @@ export default function CreateCourseModal({
               type="submit"
               size="sm"
               disabled={isSubmitting}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs gap-1.5 px-4 font-semibold"
+              className="bg-[#059669] hover:bg-[#047857] text-white text-xs gap-1.5 px-4 font-bold shadow-md"
             >
               {isSubmitting ? (
                 <span>Creating...</span>
