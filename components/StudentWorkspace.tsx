@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
-import { CodeBlockHighlighter } from './CodeBlockHighlighter';
 import ThemeToggle from './ThemeToggle';
 import { getBrowserSupabase } from '@/lib/supabase';
 import {
@@ -51,6 +50,7 @@ const MilestoneCelebrationModal = dynamic(() => import('./MilestoneCelebrationMo
 const SmartSlideViewerModal = dynamic(() => import('./SmartSlideViewerModal'), { ssr: false });
 const PdfViewerModal = dynamic(() => import('./PdfViewerModal'), { ssr: false });
 const CourseSyllabusModal = dynamic(() => import('./CourseSyllabusModal'), { ssr: false });
+const WorkspaceCodeEditor = dynamic(() => import('./WorkspaceCodeEditor'), { ssr: false });
 import { cleanInstructionsMarkdown, formatSlideCitationLabel } from '@/lib/pdf-cleaner';
 import { formatLabOptionLabel, isJurySandboxEnabled } from '@/lib/utils';
 import {
@@ -1758,26 +1758,15 @@ export default function StudentWorkspace() {
           ))}
         </div>
 
-        {/* Code Editor / Viewer */}
+        {/* Code Editor / Viewer (CodeMirror 6 — editable presets, read-only disk) */}
         <div className="flex-1 min-h-0 bg-white dark:bg-slate-950 relative overflow-hidden">
-          {sourceMode === 'disk' ? (
-            <div className="h-full overflow-y-auto p-3">
-              <CodeBlockHighlighter
-                language={getSyntaxLanguage(currentFile.name)}
-                code={currentFile.content || '// Empty file'}
-                fontSize="12px"
-                showLineNumbers
-                customStyle={{ background: 'transparent', margin: 0, padding: 0 }}
-              />
-            </div>
-          ) : (
-            <textarea
-              value={currentFile.content}
-              onChange={(e) => handleCodeChange(e.target.value)}
-              className="w-full h-full block p-3 bg-transparent text-slate-900 dark:text-slate-200 font-mono text-xs leading-relaxed focus:outline-none resize-none overflow-y-auto"
-              spellCheck={false}
-            />
-          )}
+          <WorkspaceCodeEditor
+            key={`${sourceMode}:${currentFile.name}`}
+            value={currentFile.content || ''}
+            language={getSyntaxLanguage(currentFile.name)}
+            readOnly={sourceMode === 'disk'}
+            onChange={handleCodeChange}
+          />
         </div>
 
         {/* Editor Footer Status */}
