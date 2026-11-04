@@ -5,6 +5,7 @@
 ![Meta AI](https://img.shields.io/badge/Meta_Model_API-muse--spark--1.3-0668E1)
 ![Supabase](https://img.shields.io/badge/Supabase-Realtime_%26_PostgreSQL-3ECF8E)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x_Strict-3178C6)
+![License](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue)
 
 > **Live Production App:** [https://socratix-mentor.vercel.app](https://socratix-mentor.vercel.app)  
 > Built for the **Meta Global AI Developer Hackathon** (*Track: Build for Your World*) by **Mohamed Belhassen** — Computer Science Lecturer at the **Faculty of Sciences of Gabès (FSG), Tunisia**.
@@ -169,3 +170,15 @@ pnpm dev
 - **Landing Hub:** `http://localhost:3000`
 - **Student Workspace:** `http://localhost:3000/student`
 - **Teacher ERP Hub:** `http://localhost:3000/teacher`
+
+---
+
+## License
+
+Copyright (C) 2026 Mohamed Belhassen
+
+Socratix is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but **WITHOUT ANY WARRANTY**; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [GNU Affero General Public License](./LICENSE) for more details.
+
+**Network use (AGPL §13):** if you run a modified version of Socratix as a publicly accessible web service, you must offer its corresponding source code to the users of that service. This repository is the canonical source offer for the reference deployment.

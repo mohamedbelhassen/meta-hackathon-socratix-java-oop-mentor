@@ -98,7 +98,9 @@ export default function HomePage() {
         <footer className="pt-8 border-t border-slate-200 dark:border-slate-900/80 w-full flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <div>
             &copy; {new Date().getFullYear()} <span className="font-semibold text-slate-700 dark:text-slate-400">Socratix</span> &mdash; Built for the Meta AI Hackathon by{' '}
-            <span className="text-slate-800 dark:text-slate-300 font-medium">Mohamed Belhassen</span>.
+            <span className="text-slate-800 dark:text-slate-300 font-medium">Mohamed Belhassen</span>
+            {' · '}
+            <span className="text-slate-600 dark:text-slate-400">Licensed under AGPL-3.0-or-later</span>.
           </div>
           <a
             href={getGithubRepoUrl()}
