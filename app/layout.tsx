@@ -15,8 +15,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Socratix — Zero-Install Java OOP Mentor",
-  description: "AI Teaching Assistant for Object-Oriented Programming Labs",
+  title: "Zero-Install Socratic AI Mentor",
+  description: "AI Teaching Assistant for Programming Labs",
 };
 
 export default function RootLayout({

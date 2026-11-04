@@ -50,7 +50,7 @@ export default function NotFound() {
         desc: "Retournez à la page d'accueil de Socratix, explorez l'architecture et accédez à votre compte.",
         cta: "Retourner à l'Accueil",
       },
-      footerText: 'Socratix — Mentorat Socratique OOP Java & ERP Temps Réel.',
+      footerText: 'Socratix — Mentorat Socratique & ERP Temps Réel.',
     },
     en: {
       badge: 'Error 404 • Route Not Found',
@@ -114,21 +114,18 @@ export default function NotFound() {
           <div className="inline-flex rounded-lg border border-slate-800 bg-slate-900/90 p-0.5 shadow-sm">
             <button
               onClick={() => setLang('fr')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
-                lang === 'fr'
                   ? 'bg-emerald-500 text-slate-950 shadow'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               FR
             </button>
             <button
               onClick={() => setLang('en')}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
-                lang === 'en'
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${lang === 'en'
                   ? 'bg-emerald-500 text-slate-950 shadow'
                   : 'text-slate-400 hover:text-white'
-              }`}
+                }`}
             >
               EN
             </button>

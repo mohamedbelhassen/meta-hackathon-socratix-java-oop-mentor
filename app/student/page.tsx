@@ -1,8 +1,8 @@
 import StudentWorkspace from '@/components/StudentWorkspace';
 
 export const metadata = {
-  title: 'Socratix — Student Workspace (Java OOP)',
-  description: 'Zero-Install Socratic AI Assistant for Java OOP Labs',
+  title: 'Socratix — Student Workspace',
+  description: 'Zero-Install Socratic AI Assistant for Programming Labs',
 };
 
 export default function StudentPage() {
