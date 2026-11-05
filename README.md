@@ -10,6 +10,8 @@
 > **Live Production App:** [https://socratix-mentor.vercel.app](https://socratix-mentor.vercel.app)  
 > Built for the **Meta Global AI Developer Hackathon** (*Track: Build for Your World*) by **Mohamed Belhassen** — Computer Science Lecturer at the **Faculty of Sciences of Gabès (FSG), Tunisia**.
 
+> 🧪 **Hackathon Judges:** Please see our step-by-step [Jury Evaluation Guide](./JURY_EVALUATION_GUIDE.md) to easily test all Teacher and Student features without any setup!
+
 ---
 
 ## 🚨 The Classroom Problem
