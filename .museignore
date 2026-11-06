@@ -1,0 +1,29 @@
+# Dépendances
+node_modules/
+.pnpm-store/
+
+# Builds Web & Mobile
+.next/
+out/
+dist/
+build/
+.dart_tool/
+android/app/build/
+ios/Pods/
+target/
+
+# Bases de données et médias
+*.sqlite
+*.db
+*.jpg
+*.png
+*.mp4
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+
+_dev/
+
+# dossier web
+public/

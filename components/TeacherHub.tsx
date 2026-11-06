@@ -22,6 +22,7 @@ import {
 import dynamic from 'next/dynamic';
 import TeacherLiveSessionsTab from './TeacherLiveSessionsTab';
 import ThemeToggle from './ThemeToggle';
+import SignOutButton from './SignOutButton';
 
 // Dynamic imports for secondary tabs and modals to reduce initial JS bundle (PERF-08)
 const TeacherAnalyticsTab = dynamic(() => import('./TeacherAnalyticsTab'), { ssr: false });
@@ -38,6 +39,7 @@ export default function TeacherHub() {
   const [sessions, setSessions] = useState<StudentLabSession[]>([]);
   const [activeTab, setActiveTab] = useState<'live' | 'analytics' | 'coverage' | 'studio'>('live');
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   // In-memory cache for student profiles to eliminate N+1 queries on Realtime updates (PERF-03)
   const profilesCacheRef = useRef<Map<string, { display_name: string; is_guest: boolean; email?: string | null }>>(new Map());
@@ -65,6 +67,20 @@ export default function TeacherHub() {
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
+
+  // Track signed-in state so the Sign Out button stays hidden for jury/guests without a session
+  useEffect(() => {
+    const supabase = getBrowserSupabase();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsSignedIn(Boolean(user));
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(Boolean(session?.user));
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   // 2. Fetch course chapters, labs, and student sessions when active course id changes
   const refreshCourseData = useCallback(async () => {
@@ -287,6 +303,7 @@ export default function TeacherHub() {
           {/* Realtime Status Indicator, Theme Switcher & Shortcut */}
           <div className="flex items-center gap-2.5">
             <ThemeToggle size="sm" />
+            {isSignedIn && <SignOutButton />}
 
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs shadow-xs">
               <Radio

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import ReactMarkdown from 'react-markdown';
 import ThemeToggle from './ThemeToggle';
+import SignOutButton from './SignOutButton';
 import { getBrowserSupabase } from '@/lib/supabase';
 import {
   Course,
@@ -1231,12 +1232,16 @@ export default function StudentWorkspace() {
                     >
                       Hub &rarr;
                     </Link>
+                    <SignOutButton />
                   </div>
                 ) : (
-                  <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 text-[10px] px-1.5 py-0 flex items-center gap-1 font-mono font-semibold">
-                    <User className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
-                    <span className="max-w-[100px] truncate">{authUser.name}</span>
-                  </Badge>
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="border-emerald-300 dark:border-emerald-500/30 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-400 text-[10px] px-1.5 py-0 flex items-center gap-1 font-mono font-semibold">
+                      <User className="w-2.5 h-2.5 text-emerald-700 dark:text-emerald-400" />
+                      <span className="max-w-[100px] truncate">{authUser.name}</span>
+                    </Badge>
+                    <SignOutButton />
+                  </div>
                 )
               ) : (
                 <Link
