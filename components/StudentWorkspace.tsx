@@ -565,12 +565,11 @@ export default function StudentWorkspace() {
     const isFirstAct = !act || !activeLab.activities?.length || act.id === activeLab.activities[0]?.id;
     const isEvaluationOrTeacher = Boolean(
       authUser?.role === 'teacher' ||
-      (isJurySandboxEnabled() && (
-        activeStudent.is_guest === true ||
-        activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
-        activeStudent.role?.toLowerCase().includes('judge') ||
-        activeStudent.role?.toLowerCase().includes('sandbox')
-      ))
+      isJurySandboxEnabled() ||
+      activeStudent.is_guest === true ||
+      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+      activeStudent.role?.toLowerCase().includes('judge') ||
+      activeStudent.role?.toLowerCase().includes('sandbox')
     );
     const actPresets = labPresets
       .filter((p) => (p.activity_id ? p.activity_id === act?.id : isFirstAct))
@@ -856,7 +855,9 @@ export default function StudentWorkspace() {
       activeStudent.is_guest === true ||
       activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
       activeStudent.role?.toLowerCase().includes('judge') ||
-      activeStudent.role?.toLowerCase().includes('sandbox')
+      activeStudent.role?.toLowerCase().includes('sandbox') ||
+      isJurySandboxEnabled() ||
+      activePresets.some((p) => p.key === preset.key)
     );
     if (isSolution && !isAllowed) {
       return;
@@ -897,7 +898,8 @@ export default function StudentWorkspace() {
         activeStudent.is_guest === true ||
         activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
         activeStudent.role?.toLowerCase().includes('judge') ||
-        activeStudent.role?.toLowerCase().includes('sandbox')
+        activeStudent.role?.toLowerCase().includes('sandbox') ||
+        isJurySandboxEnabled()
       );
       const actPresets = allPresets
         .filter((p) => (p.activity_id ? p.activity_id === act.id : isFirstAct))
@@ -1161,12 +1163,11 @@ export default function StudentWorkspace() {
 
   const isEvaluationOrTeacherMode = Boolean(
     authUser?.role === 'teacher' ||
-    (isJurySandboxEnabled() && (
-      activeStudent.is_guest === true ||
-      activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
-      activeStudent.role?.toLowerCase().includes('judge') ||
-      activeStudent.role?.toLowerCase().includes('sandbox')
-    ))
+    isJurySandboxEnabled() ||
+    activeStudent.is_guest === true ||
+    activeStudent.id === '44444444-4444-4444-4444-444444444444' ||
+    activeStudent.role?.toLowerCase().includes('judge') ||
+    activeStudent.role?.toLowerCase().includes('sandbox')
   );
 
   // Filter presets strictly for the active activity and hide solutions from regular students
