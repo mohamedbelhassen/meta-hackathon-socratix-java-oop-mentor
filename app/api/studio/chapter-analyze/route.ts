@@ -301,13 +301,18 @@ ${pagesTextSample}`;
       }
     }
 
+    const isEnContent = (course.content_language || '').toLowerCase() === 'en';
     const enrichedPages = cleanedPages.map((p: CleanedPage) => {
       const found = slideMarkdownMap.get(p.page);
       return {
         page: p.page,
         text: p.text,
-        fr_markdown: found?.fr_markdown?.trim() || formatRawSlideTextToMarkdown(p.text, undefined, course.file_extensions),
-        en_markdown: found?.en_markdown?.trim() || undefined,
+        fr_markdown: isEnContent
+          ? (found?.fr_markdown?.trim() || undefined)
+          : (found?.fr_markdown?.trim() || formatRawSlideTextToMarkdown(p.text, undefined, course.file_extensions)),
+        en_markdown: isEnContent
+          ? (found?.en_markdown?.trim() || formatRawSlideTextToMarkdown(p.text, undefined, course.file_extensions))
+          : (found?.en_markdown?.trim() || undefined),
       };
     });
 

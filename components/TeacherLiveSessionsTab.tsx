@@ -906,6 +906,7 @@ export default function TeacherLiveSessionsTab({
         onClose={() => setIsSlideModalOpen(false)}
         reference={selectedSlideReference}
         courseTitle={course?.title || 'Course Slides'}
+        contentLanguage={course?.content_language}
       />
 
       {/* Teacher Milestones Breakdown Modal across all Activities */}

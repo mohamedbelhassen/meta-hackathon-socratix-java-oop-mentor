@@ -2023,6 +2023,7 @@ export default function StudentWorkspace() {
         onClose={() => setIsSlideModalOpen(false)}
         reference={activeSlideReference}
         courseTitle={activeCourse?.title || 'Course Slides'}
+        contentLanguage={activeCourse?.content_language}
       />
 
       {/* Milestone Celebration Modal */}

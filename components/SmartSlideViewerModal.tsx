@@ -13,6 +13,7 @@ interface SmartSlideViewerModalProps {
   onClose: () => void;
   reference: StructuredCourseReference | null;
   courseTitle: string;
+  contentLanguage?: string;
 }
 
 export default function SmartSlideViewerModal({
@@ -20,47 +21,72 @@ export default function SmartSlideViewerModal({
   onClose,
   reference,
   courseTitle,
+  contentLanguage: propContentLanguage,
 }: SmartSlideViewerModalProps) {
   const [slideViewMode, setSlideViewMode] = useState<'clean_en' | 'pdf' | 'clean_fr'>('clean_en');
-  const [jitTranslation, setJitTranslation] = useState<string | null>(null);
+  const [jitTranslations, setJitTranslations] = useState<{ en?: string; fr?: string }>({});
   const [isTranslating, setIsTranslating] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+
+  const resolvedContentLanguage = (
+    reference?.content_language ||
+    propContentLanguage ||
+    'fr'
+  ).toLowerCase();
+  const isEnglishCourse = resolvedContentLanguage === 'en';
 
   const cleanEnText = reference ? getSlideCleanMarkdown(reference, 'en') : '';
   const cleanFrText = reference ? getSlideCleanMarkdown(reference, 'fr') : '';
 
-  // Reset local JIT translation cache when changing slides
+  // Reset local JIT translation cache and default view mode when changing slides
   useEffect(() => {
-    setJitTranslation(null);
+    setJitTranslations({});
     setIsTranslating(false);
     setTranslationError(null);
+    setSlideViewMode('clean_en');
   }, [reference?.chapter_code, reference?.page_number]);
 
+  // For English courses, native English is immediately available.
+  // For French courses, native French is available, and English is native only if en_markdown exists.
   const hasNativeEn = Boolean(
     reference?.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0
-  );
+  ) || (isEnglishCourse && Boolean(cleanEnText && cleanEnText.trim().length > 0));
 
-  const triggerTranslation = useCallback(async () => {
+  const hasNativeFr = isEnglishCourse
+    ? Boolean(reference?.slide_markdown?.fr && reference?.slide_markdown?.en)
+    : Boolean(reference?.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0);
+
+  const triggerTranslation = useCallback(async (targetLang: 'en' | 'fr') => {
     if (!reference || isTranslating) return;
     setIsTranslating(true);
     setTranslationError(null);
     try {
+      const sourceLang = targetLang === 'en' ? 'fr' : 'en';
+      const sourceText = targetLang === 'en' ? cleanFrText : cleanEnText;
+
       const res = await fetch('/api/studio/translate-slide', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chapterCode: reference.chapter_code,
           pageNumber: reference.page_number,
-          frContent: cleanFrText,
+          content: sourceText,
+          frContent: sourceText, // for backward compatibility
+          sourceLang,
+          targetLang,
         }),
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to translate slide');
+        throw new Error(errData.error || `Failed to translate slide to ${targetLang}`);
       }
       const data = await res.json();
-      if (data.en_markdown) {
-        setJitTranslation(data.en_markdown);
+      const translatedMarkdown = targetLang === 'en'
+        ? (data.en_markdown || data.markdown)
+        : (data.fr_markdown || data.markdown);
+
+      if (translatedMarkdown) {
+        setJitTranslations((prev) => ({ ...prev, [targetLang]: translatedMarkdown }));
       }
     } catch (err: unknown) {
       console.warn('[SmartSlideViewerModal] JIT Translation failed:', err);
@@ -68,27 +94,32 @@ export default function SmartSlideViewerModal({
     } finally {
       setIsTranslating(false);
     }
-  }, [reference, isTranslating, cleanFrText]);
+  }, [reference, isTranslating, cleanFrText, cleanEnText]);
 
-  // Automatic JIT translation when viewing clean English tab and no native translation exists
+  // Automatic JIT translation when viewing non-native tab and no translation exists
   useEffect(() => {
-    if (
-      isOpen &&
-      reference &&
-      slideViewMode === 'clean_en' &&
-      !hasNativeEn &&
-      !jitTranslation &&
-      !isTranslating &&
-      !translationError
-    ) {
-      triggerTranslation();
+    if (!isOpen || !reference || isTranslating || translationError) return;
+
+    if (isEnglishCourse) {
+      // Course is English: JIT translates to French when French tab is active
+      if (slideViewMode === 'clean_fr' && !hasNativeFr && !jitTranslations.fr) {
+        triggerTranslation('fr');
+      }
+    } else {
+      // Course is French: JIT translates to English when English tab is active
+      if (slideViewMode === 'clean_en' && !hasNativeEn && !jitTranslations.en) {
+        triggerTranslation('en');
+      }
     }
   }, [
     isOpen,
     reference,
     slideViewMode,
+    isEnglishCourse,
+    hasNativeFr,
     hasNativeEn,
-    jitTranslation,
+    jitTranslations.fr,
+    jitTranslations.en,
     isTranslating,
     translationError,
     triggerTranslation,
@@ -96,14 +127,18 @@ export default function SmartSlideViewerModal({
 
   if (!isOpen || !reference) return null;
 
-  const effectiveEnText = jitTranslation || (hasNativeEn ? cleanEnText : null);
+  const effectiveEnText = jitTranslations.en || (hasNativeEn ? cleanEnText : null);
+  const effectiveFrText = jitTranslations.fr || (hasNativeFr ? cleanFrText : null);
 
   // Synchronize modal header title with active slide tab (clean_en vs clean_fr)
-  const activeCleanText = slideViewMode === 'clean_en' ? (effectiveEnText || cleanEnText) : cleanFrText;
+  const activeCleanText = slideViewMode === 'clean_en'
+    ? (effectiveEnText || cleanEnText)
+    : (effectiveFrText || cleanFrText);
+
   const activeCanonicalTitle =
     extractSlideTitle(activeCleanText) ||
-    extractSlideTitle(cleanFrText) ||
-    extractSlideTitle(cleanEnText);
+    extractSlideTitle(cleanEnText) ||
+    extractSlideTitle(cleanFrText);
 
   // Preserve or extract chapter prefix (e.g. "Chapter 5 (Slide 51)")
   const prefixMatch = reference.label?.match(/^(Chapter\s+\w+(?:\s*\([^)]*\))?)\s*:/i);
@@ -114,6 +149,20 @@ export default function SmartSlideViewerModal({
   const synchronizedHeaderTitle = activeCanonicalTitle
     ? `${chapterPrefix}: ${activeCanonicalTitle}`
     : (reference.label || `Slide #${reference.page_number}`);
+
+  const isCurrentTabTranslating = isTranslating && (
+    (isEnglishCourse && slideViewMode === 'clean_fr') ||
+    (!isEnglishCourse && slideViewMode === 'clean_en')
+  );
+
+  const isCurrentTabError = Boolean(translationError) && (
+    (isEnglishCourse && slideViewMode === 'clean_fr' && !effectiveFrText) ||
+    (!isEnglishCourse && slideViewMode === 'clean_en' && !effectiveEnText)
+  );
+
+  const hasActiveJit = slideViewMode === 'clean_en'
+    ? Boolean(jitTranslations.en)
+    : Boolean(jitTranslations.fr);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -168,6 +217,7 @@ export default function SmartSlideViewerModal({
           <div className="md:col-span-8 p-4 bg-slate-50/50 dark:bg-slate-950/80 flex flex-col h-full overflow-hidden">
             {/* View Switcher Tabs */}
             <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/90 p-1 rounded-xl border border-slate-200 dark:border-slate-800 mb-3 shrink-0 shadow-xs">
+              {/* Clean English Slide Tab */}
               <button
                 type="button"
                 onClick={() => setSlideViewMode('clean_en')}
@@ -176,15 +226,20 @@ export default function SmartSlideViewerModal({
                     ? 'bg-white dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-300 border border-slate-300 dark:border-emerald-500/40 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
-                title="View clean English markdown translation (Jury recommended)"
+                title={isEnglishCourse ? "Clean English slide (Original syllabus)" : "View clean English markdown translation (Jury recommended)"}
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#059669] dark:text-emerald-400" />
                 <span>✨ Clean English Slide</span>
-                <span className="text-[9px] uppercase font-mono px-1 py-0.2 rounded bg-emerald-50 dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 font-bold">
-                  Jury
+                <span className={`text-[9px] uppercase font-mono px-1 py-0.2 rounded font-bold ${
+                  isEnglishCourse
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                    : 'bg-emerald-50 dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30'
+                }`}>
+                  {isEnglishCourse ? 'Original' : 'Jury'}
                 </span>
               </button>
 
+              {/* Official PDF Tab */}
               {reference.pdf_url && (
                 <button
                   type="button"
@@ -197,10 +252,11 @@ export default function SmartSlideViewerModal({
                   title="View original official PDF slide"
                 >
                   <FileText className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-                  <span>📄 Official PDF (French)</span>
+                  <span>📄 Official PDF {isEnglishCourse ? '(English)' : '(French)'}</span>
                 </button>
               )}
 
+              {/* Clean French Slide Tab */}
               <button
                 type="button"
                 onClick={() => setSlideViewMode('clean_fr')}
@@ -209,9 +265,16 @@ export default function SmartSlideViewerModal({
                     ? 'bg-white dark:bg-emerald-500/20 text-[#059669] dark:text-emerald-300 border border-slate-300 dark:border-emerald-500/40 shadow-xs'
                     : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
                 }`}
-                title="View clean French markdown without page boilerplate"
+                title={isEnglishCourse ? "Traduire et afficher la diapositive en français (JIT)" : "Afficher la diapositive originale en français"}
               >
                 <span>🇫🇷 Clean French Slide</span>
+                <span className={`text-[9px] uppercase font-mono px-1 py-0.2 rounded font-bold ${
+                  isEnglishCourse
+                    ? 'bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'
+                }`}>
+                  {isEnglishCourse ? 'JIT AI' : 'Original'}
+                </span>
               </button>
             </div>
 
@@ -224,7 +287,7 @@ export default function SmartSlideViewerModal({
                   className="w-full h-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white shadow-inner"
                   title={`Slide ${reference.page_number}`}
                 />
-              ) : slideViewMode === 'clean_en' && isTranslating ? (
+              ) : isCurrentTabTranslating ? (
                 <div className="w-full h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 flex flex-col items-center justify-center space-y-4 shadow-inner">
                   <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/20 text-[#059669] dark:text-emerald-400 shadow-xs">
                     <Loader2 className="w-8 h-8 animate-spin" />
@@ -232,10 +295,12 @@ export default function SmartSlideViewerModal({
                   <div className="text-center space-y-1">
                     <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center justify-center gap-2">
                       <Sparkles className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
-                      Generating Clean English Translation...
+                      {isEnglishCourse ? 'Génération de la traduction française...' : 'Generating Clean English Translation...'}
                     </h4>
                     <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm">
-                      Meta AI (muse-spark-1.3) is translating this slide in real time, preserving all code tags, CSS rules and architectural invariants.
+                      {isEnglishCourse
+                        ? 'Meta AI (muse-spark-1.3) traduit cette diapositive en temps réel, en préservant le code, les balises et les invariants pédagogiques.'
+                        : 'Meta AI (muse-spark-1.3) is translating this slide in real time, preserving all code tags, CSS rules and architectural invariants.'}
                     </p>
                   </div>
                   <div className="text-[10px] text-[#059669] dark:text-emerald-400/80 font-mono flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1 rounded-full border border-emerald-300 dark:border-emerald-500/30 font-semibold">
@@ -243,13 +308,17 @@ export default function SmartSlideViewerModal({
                     <span>Just-In-Time Curriculum Synthesis</span>
                   </div>
                 </div>
-              ) : slideViewMode === 'clean_en' && translationError && !effectiveEnText ? (
+              ) : isCurrentTabError ? (
                 <div className="w-full h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 overflow-y-auto shadow-inner space-y-4">
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-500/40 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between font-medium">
-                    <span>Clean English translation encountered a momentary error: {translationError}</span>
+                    <span>
+                      {isEnglishCourse
+                        ? `La traduction française a rencontré une erreur momentanée : ${translationError}`
+                        : `Clean English translation encountered a momentary error: ${translationError}`}
+                    </span>
                     <Button
                       size="sm"
-                      onClick={triggerTranslation}
+                      onClick={() => triggerTranslation(isEnglishCourse ? 'fr' : 'en')}
                       className="bg-amber-600 hover:bg-amber-500 text-white text-xs gap-1.5 h-7 px-2.5 ml-2 shrink-0 font-semibold"
                     >
                       <RefreshCw className="w-3 h-3" />
@@ -257,20 +326,24 @@ export default function SmartSlideViewerModal({
                     </Button>
                   </div>
                   <div className="prose prose-slate dark:prose-invert prose-sm max-w-none text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 [&_h3]:text-[#059669] dark:[&_h3]:text-emerald-400 [&_h3]:text-base [&_h3]:font-bold [&_h4]:text-slate-900 dark:[&_h4]:text-slate-100 [&_h4]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_:not(pre)>code]:bg-slate-100 dark:[&_:not(pre)>code]:bg-slate-950 [&_:not(pre)>code]:text-[#059669] dark:[&_:not(pre)>code]:text-emerald-300 [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:rounded [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-xs [&_:not(pre)>code]:border [&_:not(pre)>code]:border-slate-200 dark:[&_:not(pre)>code]:border-slate-800 [&_pre]:bg-slate-50 dark:[&_pre]:bg-slate-950 [&_pre]:border [&_pre]:border-slate-200 dark:[&_pre]:border-slate-800 [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:shadow-xs [&_pre]:text-slate-800 dark:[&_pre]:text-slate-200 [&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_pre_code]:border-0 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-500/50 [&_blockquote]:bg-emerald-50 dark:[&_blockquote]:bg-emerald-950/20 [&_blockquote]:p-3 [&_blockquote]:rounded-r-lg [&_strong]:text-[#059669] dark:[&_strong]:text-emerald-200">
-                    <ReactMarkdown>{cleanFrText}</ReactMarkdown>
+                    <ReactMarkdown>{isEnglishCourse ? cleanEnText : cleanFrText}</ReactMarkdown>
                   </div>
                 </div>
               ) : (
                 <div className="w-full h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 overflow-y-auto shadow-inner">
-                  {slideViewMode === 'clean_en' && jitTranslation && (
+                  {hasActiveJit && (
                     <div className="mb-3 flex items-center gap-1.5 text-[10px] text-[#059669] dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-500/30 px-2.5 py-1 rounded-lg w-fit font-mono font-semibold">
                       <Sparkles className="w-3 h-3 text-[#059669] dark:text-emerald-400" />
-                      <span>Translated Just-In-Time by Meta AI (Saved to Syllabus Cache)</span>
+                      <span>
+                        {slideViewMode === 'clean_fr'
+                          ? 'Traduit Just-In-Time par Meta AI (Enregistré dans le cache du syllabus)'
+                          : 'Translated Just-In-Time by Meta AI (Saved to Syllabus Cache)'}
+                      </span>
                     </div>
                   )}
                   <div className="prose prose-slate dark:prose-invert prose-sm max-w-none text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 [&_h3]:text-[#059669] dark:[&_h3]:text-emerald-400 [&_h3]:text-base [&_h3]:font-bold [&_h4]:text-slate-900 dark:[&_h4]:text-slate-100 [&_h4]:text-sm [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_:not(pre)>code]:bg-slate-100 dark:[&_:not(pre)>code]:bg-slate-950 [&_:not(pre)>code]:text-[#059669] dark:[&_:not(pre)>code]:text-emerald-300 [&_:not(pre)>code]:px-1.5 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:rounded [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-xs [&_:not(pre)>code]:border [&_:not(pre)>code]:border-slate-200 dark:[&_:not(pre)>code]:border-slate-800 [&_pre]:bg-slate-50 dark:[&_pre]:bg-slate-950 [&_pre]:border [&_pre]:border-slate-200 dark:[&_pre]:border-slate-800 [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:shadow-xs [&_pre]:text-slate-800 dark:[&_pre]:text-slate-200 [&_pre_code]:bg-transparent dark:[&_pre_code]:bg-transparent [&_pre_code]:text-inherit [&_pre_code]:p-0 [&_pre_code]:border-0 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-500/50 [&_blockquote]:bg-emerald-50 dark:[&_blockquote]:bg-emerald-950/20 [&_blockquote]:p-3 [&_blockquote]:rounded-r-lg [&_strong]:text-[#059669] dark:[&_strong]:text-emerald-200">
                     <ReactMarkdown>
-                      {slideViewMode === 'clean_en' ? (effectiveEnText || cleanEnText) : cleanFrText}
+                      {slideViewMode === 'clean_en' ? (effectiveEnText || cleanEnText) : (effectiveFrText || cleanFrText)}
                     </ReactMarkdown>
                   </div>
                 </div>

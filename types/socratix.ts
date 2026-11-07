@@ -208,6 +208,7 @@ export interface StructuredCourseReference {
   chapter_code: string; // e.g., 'CH3_CLASSES'
   page_number: number; // e.g., 42
   pdf_url?: string | null;
+  content_language?: string; // Language of source course material: 'en' | 'fr'
   en_note: string; // English pedagogical synthesis note
   slide_markdown?: {
     en?: string;

@@ -277,12 +277,23 @@ ${studentInputPrompt}
     );
     if (refChapter && parsed.socratic_reply?.course_reference) {
       parsed.socratic_reply.course_reference.pdf_url = refChapter.pdf_url || null;
+      parsed.socratic_reply.course_reference.content_language = course.content_language || 'fr';
       const slidePage = refChapter.pages_json?.find(
         (p) => p.page === parsed.socratic_reply.course_reference.page_number
       );
       if (slidePage) {
-        const frClean = slidePage.fr_markdown?.trim() || (slidePage.text ? formatRawSlideTextToMarkdown(slidePage.text) : undefined);
-        const enClean = slidePage.en_markdown?.trim() || undefined;
+        const isEnglishCourse = (course.content_language || '').toLowerCase() === 'en';
+        const rawFormatted = slidePage.text ? formatRawSlideTextToMarkdown(slidePage.text, undefined, course.file_extensions) : undefined;
+        let frClean: string | undefined;
+        let enClean: string | undefined;
+
+        if (isEnglishCourse) {
+          enClean = slidePage.en_markdown?.trim() || slidePage.fr_markdown?.trim() || rawFormatted;
+          frClean = slidePage.en_markdown ? slidePage.fr_markdown?.trim() : undefined;
+        } else {
+          frClean = slidePage.fr_markdown?.trim() || rawFormatted;
+          enClean = slidePage.en_markdown?.trim() || undefined;
+        }
 
         parsed.socratic_reply.course_reference.slide_markdown = {
           en: enClean,
@@ -290,7 +301,9 @@ ${studentInputPrompt}
         };
 
         // Ground course_reference.label canonically from slide markdown to eliminate LLM improvisation
-        const canonicalSlideTitle = extractSlideTitle(frClean) || extractSlideTitle(enClean);
+        const canonicalSlideTitle = isEnglishCourse
+          ? (extractSlideTitle(enClean) || extractSlideTitle(frClean))
+          : (extractSlideTitle(frClean) || extractSlideTitle(enClean));
         if (canonicalSlideTitle) {
           const chNum = refChapter.chapter_number != null ? refChapter.chapter_number : refChapter.code;
           parsed.socratic_reply.course_reference.label = `Chapter ${chNum} (Slide ${slidePage.page}): ${canonicalSlideTitle}`;

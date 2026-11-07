@@ -409,6 +409,7 @@ export async function POST(req: NextRequest) {
             chapter_code: chapterCode,
             page_number: 1,
             pdf_url: resolvedPdfUrl,
+            content_language: courseData?.content_language || 'fr',
             en_note: `Review requirements for ${concept2} in ${primaryFile}.`,
             slide_markdown: {
               en: `**${concept2} Guideline**:\nEnsure all invariants and input constraints are properly verified.`,

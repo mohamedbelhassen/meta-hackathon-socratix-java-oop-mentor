@@ -10,7 +10,15 @@ const META_API_KEY = process.env.META_API_KEY;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { chapterCode, pageNumber, frContent, courseId } = body;
+    const {
+      chapterCode,
+      pageNumber,
+      content,
+      frContent,
+      sourceLang,
+      targetLang,
+      courseId,
+    } = body;
 
     if (!chapterCode || !pageNumber) {
       return NextResponse.json({ error: 'Missing chapterCode or pageNumber' }, { status: 400 });
@@ -18,10 +26,10 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // 1. Check if chapter exists and already has en_markdown cached
+    // 1. Fetch chapter and course metadata
     let query = supabase
       .from('course_chapters')
-      .select('id, course_id, code, title, pages_json');
+      .select('id, course_id, code, title, title_i18n, pages_json');
 
     if (courseId) {
       query = query.eq('course_id', courseId);
@@ -45,19 +53,79 @@ export async function POST(req: NextRequest) {
     const pages = (chapter?.pages_json || []) as ChapterSlidePage[];
     const existingSlide = pages.find((p) => p.page === pageNum);
 
-    // If en_markdown already cached, return immediately
-    if (existingSlide?.en_markdown && existingSlide.en_markdown.trim().length > 0) {
-      return NextResponse.json({
-        en_markdown: existingSlide.en_markdown,
-        cached: true,
-      });
+    // Determine course content language
+    let courseContentLang = 'fr';
+    if (chapter?.course_id) {
+      const { data: cData } = await supabase
+        .from('courses')
+        .select('content_language')
+        .eq('id', chapter.course_id)
+        .maybeSingle();
+      if (cData?.content_language) {
+        courseContentLang = cData.content_language.toLowerCase();
+      }
     }
 
-    // 2. Prepare French text to translate
-    const textToTranslate =
-      frContent?.trim() ||
-      existingSlide?.fr_markdown?.trim() ||
-      existingSlide?.text?.trim();
+    const isEnglishCourse = courseContentLang === 'en';
+
+    // Determine resolved target and source languages
+    // If course is English, default target is 'fr' (unless specified).
+    // If course is French, default target is 'en' (unless specified).
+    const resolvedTargetLang: 'en' | 'fr' = (
+      targetLang || (isEnglishCourse ? 'fr' : 'en')
+    ).toLowerCase() as 'en' | 'fr';
+
+    const resolvedSourceLang: 'en' | 'fr' = (
+      sourceLang || (resolvedTargetLang === 'en' ? 'fr' : 'en')
+    ).toLowerCase() as 'en' | 'fr';
+
+    // 2. Cache check
+    if (resolvedTargetLang === 'en') {
+      if (existingSlide?.en_markdown && existingSlide.en_markdown.trim().length > 0) {
+        return NextResponse.json({
+          en_markdown: existingSlide.en_markdown,
+          markdown: existingSlide.en_markdown,
+          sourceLang: resolvedSourceLang,
+          targetLang: 'en',
+          cached: true,
+        });
+      }
+    } else {
+      // resolvedTargetLang === 'fr'
+      // If course is English, fr_markdown is only genuine French if en_markdown also exists
+      const isGenuineFrench = isEnglishCourse
+        ? Boolean(existingSlide?.fr_markdown && existingSlide?.en_markdown)
+        : Boolean(existingSlide?.fr_markdown);
+
+      if (isGenuineFrench && existingSlide?.fr_markdown && existingSlide.fr_markdown.trim().length > 0) {
+        return NextResponse.json({
+          fr_markdown: existingSlide.fr_markdown,
+          markdown: existingSlide.fr_markdown,
+          sourceLang: resolvedSourceLang,
+          targetLang: 'fr',
+          cached: true,
+        });
+      }
+    }
+
+    // 3. Prepare text to translate
+    let textToTranslate = '';
+    if (resolvedTargetLang === 'en') {
+      textToTranslate =
+        content?.trim() ||
+        frContent?.trim() ||
+        existingSlide?.fr_markdown?.trim() ||
+        existingSlide?.text?.trim() ||
+        '';
+    } else {
+      // Translating to French
+      textToTranslate =
+        content?.trim() ||
+        existingSlide?.en_markdown?.trim() ||
+        (isEnglishCourse ? existingSlide?.fr_markdown?.trim() : undefined) ||
+        existingSlide?.text?.trim() ||
+        '';
+    }
 
     if (!textToTranslate || textToTranslate.length === 0) {
       return NextResponse.json(
@@ -73,8 +141,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Call Meta AI for Just-in-Time 1:1 Translation
-    const systemPrompt = `You are an elite bilingual technical curriculum translator for Socratix.
+    // 4. Configure bidirectional Meta AI prompt
+    let systemPrompt = '';
+    let userPrompt = '';
+
+    if (resolvedTargetLang === 'en') {
+      systemPrompt = `You are an elite bilingual technical curriculum translator for Socratix.
 Your role is to translate university computer science lecture slides from French to clean, elegant, educational English Markdown.
 
 STRICT INVARIANTS:
@@ -83,7 +155,19 @@ STRICT INVARIANTS:
 3. CRITICAL: Strictly PRESERVE all code snippets, tag names (e.g. <div>, <header>, <nav>, <main>, <footer>, <p>, <ul>, <li>), CSS properties, HTML attributes (e.g. class, id, alt, src), variable names, function names, and language keywords exactly as they are without translating them.
 4. Output ONLY the clean Markdown content without surrounding conversational preambles or code fences.`;
 
-    const userPrompt = `Translate the following French lecture slide (Chapter ${chapterCode}, Slide ${pageNum}) into clean English Markdown:\n\n${textToTranslate}`;
+      userPrompt = `Translate the following French lecture slide (Chapter ${chapterCode}, Slide ${pageNum}) into clean English Markdown:\n\n${textToTranslate}`;
+    } else {
+      systemPrompt = `You are an elite bilingual technical curriculum translator for Socratix.
+Your role is to translate university computer science lecture slides from English to clean, elegant, educational French Markdown.
+
+STRICT INVARIANTS:
+1. ALWAYS start with a concise descriptive Markdown header: ### Titre de la diapositive
+2. Translate all prose, explanations, bullet points, and notes into natural, idiomatic academic French.
+3. CRITICAL: Strictly PRESERVE all code snippets, tag names (e.g. <div>, <header>, <nav>, <main>, <footer>, <p>, <ul>, <li>), CSS properties, HTML attributes (e.g. class, id, alt, src), variable names, function names, and language keywords exactly as they are without translating them.
+4. Output ONLY the clean Markdown content without surrounding conversational preambles or code fences.`;
+
+      userPrompt = `Translate the following English lecture slide (Chapter ${chapterCode}, Slide ${pageNum}) into clean French Markdown:\n\n${textToTranslate}`;
+    }
 
     const metaRes = await fetch('https://api.meta.ai/v1/chat/completions', {
       method: 'POST',
@@ -109,36 +193,64 @@ STRICT INVARIANTS:
     }
 
     const metaData = await metaRes.json();
-    const rawEnContent = metaData.choices?.[0]?.message?.content?.trim();
+    const rawTranslatedContent = metaData.choices?.[0]?.message?.content?.trim();
 
-    if (!rawEnContent) {
+    if (!rawTranslatedContent) {
       throw new Error('Meta AI returned an empty translation.');
     }
 
     // Ensure header starts with ### if missing
-    let cleanEnMarkdown = rawEnContent.replace(/^```markdown\s*/i, '').replace(/```$/i, '').trim();
-    if (!/^#{1,4}\s+/m.test(cleanEnMarkdown)) {
-      cleanEnMarkdown = `### ${chapter?.title || 'Slide Reference'}\n\n${cleanEnMarkdown}`;
+    let cleanTranslatedMarkdown = rawTranslatedContent
+      .replace(/^```markdown\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    if (!/^#{1,4}\s+/m.test(cleanTranslatedMarkdown)) {
+      const defaultTitle = resolvedTargetLang === 'en'
+        ? (chapter?.title_i18n?.en || chapter?.title || 'Slide Reference')
+        : (chapter?.title_i18n?.fr || chapter?.title || 'Référence Diapositive');
+      cleanTranslatedMarkdown = `### ${defaultTitle}\n\n${cleanTranslatedMarkdown}`;
     }
 
-    // 4. Cache into Supabase course_chapters.pages_json
+    // 5. Cache into Supabase course_chapters.pages_json
     if (chapter) {
       let updated = false;
       const updatedPages = pages.map((p) => {
         if (p.page === pageNum) {
           updated = true;
-          return { ...p, en_markdown: cleanEnMarkdown };
+          if (resolvedTargetLang === 'en') {
+            return {
+              ...p,
+              en_markdown: cleanTranslatedMarkdown,
+              fr_markdown: p.fr_markdown || textToTranslate,
+            };
+          } else {
+            return {
+              ...p,
+              fr_markdown: cleanTranslatedMarkdown,
+              en_markdown: p.en_markdown || textToTranslate,
+            };
+          }
         }
         return p;
       });
 
       if (!updated) {
-        updatedPages.push({
-          page: pageNum,
-          text: existingSlide?.text || textToTranslate,
-          fr_markdown: existingSlide?.fr_markdown || textToTranslate,
-          en_markdown: cleanEnMarkdown,
-        });
+        if (resolvedTargetLang === 'en') {
+          updatedPages.push({
+            page: pageNum,
+            text: existingSlide?.text || textToTranslate,
+            fr_markdown: existingSlide?.fr_markdown || textToTranslate,
+            en_markdown: cleanTranslatedMarkdown,
+          });
+        } else {
+          updatedPages.push({
+            page: pageNum,
+            text: existingSlide?.text || textToTranslate,
+            en_markdown: existingSlide?.en_markdown || textToTranslate,
+            fr_markdown: cleanTranslatedMarkdown,
+          });
+        }
       }
 
       await supabase
@@ -152,7 +264,11 @@ STRICT INVARIANTS:
     }
 
     return NextResponse.json({
-      en_markdown: cleanEnMarkdown,
+      en_markdown: resolvedTargetLang === 'en' ? cleanTranslatedMarkdown : (existingSlide?.en_markdown || textToTranslate),
+      fr_markdown: resolvedTargetLang === 'fr' ? cleanTranslatedMarkdown : (existingSlide?.fr_markdown || textToTranslate),
+      markdown: cleanTranslatedMarkdown,
+      sourceLang: resolvedSourceLang,
+      targetLang: resolvedTargetLang,
       cached: false,
     });
   } catch (err: unknown) {
@@ -161,4 +277,3 @@ STRICT INVARIANTS:
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
-

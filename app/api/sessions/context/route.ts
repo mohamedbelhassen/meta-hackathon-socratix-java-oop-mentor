@@ -64,12 +64,23 @@ export async function GET(req: NextRequest) {
     // Check if any message has course_reference that needs slide_markdown enrichment
     const hasRefs = rawMessages.some((m) => m.course_reference?.chapter_code && m.course_reference?.page_number);
     if (hasRefs) {
-      const { data: chaptersData } = await supabase
-        .from('course_chapters')
-        .select('chapter_number, code, title, title_i18n, pdf_url, pages_json')
-        .eq('course_id', session.course_id);
+      const [chaptersRes, courseRes] = await Promise.all([
+        supabase
+          .from('course_chapters')
+          .select('chapter_number, code, title, title_i18n, pdf_url, pages_json')
+          .eq('course_id', session.course_id),
+        supabase
+          .from('courses')
+          .select('content_language, file_extensions')
+          .eq('id', session.course_id)
+          .maybeSingle(),
+      ]);
 
-      const chapters = (chaptersData || []) as unknown as CourseChapter[];
+      const chapters = (chaptersRes.data || []) as unknown as CourseChapter[];
+      const courseContentLang = (courseRes.data?.content_language || 'fr').toLowerCase();
+      const isEnglishCourse = courseContentLang === 'en';
+      const fileExtensions = courseRes.data?.file_extensions;
+
       if (chapters.length > 0) {
         hydratedMessages = rawMessages.map((msg) => {
           if (!msg.course_reference?.chapter_code || !msg.course_reference?.page_number) {
@@ -82,11 +93,23 @@ export async function GET(req: NextRequest) {
           const pdfUrl = refChap.pdf_url || msg.course_reference.pdf_url;
           const currentSlideMd = msg.course_reference.slide_markdown;
 
-          const frClean = currentSlideMd?.fr || slidePage?.fr_markdown?.trim() || (slidePage?.text ? formatRawSlideTextToMarkdown(slidePage.text) : undefined);
-          const enClean = currentSlideMd?.en || slidePage?.en_markdown?.trim() || undefined;
+          const rawFormatted = slidePage?.text ? formatRawSlideTextToMarkdown(slidePage.text, undefined, fileExtensions) : undefined;
+          let frClean: string | undefined;
+          let enClean: string | undefined;
+
+          if (isEnglishCourse) {
+            enClean = currentSlideMd?.en || slidePage?.en_markdown?.trim() || slidePage?.fr_markdown?.trim() || rawFormatted;
+            frClean = currentSlideMd?.fr || (slidePage?.en_markdown ? slidePage?.fr_markdown?.trim() : undefined);
+          } else {
+            frClean = currentSlideMd?.fr || slidePage?.fr_markdown?.trim() || rawFormatted;
+            enClean = currentSlideMd?.en || slidePage?.en_markdown?.trim() || undefined;
+          }
 
           // Deterministic title synchronization (Variante 1)
-          const canonicalSlideTitle = extractSlideTitle(frClean) || extractSlideTitle(enClean);
+          const canonicalSlideTitle = isEnglishCourse
+            ? (extractSlideTitle(enClean) || extractSlideTitle(frClean))
+            : (extractSlideTitle(frClean) || extractSlideTitle(enClean));
+
           let canonicalLabel = msg.course_reference.label;
           if (canonicalSlideTitle) {
             const chNum = refChap.chapter_number != null ? refChap.chapter_number : refChap.code;
@@ -97,6 +120,7 @@ export async function GET(req: NextRequest) {
             ...msg,
             course_reference: {
               ...msg.course_reference,
+              content_language: msg.course_reference.content_language || courseContentLang,
               label: canonicalLabel,
               pdf_url: pdfUrl,
               slide_markdown: {

@@ -372,14 +372,16 @@ export function getSlideCleanMarkdown(
     page_number: number;
     en_note?: string;
     slide_markdown?: { en?: string; fr?: string };
+    content_language?: string;
   },
   lang: 'en' | 'fr'
 ): string {
+  const isEnglishCourse = (reference.content_language || '').toLowerCase() === 'en';
+
   // Extract clean slide title prioritizing canonical slide_markdown, then reference.label
-  const canonicalTitle =
-    extractSlideTitle(lang === 'en' ? reference.slide_markdown?.en : reference.slide_markdown?.fr) ||
-    extractSlideTitle(reference.slide_markdown?.fr) ||
-    extractSlideTitle(reference.slide_markdown?.en);
+  const canonicalTitle = isEnglishCourse
+    ? (extractSlideTitle(reference.slide_markdown?.en) || extractSlideTitle(reference.slide_markdown?.fr))
+    : (extractSlideTitle(reference.slide_markdown?.fr) || extractSlideTitle(reference.slide_markdown?.en));
 
   let cleanTitle = canonicalTitle || reference.label || `Slide #${reference.page_number}`;
   if (!canonicalTitle) {
@@ -402,7 +404,11 @@ export function getSlideCleanMarkdown(
     if (reference.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0) {
       return ensureHeader(reference.slide_markdown.en, cleanTitle);
     }
-    // If English markdown is pending, display French clean markdown if available
+    // If English course but text is stored in fr slot (legacy ingestion), it is actually native English!
+    if (isEnglishCourse && reference.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0) {
+      return ensureHeader(reference.slide_markdown.fr, cleanTitle);
+    }
+    // If French course and English translation is pending, display French clean markdown if available
     if (reference.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0) {
       const frContent = ensureHeader(reference.slide_markdown.fr, cleanTitle);
       return `> 💡 *Clean English translation pending recompilation. Displaying official clean slide content below:*\n\n${frContent}`;
@@ -413,15 +419,21 @@ export function getSlideCleanMarkdown(
       `> ${reference.en_note || 'This slide presents the core concept and architectural invariant relevant to your current implementation hurdle.'}\n\n` +
       `*Tip: Run "Recompile Knowledge Base" with "Re-distill PDFs" checked in Course Studio to generate full verbatim slide-by-slide translations.*`;
   } else {
-    if (reference.slide_markdown?.fr && reference.slide_markdown.fr.trim().length > 0) {
+    // If real French markdown exists (for English course, only when en also exists or explicitly translated)
+    if (reference.slide_markdown?.fr && (!isEnglishCourse || reference.slide_markdown?.en) && reference.slide_markdown.fr.trim().length > 0) {
       return ensureHeader(reference.slide_markdown.fr, cleanTitle);
+    }
+    // If English course and French translation pending
+    if (isEnglishCourse && (reference.slide_markdown?.en || reference.slide_markdown?.fr)) {
+      const enContent = ensureHeader(reference.slide_markdown.en || reference.slide_markdown.fr!, cleanTitle);
+      return `> 💡 *Traduction française disponible via l'onglet JIT ci-dessus. Diapositive originale ci-dessous :*\n\n${enContent}`;
     }
     if (reference.slide_markdown?.en && reference.slide_markdown.en.trim().length > 0) {
       return ensureHeader(reference.slide_markdown.en, cleanTitle);
     }
     return `### ${cleanTitle}\n\n` +
       `**Référence officielle du cours :** Chapitre \`${reference.chapter_code}\` (Diapositive ${reference.page_number})\n\n` +
-      `Consultez l'original officiel en cliquant sur l'onglet **"📄 Official PDF (French)"** ci-dessus.`;
+      `Consultez l'original officiel en cliquant sur l'onglet **"📄 Official PDF"** ci-dessus.`;
   }
 }
 
